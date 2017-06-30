@@ -1,0 +1,7 @@
+[DEFAULT]
+# Put the remote users you intend to use this key on here
+# Can also be specified per environment
+principals = production
+
+[prod]
+private_key = ssh_ca_prod

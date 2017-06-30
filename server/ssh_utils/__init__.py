@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+""" ssh-keygen lib """
+
+import ConfigParser
+import os
+import subprocess
+import time
+
+class SSHCAException(Exception):
+    """ SSHCAException """
+    pass
+
+class SSHCAInvalidConfiguration(SSHCAException):
+    """ SSHCAInvalidConfiguration """
+    pass
+
+
+def get_config_value(config, section, name, required=False):
+    """
+    Get config value
+    """
+    if config:
+        try:
+            return config.get(section, name)
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+            if required:
+                raise SSHCAInvalidConfiguration(
+                    "option '%s' is required in section '%s'" %
+                    (name, section))
+    return None
+
+def get_cert_contents(public_key_filename):
+    """
+    Print cert
+    """
+    if public_key_filename.endswith('.pub'):
+        public_key_filename = public_key_filename[:-4]
+    cert_filename = public_key_filename + '-cert.pub'
+    with open(cert_filename, 'r') as pub_key:
+        cert_contents = pub_key.read()
+    os.remove(cert_filename)
+    return cert_contents
+
+class Authority(object):
+    """
+    Class which control authority certification
+    """
+    def __init__(self, ca_key):
+        self.ca_key = ca_key
+
+    def sign_public_user_key(self, public_key_filename, username, duration, principals):
+        """
+        Sign public key
+        """
+        subprocess.check_output([
+            'ssh-keygen',
+            '-s', self.ca_key,
+            '-I', username,
+            '-V', duration,
+            '-n', principals,
+            public_key_filename])
+        return get_cert_contents(public_key_filename)

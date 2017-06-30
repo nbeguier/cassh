@@ -1,0 +1,119 @@
+#!/usr/bin/env python
+
+"""
+Sign a user's SSH public key.
+"""
+
+import argparse
+import ConfigParser
+import os
+import sys
+import time
+
+import ca_ssh_test
+from ssh_ca.utils import parse_time, epoch2timefmt
+
+# Debug
+# from pdb import set_trace as st
+
+def get_valid_ca_key(config, environment):
+    """
+    Get a valid CA key file
+    """
+    ca_key = ca_ssh_test.get_config_value(config, environment, 'private_key')
+    if ca_key:
+        ca_key = os.path.expanduser(ca_key)
+    else:
+        ca_key = os.path.expanduser('~/.ssh/ssh_ca_%s' % (environment,))
+    if not os.path.isfile(ca_key):
+        print 'CA key file %s does not exist.' % (ca_key,)
+        sys.exit(1)
+
+    return ca_ssh_test.Authority(ca_key)
+
+
+if __name__ == '__main__':
+    PARSER = argparse.ArgumentParser(description=__doc__)
+    PARSER.add_argument(
+        '-c', '--config-file',
+        help='The configuration file to use.  Can also be '
+             'specified in the SSH_CA_CONFIG environment '
+             'variable.  Default: %(default)s')
+    PARSER.add_argument(
+        '-e', '--environment', required=True, help='Environment name')
+    PARSER.add_argument(
+        '--principal', action='append',
+        help='A principal (username) that the user is allowed to use')
+    PARSER.add_argument(
+        '-p', dest='public_path',
+        help='Path to public key. May be a local file or one located at a '
+             'http/https url. If set we try to upload this. Otherwise we try '
+             'to download one.')
+    PARSER.add_argument(
+        '-u', required=True, dest='username', help='username / email address')
+    PARSER.add_argument(
+        '--upload', dest='upload_only', action='store_true',
+        help='Only upload the public key')
+    PARSER.add_argument(
+        '-r', '--reason',
+        help='Specify the reason for the user needing this cert.')
+    PARSER.add_argument(
+        '-t', '--expires-in', default='+2h',
+        help='Expires in. A relative time like +1w. Or YYYYMMDDHHMMSS. '
+             'Default: %(default)s')
+    PARSER.add_argument(
+        '-s', '--starts-in', default='+0m',
+        help='Certificate becomes active in. '
+             'A relative time like +1h. Or YYYYMMDDHHMMSS. '
+             'Default: %(default)s')
+    ARGS = PARSER.parse_args()
+
+    PUBLIC_PATH = ARGS.public_path
+    ENVIRONMENT = ARGS.environment
+    USERNAME = ARGS.username
+
+    NOW = int(time.time())
+    STARTS_IN = parse_time(ARGS.starts_in, NOW)
+    EXPIRES_IN = parse_time(ARGS.expires_in, NOW)
+    if STARTS_IN > EXPIRES_IN:
+        sys.stderr.write("You must specify an --expires-in later then "
+                         "the --starts-in\n")
+        sys.exit(-1)
+
+    if EXPIRES_IN < int(time.time()):
+        sys.stderr.write("You must specify an --expires-in in the future\n")
+        sys.exit(-1)
+
+    # always tell S3 to expire the key when the cert expires
+    URL_EXPIRES = EXPIRES_IN - NOW
+
+    # Keys which expire really soon don't make much sense
+    if URL_EXPIRES < (5 * 60):
+        sys.stderr.write("*" * 50 + "\n")
+        sys.stderr.write("WARNING: Very short cert expire time of %dsec!\n" %
+                         (URL_EXPIRES,))
+        sys.stderr.write("*" * 50 + "\n")
+
+    STARTS_IN = epoch2timefmt(STARTS_IN)
+    EXPIRES_IN = epoch2timefmt(EXPIRES_IN)
+
+    CONFIG = None
+    if ARGS.config_file:
+        CONFIG = ConfigParser.ConfigParser()
+        CONFIG.read(ARGS.config_file)
+
+
+    CA = get_valid_ca_key(CONFIG, ENVIRONMENT)
+
+    if ARGS.principal:
+        PRINCIPALS = ARGS.principal
+    else:
+        P_CONF = ca_ssh_test.get_config_value(CONFIG, ENVIRONMENT, 'principals')
+        if P_CONF:
+            PRINCIPALS = [p.strip() for p in P_CONF.split(',')]
+        else:
+            PRINCIPALS = ['ec2-user', 'ubuntu']
+
+    # Sign the key
+    CERT_CONTENTS = CA.sign_public_user_key(
+        PUBLIC_PATH, USERNAME, STARTS_IN, EXPIRES_IN, PRINCIPALS)
