@@ -44,3 +44,25 @@ curl http://localhost:8080/admin/toto?sign=true
 curl -X POST -d @test-keys/id_rsa.pub http://localhost:8080/client/toto
 ```
 The output is the signing key.
+
+## Client CLI
+
+```bash
+# Add new key to lbcssh-server
+lbcssh add <ssh pub key>
+
+# Sign pub key
+lbcssh sign <ssh pub key>
+
+# Get public key status
+lbcssh status
+
+# Remove key from lbcssh-server
+lbcssh rm <ssh pub key>
+
+# Get ca public key
+lbcssh ca
+
+# Get ca krl
+lbcssh krl
+```
