@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+""" LBCSSH CLI """
+
+# Standard library imports
+from argparse import ArgumentParser
+from ConfigParser import ConfigParser, NoOptionError
+from os import getenv
+from os.path import isfile
+
+# Debug
+# from pdb import set_trace as st
+
+def display_devices_type(devices_type):
+    """
+    Display results.
+    """
+    for device_type in devices_type['results']:
+        print device_type['model']
+
+def read_conf(conf_path):
+    """
+    Read NetBox configuration file.
+    """
+    config = ConfigParser()
+    config.read(conf_path)
+    user_metadata = {}
+    try:
+        user_metadata['name'] = config.get('user', 'name')
+        user_metadata['token'] = config.get('user', 'token')
+        user_metadata['url'] = config.get('user', 'url')
+    except NoOptionError as error_msg:
+        print "Can't read configuration file..."
+        print error_msg
+        exit(1)
+    return user_metadata
+
+if __name__ == '__main__':
+
+    CONF_FILE = '%s/.lbcssh' % getenv('HOME')
+
+    if not isfile(CONF_FILE):
+        print 'Config file missing : %s' % CONF_FILE
+        print 'Example:'
+        print '[user]'
+        print 'name = user'
+        print 'pubkey_path = ~/.ssh/id_rsa'
+        print 'url = https://lbcssh.net'
+        exit(1)
+
+    PARSER = ArgumentParser()
+
+    SUBPARSERS = PARSER.add_subparsers(help='commands')
+
+    # ADD Arguments
+    ADD_PARSER = SUBPARSERS.add_parser('add', help='TODO')
+    ADD_PARSER.add_argument('key', action='store', help="TODO")
+
+    # SIGN Arguments
+    SIGN_PARSER = SUBPARSERS.add_parser('sign', help='TODO')
+    SIGN_PARSER.add_argument('key', action='store', help="TODO")
+
+    # STATUS Arguments
+    STATUS_PARSER = SUBPARSERS.add_parser('status', help='TODO')
+
+    # RM Arguments
+    RM_PARSER = SUBPARSERS.add_parser('rm', help='TODO')
+    RM_PARSER.add_argument('key', action='store', help="TODO")
+
+    # CA Arguments
+    CA_PARSER = SUBPARSERS.add_parser('ca', help='TODO')
+    CA_PARSER.add_argument('key', action='store', help="TODO")
+
+    # KRL Arguments
+    KRL_PARSER = SUBPARSERS.add_parser('krl', help='TODO')
+    KRL_PARSER.add_argument('key', action='store', help="TODO")
+
+    ARGS = PARSER.parse_args()
+
+    exit(0)
