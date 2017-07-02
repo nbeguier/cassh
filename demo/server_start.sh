@@ -1,7 +1,6 @@
 #!/bin/bash
 
-figlet 'START : LBC - SSH'
+echo 'START : LBC - SSH'
 
-echo "Starting server"
+echo 'Starting server'
 python server/server.py $1
-

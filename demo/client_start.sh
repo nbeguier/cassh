@@ -1,6 +1,6 @@
 #!/bin/bash
 
-figlet 'CLIENT'
+echo 'CLIENT'
 
 echo "# ADMIN List all keys"
 echo "curl http://localhost:8080/client"
