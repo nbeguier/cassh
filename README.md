@@ -38,7 +38,7 @@ curl http://localhost:8080/client
 curl -X PUT -d @test-keys/id_rsa.pub http://localhost:8080/client/toto
 
 # ADMIN: Active key
-curl http://localhost:8080/admin/toto?sign=true
+curl http://localhost:8080/admin/toto?revoke=false
 
 # Sign it !
 curl -X POST -d @test-keys/id_rsa.pub http://localhost:8080/client/toto
