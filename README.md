@@ -49,16 +49,13 @@ The output is the signing key.
 
 ```bash
 # Add new key to lbcssh-server
-lbcssh add <ssh pub key>
+lbcssh add
 
 # Sign pub key
-lbcssh sign <ssh pub key>
+lbcssh sign
 
 # Get public key status
 lbcssh status
-
-# Remove key from lbcssh-server
-lbcssh rm <ssh pub key>
 
 # Get ca public key
 lbcssh ca

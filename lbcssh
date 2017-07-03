@@ -5,11 +5,16 @@
 # Standard library imports
 from argparse import ArgumentParser
 from ConfigParser import ConfigParser, NoOptionError
+from json import dumps, loads
 from os import getenv
 from os.path import isfile
+from sys import argv
+
+# Third party library imports
+from requests import Session
 
 # Debug
-# from pdb import set_trace as st
+from pdb import set_trace as st
 
 def display_devices_type(devices_type):
     """
@@ -27,13 +32,67 @@ def read_conf(conf_path):
     user_metadata = {}
     try:
         user_metadata['name'] = config.get('user', 'name')
-        user_metadata['token'] = config.get('user', 'token')
+        user_metadata['pubkey_path'] = config.get('user', 'pubkey_path')
         user_metadata['url'] = config.get('user', 'url')
     except NoOptionError as error_msg:
         print "Can't read configuration file..."
         print error_msg
         exit(1)
+    if not isfile(user_metadata['pubkey_path']):
+        print "File %s does not exists" % user_metadata['pubkey_path']
+        exit(1)
     return user_metadata
+
+class LBCSSH(object):
+    """
+    Main NetBox class.
+"""
+    def __init__(self, user_metadata):
+        """
+        Init file.
+        """
+        self.name = user_metadata['name']
+        self.pubkey_path = user_metadata['pubkey_path']
+        self.session = Session()
+        self.url = user_metadata['url']
+
+    def add(self):
+        """
+        Add a key.
+        """
+        pubkey = open(self.pubkey_path, 'rb')
+        req = self.session.put(self.url + 'client/' + self.name, data=pubkey)
+        print req.text
+
+    def sign(self):
+        """
+        Sign a key.
+        """
+        pubkey = open(self.pubkey_path, 'rb')
+        req = self.session.post(self.url + 'client/' + self.name, data=pubkey)
+        print req.text
+
+    def status(self):
+        """
+        Get status of key.
+        """
+        req = self.session.get(self.url + 'client/' + self.name)
+        print req.text
+
+    def get_ca(self):
+        """
+        Delete a key.
+        """
+        req = self.session.get(self.url + 'ca')
+        print req.text
+
+    def get_krl(self):
+        """
+        Delete a key.
+        """
+        req = self.session.get(self.url + 'krl')
+        print req.text
+
 
 if __name__ == '__main__':
 
@@ -54,27 +113,32 @@ if __name__ == '__main__':
 
     # ADD Arguments
     ADD_PARSER = SUBPARSERS.add_parser('add', help='TODO')
-    ADD_PARSER.add_argument('key', action='store', help="TODO")
 
     # SIGN Arguments
     SIGN_PARSER = SUBPARSERS.add_parser('sign', help='TODO')
-    SIGN_PARSER.add_argument('key', action='store', help="TODO")
 
     # STATUS Arguments
     STATUS_PARSER = SUBPARSERS.add_parser('status', help='TODO')
 
-    # RM Arguments
-    RM_PARSER = SUBPARSERS.add_parser('rm', help='TODO')
-    RM_PARSER.add_argument('key', action='store', help="TODO")
-
     # CA Arguments
     CA_PARSER = SUBPARSERS.add_parser('ca', help='TODO')
-    CA_PARSER.add_argument('key', action='store', help="TODO")
 
     # KRL Arguments
     KRL_PARSER = SUBPARSERS.add_parser('krl', help='TODO')
-    KRL_PARSER.add_argument('key', action='store', help="TODO")
 
     ARGS = PARSER.parse_args()
+
+    LBC = LBCSSH(read_conf(CONF_FILE))
+
+    if argv[1] == 'add':
+        LBC.add()
+    elif argv[1] == 'sign':
+        LBC.sign()
+    elif argv[1] == 'status':
+        LBC.status()
+    elif argv[1] == 'ca':
+        LBC.get_ca()
+    elif argv[1] == 'krl':
+        LBC.get_krl()
 
     exit(0)

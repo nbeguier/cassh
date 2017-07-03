@@ -19,6 +19,8 @@ URLS = (
     '/client', 'AllClientKeys',
     '/client/([a-z]+)', 'Client',
     '/admin/([a-z]+)', 'Admin',
+    '/ca', 'Ca',
+    '/krl', 'Krl',
 )
 
 STATES = {
@@ -211,6 +213,25 @@ class Admin():
         pg_conn.close()
         return 'OK'
 
+class Ca():
+    """
+    Classe CA
+    """
+    def GET(self):
+        """
+        Return ca
+        """
+        return 'TODO'
+
+class Krl():
+    """
+    Classe KRL
+    """
+    def GET(self):
+        """
+        Return krl
+        """
+        return 'TODO'
 
 class MyApplication(application):
     def run(self, port=8080, *middleware):
