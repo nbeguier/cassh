@@ -13,7 +13,7 @@ import ssh_utils
 from psycopg2 import connect, OperationalError
 
 # DEBUG
-# from pdb import set_trace as st
+from pdb import set_trace as st
 
 URLS = (
     '/client', 'AllClientKeys',
@@ -167,7 +167,7 @@ class Admin():
         """
         Return informations
         """
-        do_sign = web_input('sign')
+        do_revoke = web_input('revoke')['revoke'] == 'true'
         pg_conn = pg_connection()
         if pg_conn is None:
             return 'I am unable to connect to the database'
@@ -181,6 +181,12 @@ class Admin():
             cur.close()
             pg_conn.close()
             return "User '%s' does not exists." % username
+        elif do_revoke:
+            cur.execute("""UPDATE USERS SET STATE=1 WHERE NAME = '%s'""" % username)
+            pg_conn.commit()
+            cur.close()
+            pg_conn.close()
+            return 'Revoke user=%s.' % username
         # If user is in PENDING state
         elif user[1] == 2:
             cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)

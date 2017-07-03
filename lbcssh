@@ -5,7 +5,6 @@
 # Standard library imports
 from argparse import ArgumentParser
 from ConfigParser import ConfigParser, NoOptionError
-from json import dumps, loads
 from os import getenv
 from os.path import isfile
 from sys import argv
@@ -25,7 +24,7 @@ def display_devices_type(devices_type):
 
 def read_conf(conf_path):
     """
-    Read NetBox configuration file.
+    Read LBCSSH configuration file.
     """
     config = ConfigParser()
     config.read(conf_path)
@@ -41,20 +40,45 @@ def read_conf(conf_path):
     if not isfile(user_metadata['pubkey_path']):
         print "File %s does not exists" % user_metadata['pubkey_path']
         exit(1)
+
+    try:
+        user_metadata['token'] = config.get('user', 'token')
+    except NoOptionError:
+        user_metadata['token'] = None
+
     return user_metadata
 
 class LBCSSH(object):
     """
-    Main NetBox class.
+    Main LBCSSH class.
 """
     def __init__(self, user_metadata):
         """
         Init file.
         """
+        self.admin_token = user_metadata['token']
         self.name = user_metadata['name']
         self.pubkey_path = user_metadata['pubkey_path']
         self.session = Session()
         self.url = user_metadata['url']
+
+    def admin(self, username, action):
+        """
+        Admin CLI
+        """
+        if self.admin_token is None:
+            print 'You need an admin token'
+            print 'Example:'
+            print '[user]'
+            print 'token = 14af6d8a23b6587794438bc669c526e2'
+            exit(1)
+        if action == 'revoke':
+            req = self.session.get(self.url + 'admin/' + username + '?revoke=true')
+        elif action == 'active':
+            req = self.session.get(self.url + 'admin/' + username + '?revoke=false')
+        elif action == 'delete':
+            req = self.session.delete(self.url + 'admin/' + username)
+        print req.text
 
     def add(self):
         """
@@ -111,6 +135,11 @@ if __name__ == '__main__':
 
     SUBPARSERS = PARSER.add_subparsers(help='commands')
 
+    # ADMIN Arguments
+    ADMIN_PARSER = SUBPARSERS.add_parser('admin', help='TODO')
+    ADMIN_PARSER.add_argument('username', action='store', help='TODO')
+    ADMIN_PARSER.add_argument('action', action='store', help='TODO')
+
     # ADD Arguments
     ADD_PARSER = SUBPARSERS.add_parser('add', help='TODO')
 
@@ -140,5 +169,7 @@ if __name__ == '__main__':
         LBC.get_ca()
     elif argv[1] == 'krl':
         LBC.get_krl()
+    elif argv[1] == 'admin':
+        LBC.admin(ARGS.username, ARGS.action)
 
     exit(0)

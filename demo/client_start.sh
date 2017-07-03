@@ -14,7 +14,7 @@ echo "curl -X PUT -d @test-keys/test_key.pub http://localhost:8080/client/toto"
 echo ""
 
 echo "# ADMIN active key (but not sign)"
-echo "curl http://localhost:8080/admin/toto?sign=true"
+echo "curl http://localhost:8080/admin/toto?revoke=false"
 echo "# or just delete (but don't revoke)"
 echo "curl -X DELETE http://localhost:8080/admin/toto"
 
