@@ -221,7 +221,7 @@ class Ca():
         """
         Return ca
         """
-        return 'TODO'
+        return open(CA_KEY+'.pub', 'rb')
 
 class Krl():
     """
