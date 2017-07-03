@@ -13,7 +13,7 @@ from sys import argv
 from requests import Session
 
 # Debug
-from pdb import set_trace as st
+# from pdb import set_trace as st
 
 def display_devices_type(devices_type):
     """

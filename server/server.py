@@ -13,7 +13,7 @@ import ssh_utils
 from psycopg2 import connect, OperationalError
 
 # DEBUG
-from pdb import set_trace as st
+# from pdb import set_trace as st
 
 URLS = (
     '/client', 'AllClientKeys',
@@ -34,7 +34,7 @@ CA_KEY = argv[1]
 def pg_connection(dbname='postgres', user='postgres', host='localhost',\
     password='mysecretpassword'):
     """
-    Return a connection to the db
+    Return a connection to the db.
     """
     try:
         pg_conn = connect("dbname='%s' user='%s' host='%s' password='%s'"\
@@ -46,6 +46,9 @@ def pg_connection(dbname='postgres', user='postgres', host='localhost',\
 
 
 def list_keys(username=None):
+    """
+    Return all keys.
+    """
     pg_conn = pg_connection()
     if pg_conn is None:
         return 'I am unable to connect to the database'
@@ -63,21 +66,27 @@ def list_keys(username=None):
     return result
 
 class AllClientKeys():
+    """
+    Class which retrun all client keys.
+    """
     def GET(self):
         return list_keys()
 
 class Client():
     """
-    Classe cliente qui demande de signer ou ajouter sa cle publique
+    Client class.
     """
     def GET(self, username):
         """
-        Return informations
+        Return informations.
         """
         return list_keys(username=username)
 
 
     def POST(self, username):
+        """
+        Ask to sign pub key.
+        """
         pubkey = data()
         pubkey_hash = md5(pubkey).hexdigest()
         tmp_pubkey = NamedTemporaryFile(delete=False)
@@ -99,7 +108,7 @@ class Client():
             remove(tmp_pubkey.name)
             return 'User absent, try PUT'
 
-        # TODO : Ajouter l'expiration !! user[4]
+        # TODO : Add expiration !! user[4]
         if user[1] > 0:
             cur.close()
             pg_conn.close()
@@ -113,7 +122,8 @@ class Client():
         try:
             cert_contents = ca_ssh.sign_public_user_key(\
                 tmp_pubkey.name, username, '+1d', username)
-            cur.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'""" % (time(), username))
+            cur.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
+                % (time(), username))
         except:
             cert_contents = 'Error signing key'
         remove(tmp_pubkey.name)
@@ -124,7 +134,7 @@ class Client():
 
     def PUT(self, username):
         """
-        This function permit to add or update a ssh public key
+        This function permit to add or update a ssh public key.
         """
         pubkey = data()
         pubkey_hash = md5(pubkey).hexdigest()
@@ -161,11 +171,11 @@ class Client():
 
 class Admin():
     """
-    Classe admin pour signer les cles
+    Class admin to action or revoke keys.
     """
     def GET(self, username):
         """
-        Return informations
+        Revoke or Active keys.
         """
         do_revoke = web_input('revoke')['revoke'] == 'true'
         pg_conn = pg_connection()
@@ -207,6 +217,9 @@ class Admin():
             return 'user=%s already active. Nothing done.' % username
 
     def DELETE(self, username):
+        """
+        Delete keys (but DOESN'T REVOKE)
+        """
         pg_conn = pg_connection()
         if pg_conn is None:
             return 'I am unable to connect to the database'
@@ -221,25 +234,28 @@ class Admin():
 
 class Ca():
     """
-    Classe CA
+    Class CA.
     """
     def GET(self):
         """
-        Return ca
+        Return ca.
         """
         return open(CA_KEY+'.pub', 'rb')
 
 class Krl():
     """
-    Classe KRL
+    Class KRL. 
     """
     def GET(self):
         """
-        Return krl
+        Return krl.
         """
         return 'TODO'
 
 class MyApplication(application):
+    """
+    Can change port or other stuff
+    """
     def run(self, port=8080, *middleware):
         func = self.wsgifunc(*middleware)
         return httpserver.runsimple(func, ('0.0.0.0', port))
