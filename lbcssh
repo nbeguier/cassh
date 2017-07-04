@@ -11,6 +11,10 @@ from sys import argv
 
 # Third party library imports
 from requests import Session
+from urllib3 import disable_warnings
+
+# Disable HTTPs warnings
+disable_warnings()
 
 # Debug
 # from pdb import set_trace as st
@@ -41,11 +45,6 @@ def read_conf(conf_path):
         print "File %s does not exists" % user_metadata['pubkey_path']
         exit(1)
 
-    try:
-        user_metadata['token'] = config.get('user', 'token')
-    except NoOptionError:
-        user_metadata['token'] = None
-
     return user_metadata
 
 class LBCSSH(object):
@@ -56,7 +55,6 @@ class LBCSSH(object):
         """
         Init file.
         """
-        self.admin_token = user_metadata['token']
         self.name = user_metadata['name']
         self.pubkey_path = user_metadata['pubkey_path']
         self.session = Session()
@@ -66,18 +64,12 @@ class LBCSSH(object):
         """
         Admin CLI
         """
-        if self.admin_token is None:
-            print 'You need an admin token'
-            print 'Example:'
-            print '[user]'
-            print 'token = 14af6d8a23b6587794438bc669c526e2'
-            exit(1)
         if action == 'revoke':
-            req = self.session.get(self.url + 'admin/' + username + '?revoke=true')
+            req = self.session.get(self.url + 'admin/' + username + '?revoke=true', verify=False)
         elif action == 'active':
-            req = self.session.get(self.url + 'admin/' + username + '?revoke=false')
+            req = self.session.get(self.url + 'admin/' + username + '?revoke=false', verify=False)
         elif action == 'delete':
-            req = self.session.delete(self.url + 'admin/' + username)
+            req = self.session.delete(self.url + 'admin/' + username, verify=False)
         else:
             print 'Action should be : revoke, active or delete'
             exit(1)
@@ -88,7 +80,7 @@ class LBCSSH(object):
         Add a key.
         """
         pubkey = open(self.pubkey_path, 'rb')
-        req = self.session.put(self.url + 'client/' + self.name, data=pubkey)
+        req = self.session.put(self.url + 'client/' + self.name, data=pubkey, verify=False)
         print req.text
 
     def sign(self):
@@ -96,28 +88,28 @@ class LBCSSH(object):
         Sign a key.
         """
         pubkey = open(self.pubkey_path, 'rb')
-        req = self.session.post(self.url + 'client/' + self.name, data=pubkey)
+        req = self.session.post(self.url + 'client/' + self.name, data=pubkey, verify=False)
         print req.text
 
     def status(self):
         """
         Get status of key.
         """
-        req = self.session.get(self.url + 'client/' + self.name)
+        req = self.session.get(self.url + 'client/' + self.name, verify=False)
         print req.text
 
     def get_ca(self):
         """
         Delete a key.
         """
-        req = self.session.get(self.url + 'ca')
+        req = self.session.get(self.url + 'ca', verify=False)
         print req.text
 
     def get_krl(self):
         """
         Delete a key.
         """
-        req = self.session.get(self.url + 'krl')
+        req = self.session.get(self.url + 'krl', verify=False)
         print req.text
 
 
