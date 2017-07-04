@@ -35,6 +35,7 @@ def read_conf(conf_path):
     user_metadata = {}
     try:
         user_metadata['name'] = config.get('user', 'name')
+        user_metadata['realname'] = config.get('user', 'realname')
         user_metadata['pubkey_path'] = config.get('user', 'pubkey_path')
         user_metadata['url'] = config.get('user', 'url')
     except NoOptionError as error_msg:
@@ -50,7 +51,7 @@ def read_conf(conf_path):
 class LBCSSH(object):
     """
     Main LBCSSH class.
-"""
+    """
     def __init__(self, user_metadata):
         """
         Init file.
@@ -122,6 +123,7 @@ if __name__ == '__main__':
         print 'Example:'
         print '[user]'
         print 'name = user'
+        print 'realname = Ursula Ser'
         print 'pubkey_path = ~/.ssh/id_rsa'
         print 'url = https://lbcssh.net'
         exit(1)
