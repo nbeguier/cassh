@@ -7,20 +7,19 @@ Easy SSH for admin ONLY !
 sudo apt-get install python-psycopg2 python-webpy docker.io
 
 mkdir test-keys
-cd test-keys
 
-ssh-keygen -C CA -f ca # without passphrase
+ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
 ```
 
 Then, initialize db
 ```bash
-# sudo is only if your user doesn't have docker rights, add it into docker group
-sudo bash demo/server_init.sh
+# Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
+bash demo/server_init.sh
 ```
 
 Finally, start server
 ```bash
-bash demo/server_start.sh test-keys/ca
+bash demo/server_start.sh test-keys/id_rsa_ca
 ```
 
 ## Quick test
@@ -29,7 +28,7 @@ Generate key pair then sign it !
 
 ```bash
 # Generate key pair
-ssh-keygen -t ecdsa -f test-keys/id_rsa
+ssh-keygen -t rsa -b 4096 -o -a 100 -f test-keys/id_rsa
 
 # List keys (just in case... it should be '[]')
 curl http://localhost:8080/client
@@ -49,17 +48,17 @@ The output is the signing key.
 
 ```bash
 # Add new key to lbcssh-server
-lbcssh add
+python lbcssh add
 
 # Sign pub key
-lbcssh sign
+python lbcssh sign
 
 # Get public key status
-lbcssh status
+python lbcssh status
 
 # Get ca public key
-lbcssh ca
+python lbcssh ca
 
 # Get ca krl
-lbcssh krl
+python lbcssh krl
 ```

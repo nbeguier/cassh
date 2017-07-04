@@ -78,6 +78,9 @@ class LBCSSH(object):
             req = self.session.get(self.url + 'admin/' + username + '?revoke=false')
         elif action == 'delete':
             req = self.session.delete(self.url + 'admin/' + username)
+        else:
+            print 'Action should be : revoke, active or delete'
+            exit(1)
         print req.text
 
     def add(self):
