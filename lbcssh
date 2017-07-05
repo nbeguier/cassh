@@ -5,6 +5,7 @@
 # Standard library imports
 from argparse import ArgumentParser
 from ConfigParser import ConfigParser, NoOptionError
+from getpass import getpass
 from os import getenv
 from os.path import isfile
 from sys import argv
@@ -38,6 +39,7 @@ def read_conf(conf_path):
         user_metadata['realname'] = config.get('user', 'realname')
         user_metadata['pubkey_path'] = config.get('user', 'pubkey_path')
         user_metadata['url'] = config.get('user', 'url')
+        user_metadata['auth'] = config.get('user', 'auth')
     except NoOptionError as error_msg:
         print "Can't read configuration file..."
         print error_msg
@@ -60,17 +62,35 @@ class LBCSSH(object):
         self.pubkey_path = user_metadata['pubkey_path']
         self.session = Session()
         self.url = user_metadata['url']
+        self.auth = user_metadata['auth']
+        self.realname = user_metadata['realname']
+
+
+    def auth_url(self, prefix=""):
+        """
+        Return a ?xxx=xxx data
+        """
+        if self.auth == 'ldap':
+            if prefix is None:
+                return '?realname=%s&password=%s' % (self.realname, getpass('pass: '))
+            else:
+                return prefix + '&realname=%s&password=%s' % (self.realname, getpass('pass: '))
+        else:
+            return prefix
 
     def admin(self, username, action):
         """
         Admin CLI
         """
         if action == 'revoke':
-            req = self.session.get(self.url + 'admin/' + username + '?revoke=true', verify=False)
+            req = self.session.get(self.url + 'admin/' + username + \
+                self.auth_url(prefix='?revoke=true'), verify=False)
         elif action == 'active':
-            req = self.session.get(self.url + 'admin/' + username + '?revoke=false', verify=False)
+            req = self.session.get(self.url + 'admin/' + username + \
+                self.auth_url(prefix='?revoke=false'), verify=False)
         elif action == 'delete':
-            req = self.session.delete(self.url + 'admin/' + username, verify=False)
+            req = self.session.delete(self.url + 'admin/' + username + \
+                self.auth_url(), verify=False)
         else:
             print 'Action should be : revoke, active or delete'
             exit(1)
@@ -81,7 +101,8 @@ class LBCSSH(object):
         Add a key.
         """
         pubkey = open(self.pubkey_path, 'rb')
-        req = self.session.put(self.url + 'client/' + self.name, data=pubkey, verify=False)
+        req = self.session.put(self.url + 'client/' + self.name + self.auth_url(), \
+            data=pubkey, verify=False)
         print req.text
 
     def sign(self):
@@ -89,14 +110,15 @@ class LBCSSH(object):
         Sign a key.
         """
         pubkey = open(self.pubkey_path, 'rb')
-        req = self.session.post(self.url + 'client/' + self.name, data=pubkey, verify=False)
+        req = self.session.post(self.url + 'client/' + self.name + self.auth_url(), \
+            data=pubkey, verify=False)
         print req.text
 
     def status(self):
         """
         Get status of key.
         """
-        req = self.session.get(self.url + 'client/' + self.name, verify=False)
+        req = self.session.get(self.url + 'client/' + self.name + self.auth_url(), verify=False)
         print req.text
 
     def get_ca(self):
@@ -126,6 +148,7 @@ if __name__ == '__main__':
         print 'realname = Ursula Ser'
         print 'pubkey_path = ~/.ssh/id_rsa'
         print 'url = https://lbcssh.net'
+        print 'auth = None # None or ldap'
         exit(1)
 
     PARSER = ArgumentParser()

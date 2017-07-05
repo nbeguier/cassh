@@ -107,7 +107,7 @@ class AllClientKeys():
         Get every client key status.
         """
         if not ldap_authentification():
-            return 'Auth error'
+            return 'Authentication error'
         return list_keys()
 
 class Client():
@@ -119,7 +119,7 @@ class Client():
         Return informations.
         """
         if not ldap_authentification():
-            return 'Auth error'
+            return 'Authentication error'
         return list_keys(username=username)
 
 
@@ -128,7 +128,7 @@ class Client():
         Ask to sign pub key.
         """
         if not ldap_authentification():
-            return 'Auth error'
+            return 'Authentication error'
         pubkey = data()
         pubkey_hash = md5(pubkey).hexdigest()
         tmp_pubkey = NamedTemporaryFile(delete=False)
@@ -179,7 +179,7 @@ class Client():
         This function permit to add or update a ssh public key.
         """
         if not ldap_authentification():
-            return 'Auth error'
+            return 'Authentication error'
         pubkey = data()
         pubkey_hash = md5(pubkey).hexdigest()
         tmp_pubkey = NamedTemporaryFile(delete=False)
@@ -222,7 +222,7 @@ class Admin():
         Revoke or Active keys.
         """
         if not ldap_authentification(admin=True):
-            return 'Auth error'
+            return 'Authentication error'
         do_revoke = web_input()['revoke'] == 'true'
         pg_conn = pg_connection()
         if pg_conn is None:
@@ -268,7 +268,7 @@ class Admin():
         Delete keys (but DOESN'T REVOKE)
         """
         if not ldap_authentification(admin=True):
-            return 'Auth error'
+            return 'Authentication error'
         pg_conn = pg_connection()
         if pg_conn is None:
             return 'I am unable to connect to the database'
