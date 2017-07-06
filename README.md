@@ -5,7 +5,7 @@ Easy SSH for admin ONLY !
 ## Prerequisites
 
 ```bash
-sudo apt-get install python-psycopg2 python-webpy docker.io
+sudo apt-get install python-psycopg2 python-webpy python-ldap docker.io
 
 mkdir test-keys
 
