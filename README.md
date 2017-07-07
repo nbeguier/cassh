@@ -5,11 +5,19 @@ Easy SSH for admin ONLY !
 ## Prerequisites
 
 ```bash
-sudo apt-get install python-psycopg2 python-webpy python-ldap docker.io
+# Demo PG database
+sudo apt-get install docker.io
+
+# Server side
+sudo apt-get install python-psycopg2 python-webpy python-ldap
 
 mkdir test-keys
 
 ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
+
+
+# Client side
+sudo apt-get install python-requests
 ```
 
 Then, initialize db
