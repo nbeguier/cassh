@@ -22,16 +22,9 @@ disable_warnings()
 # Debug
 # from pdb import set_trace as st
 
-def display_devices_type(devices_type):
-    """
-    Display results.
-    """
-    for device_type in devices_type['results']:
-        print(device_type['model'])
-
 def read_conf(conf_path):
     """
-    Read LBCSSH configuration file.
+    Read LBCSSH configuration file and return metadata.
     """
     config = ConfigParser()
     config.read(conf_path)
@@ -42,7 +35,7 @@ def read_conf(conf_path):
         .replace('~', getenv('HOME'))
         user_metadata['url'] = config.get('user', 'url')
     except NoOptionError as error_msg:
-        print("Can't read configuration file...")
+        print('Can\'t read configuration file...')
         print(error_msg)
         exit(1)
 
@@ -50,7 +43,7 @@ def read_conf(conf_path):
         user_metadata['auth'] = 'ldap'
         user_metadata['realname'] = config.get('ldap', 'realname')
     except NoOptionError as error_msg:
-        print("Can't read configuration file...")
+        print('Can\'t read configuration file...')
         print(error_msg)
         exit(1)
     except NoSectionError:
@@ -58,7 +51,7 @@ def read_conf(conf_path):
         user_metadata['realname'] = None
 
     if not isfile(user_metadata['pubkey_path']):
-        print("File %s does not exists" % user_metadata['pubkey_path'])
+        print('File %s doesn\'t exists' % user_metadata['pubkey_path'])
         exit(1)
 
     return user_metadata
@@ -81,17 +74,19 @@ class LBCSSH(object):
 
     def auth_url(self, prefix=None):
         """
-        Return a ?xxx=xxx data
+        Return a ?xxx=xxx to put at the end of a GET request.
         """
         passwd_message = 'Please type your LDAP password (user=%s): ' % self.realname
         if self.auth == 'ldap':
             if prefix is None:
-                return '?realname=%s&password=%s' % (self.realname, getpass(passwd_message))
+                return '?realname=%s&password=%s'\
+                    % (self.realname, getpass(passwd_message))
             else:
-                return prefix + '&realname=%s&password=%s' % (self.realname, getpass(passwd_message))
+                return prefix + '&realname=%s&password=%s'\
+                    % (self.realname, getpass(passwd_message))
         else:
             if prefix is None:
-                return ""
+                return ''
             else:
                 return prefix
 
@@ -119,7 +114,7 @@ class LBCSSH(object):
 
     def add(self):
         """
-        Add a key.
+        Add a public key.
         """
         pubkey = open(self.pubkey_path, 'rb')
         try:
@@ -132,7 +127,7 @@ class LBCSSH(object):
 
     def sign(self):
         """
-        Sign a key.
+        Sign a public key.
         """
         pubkey = open(self.pubkey_path, 'rb')
         try:
@@ -145,7 +140,7 @@ class LBCSSH(object):
 
     def status(self):
         """
-        Get status of key.
+        Get status of public key.
         """
         try:
             req = self.session.get(self.url + '/client/' + self.name + self.auth_url(),\
@@ -157,7 +152,7 @@ class LBCSSH(object):
 
     def get_ca(self):
         """
-        Delete a key.
+        Get CA public key.
         """
         try:
             req = self.session.get(self.url + '/ca', verify=False)
@@ -168,7 +163,7 @@ class LBCSSH(object):
 
     def get_krl(self):
         """
-        Delete a key.
+        Get CA KRL.
         """
         try:
             req = self.session.get(self.url + '/krl', verify=False)
