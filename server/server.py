@@ -156,7 +156,6 @@ class Client():
             remove(tmp_pubkey.name)
             return 'User absent, try PUT'
 
-        # TODO : Add expiration !! user[4]
         if user[1] > 0:
             cur.close()
             pg_conn.close()
