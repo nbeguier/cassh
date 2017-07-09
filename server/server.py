@@ -96,7 +96,8 @@ def ldap_authentification(admin=False):
         real_name = web_input()['realname']
         password = web_input()['password']
         if ARGS.ldap_host is None or ARGS.ldap_binddn is None:
-            print 'Cannot parse ldap args : Host=%s, BindDN=%s' % (ARGS.ldap_host, ARGS.ldap_binddn)
+            print('Cannot parse ldap args : Host=%s, BindDN=%s'\
+                % (ARGS.ldap_host, ARGS.ldap_binddn))
             return False
         ldap_conn = ldap_open(ARGS.ldap_host)
         try:
