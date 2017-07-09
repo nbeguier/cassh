@@ -31,11 +31,11 @@ ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without
 #################
 # Python 3
 sudo apt-get install python3-pip
-pip3 install configparser
+pip3 install -r requirements.txt
 
 # Python 2
 sudo apt-get install python-pip
-pip install configparser
+pip3 install -r requirements.txt
 ```
 
 Then, initialize a postgresql db. If you already have one, reconfigure server.py
