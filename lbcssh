@@ -12,6 +12,7 @@ from sys import argv
 
 # Third party library imports
 from requests import Session
+from requests.exceptions import ConnectionError
 from urllib3 import disable_warnings
 
 # Disable HTTPs warnings
@@ -85,17 +86,21 @@ class LBCSSH(object):
         """
         Admin CLI
         """
-        if action == 'revoke':
-            req = self.session.get(self.url + 'admin/' + username + \
-                self.auth_url(prefix='?revoke=true'), verify=False)
-        elif action == 'active':
-            req = self.session.get(self.url + 'admin/' + username + \
-                self.auth_url(prefix='?revoke=false'), verify=False)
-        elif action == 'delete':
-            req = self.session.delete(self.url + 'admin/' + username + \
-                self.auth_url(), verify=False)
-        else:
-            print 'Action should be : revoke, active or delete'
+        try:
+            if action == 'revoke':
+                req = self.session.get(self.url + '/admin/' + username +\
+                    self.auth_url(prefix='?revoke=true'), verify=False)
+            elif action == 'active':
+                req = self.session.get(self.url + '/admin/' + username +\
+                    self.auth_url(prefix='?revoke=false'), verify=False)
+            elif action == 'delete':
+                req = self.session.delete(self.url + '/admin/' + username +\
+                    self.auth_url(), verify=False)
+            else:
+                print 'Action should be : revoke, active or delete'
+                exit(1)
+        except ConnectionError:
+            print 'Connection error : %s' % self.url
             exit(1)
         print req.text
 
@@ -104,8 +109,12 @@ class LBCSSH(object):
         Add a key.
         """
         pubkey = open(self.pubkey_path, 'rb')
-        req = self.session.put(self.url + '/client/' + self.name + self.auth_url(), \
-            data=pubkey, verify=False)
+        try:
+            req = self.session.put(self.url + '/client/' + self.name +\
+                self.auth_url(), data=pubkey, verify=False)
+        except ConnectionError:
+            print 'Connection error : %s' % self.url
+            exit(1)
         print req.text
 
     def sign(self):
@@ -113,29 +122,46 @@ class LBCSSH(object):
         Sign a key.
         """
         pubkey = open(self.pubkey_path, 'rb')
-        req = self.session.post(self.url + '/client/' + self.name + self.auth_url(), \
-            data=pubkey, verify=False)
+        try:
+            req = self.session.post(self.url + '/client/' + self.name +\
+                self.auth_url(), data=pubkey, verify=False)
+        except ConnectionError:
+            print 'Connection error : %s' % self.url
+            exit(1)
         print req.text
 
     def status(self):
         """
         Get status of key.
         """
-        req = self.session.get(self.url + '/client/' + self.name + self.auth_url(), verify=False)
+        try:
+            req = self.session.get(self.url + '/client/' + self.name + self.auth_url(),\
+                verify=False)
+        except ConnectionError:
+            print 'Connection error : %s' % self.url
+            exit(1)
         print req.text
 
     def get_ca(self):
         """
         Delete a key.
         """
-        req = self.session.get(self.url + '/ca', verify=False)
+        try:
+            req = self.session.get(self.url + '/ca', verify=False)
+        except ConnectionError:
+            print 'Connection error : %s' % self.url
+            exit(1)
         print req.text
 
     def get_krl(self):
         """
         Delete a key.
         """
-        req = self.session.get(self.url + '/krl', verify=False)
+        try:
+            req = self.session.get(self.url + '/krl', verify=False)
+        except ConnectionError:
+            print 'Connection error : %s' % self.url
+            exit(1)
         print req.text
 
 
