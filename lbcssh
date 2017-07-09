@@ -83,11 +83,12 @@ class LBCSSH(object):
         """
         Return a ?xxx=xxx data
         """
+        passwd_message = 'Please type your LDAP password (user=%s): ' % self.realname
         if self.auth == 'ldap':
             if prefix is None:
-                return '?realname=%s&password=%s' % (self.realname, getpass('pass: '))
+                return '?realname=%s&password=%s' % (self.realname, getpass(passwd_message))
             else:
-                return prefix + '&realname=%s&password=%s' % (self.realname, getpass('pass: '))
+                return prefix + '&realname=%s&password=%s' % (self.realname, getpass(passwd_message))
         else:
             if prefix is None:
                 return ""
