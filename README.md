@@ -19,9 +19,11 @@ ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without
 # Client side
 # Python 3
 sudo apt-get install python3-pip
+pip3 install configparser
 
 # Python 2
 sudo apt-get install python-pip
+pip install configparser
 ```
 
 Then, initialize a postgresql db. If you already have one, reconfigure server.py
@@ -98,16 +100,16 @@ pubkey_path = ${PWD}/test-keys/id_rsa.pub
 url = http://localhost:8080
 EOF
 
-# List keys (just in case... it should be '[]')
-curl http://localhost:8080/client
+# List keys
+python lbcssh status
 
 # Add it into server
-curl -X PUT -d @test-keys/id_rsa.pub http://localhost:8080/client/toto
+python lbcssh add
 
 # ADMIN: Active key
-curl http://localhost:8080/admin/toto?revoke=false
+python lbcssh admin user active
 
 # Sign it !
-curl -X POST -d @test-keys/id_rsa.pub http://localhost:8080/client/toto
+python lbcssh sign
 ```
 The output is the signing key.
