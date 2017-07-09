@@ -37,7 +37,7 @@ def read_conf(conf_path):
     try:
         user_metadata['name'] = config.get('user', 'name')
         user_metadata['realname'] = config.get('user', 'realname')
-        user_metadata['pubkey_path'] = config.get('user', 'pubkey_path')
+        user_metadata['pubkey_path'] = config.get('user', 'pubkey_path').replace('~', getenv('HOME'))
         user_metadata['url'] = config.get('user', 'url')
         user_metadata['auth'] = config.get('user', 'auth')
     except NoOptionError as error_msg:
@@ -76,7 +76,10 @@ class LBCSSH(object):
             else:
                 return prefix + '&realname=%s&password=%s' % (self.realname, getpass('pass: '))
         else:
-            return prefix
+            if prefix is None:
+                return ""
+            else:
+                return prefix
 
     def admin(self, username, action):
         """
@@ -101,7 +104,7 @@ class LBCSSH(object):
         Add a key.
         """
         pubkey = open(self.pubkey_path, 'rb')
-        req = self.session.put(self.url + 'client/' + self.name + self.auth_url(), \
+        req = self.session.put(self.url + '/client/' + self.name + self.auth_url(), \
             data=pubkey, verify=False)
         print req.text
 
@@ -110,7 +113,7 @@ class LBCSSH(object):
         Sign a key.
         """
         pubkey = open(self.pubkey_path, 'rb')
-        req = self.session.post(self.url + 'client/' + self.name + self.auth_url(), \
+        req = self.session.post(self.url + '/client/' + self.name + self.auth_url(), \
             data=pubkey, verify=False)
         print req.text
 
@@ -118,21 +121,21 @@ class LBCSSH(object):
         """
         Get status of key.
         """
-        req = self.session.get(self.url + 'client/' + self.name + self.auth_url(), verify=False)
+        req = self.session.get(self.url + '/client/' + self.name + self.auth_url(), verify=False)
         print req.text
 
     def get_ca(self):
         """
         Delete a key.
         """
-        req = self.session.get(self.url + 'ca', verify=False)
+        req = self.session.get(self.url + '/ca', verify=False)
         print req.text
 
     def get_krl(self):
         """
         Delete a key.
         """
-        req = self.session.get(self.url + 'krl', verify=False)
+        req = self.session.get(self.url + '/krl', verify=False)
         print req.text
 
 
