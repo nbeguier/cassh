@@ -175,7 +175,7 @@ if __name__ == '__main__':
         print '[user]'
         print 'name = user'
         print 'realname = Ursula Ser'
-        print 'pubkey_path = ~/.ssh/id_rsa'
+        print 'pubkey_path = ~/.ssh/id_rsa.pub'
         print 'url = https://lbcssh.net'
         print 'auth = None # None or ldap'
         exit(1)
