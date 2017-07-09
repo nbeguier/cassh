@@ -1,0 +1,3 @@
+python-ldap
+psycopg2
+web.py
