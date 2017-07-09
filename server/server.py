@@ -11,7 +11,7 @@ from time import time
 
 # Third party library imports
 from ldap import open as ldap_open
-from psycopg2 import connect, OperationalError
+from psycopg2 import connect, OperationalError, ProgrammingError
 from web import application, data, httpserver, input as web_input
 from web.wsgiserver import CherryPyWSGIServer
 
@@ -52,22 +52,28 @@ def pg_connection(dbname='postgres', user='postgres', host='localhost',\
     """
     Return a connection to the db.
     """
+    message = ''
     try:
         pg_conn = connect("dbname='%s' user='%s' host='%s' password='%s'"\
             % (dbname, user, host, password))
     except OperationalError:
-        print "I am unable to connect to the database"
+        message = 'Server cannot connect to datdabase'
         pg_conn = None
-    return pg_conn
+    try:
+        pg_conn.cursor().execute("""SELECT * FROM USERS""")
+    except ProgrammingError:
+        message = 'Server cannot connect to table in database'
+        pg_conn = None
+    return pg_conn, message
 
 
 def list_keys(username=None):
     """
     Return all keys.
     """
-    pg_conn = pg_connection()
+    pg_conn, message = pg_connection()
     if pg_conn is None:
-        return 'I am unable to connect to the database'
+        return message
     cur = pg_conn.cursor()
 
     # Search if key already exists
@@ -134,10 +140,10 @@ class Client():
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
-        pg_conn = pg_connection()
+        pg_conn, message = pg_connection()
         if pg_conn is None:
             remove(tmp_pubkey.name)
-            return 'I am unable to connect to the database'
+            return message
         cur = pg_conn.cursor()
 
         # Search if key already exists
@@ -185,10 +191,10 @@ class Client():
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
-        pg_conn = pg_connection()
+        pg_conn, message = pg_connection()
         if pg_conn is None:
             remove(tmp_pubkey.name)
-            return 'I am unable to connect to the database'
+            return message
         cur = pg_conn.cursor()
 
         # Search if key already exists
@@ -224,9 +230,9 @@ class Admin():
         if not ldap_authentification(admin=True):
             return 'Authentication error'
         do_revoke = web_input()['revoke'] == 'true'
-        pg_conn = pg_connection()
+        pg_conn, message = pg_connection()
         if pg_conn is None:
-            return 'I am unable to connect to the database'
+            return message
         cur = pg_conn.cursor()
 
         # Search if key already exists
@@ -269,9 +275,9 @@ class Admin():
         """
         if not ldap_authentification(admin=True):
             return 'Authentication error'
-        pg_conn = pg_connection()
+        pg_conn, message = pg_connection()
         if pg_conn is None:
-            return 'I am unable to connect to the database'
+            return message
         cur = pg_conn.cursor()
 
         # Search if key already exists
