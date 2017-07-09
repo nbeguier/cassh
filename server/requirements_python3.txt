@@ -1,3 +1,0 @@
-python3-ldap
-psycopg2
-web.py==0.40.dev0

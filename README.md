@@ -13,16 +13,13 @@ sudo apt-get install docker.io
 ## Server side ##
 #################
 # Python 3
-sudo apt-get install libpq-dev
-sudo apt-get install python3-pip
-pip3 install -r server/requirements_python3.txt
+# Not working, python-ldap only in v2
 
 # Python 2
 sudo apt-get install libsasl2-dev python-dev libldap2-dev libssl-dev libpq-dev
 sudo apt-get install python-pip
 pip install -r server/requirements_python2.txt
-
-
+# or
 sudo apt-get install python-psycopg2 python-webpy python-ldap
 
 mkdir test-keys
