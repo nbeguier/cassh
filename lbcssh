@@ -4,7 +4,7 @@
 
 # Standard library imports
 from argparse import ArgumentParser
-from ConfigParser import ConfigParser, NoOptionError
+from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 from getpass import getpass
 from os import getenv
 from os.path import isfile
@@ -37,14 +37,25 @@ def read_conf(conf_path):
     user_metadata = {}
     try:
         user_metadata['name'] = config.get('user', 'name')
-        user_metadata['realname'] = config.get('user', 'realname')
-        user_metadata['pubkey_path'] = config.get('user', 'pubkey_path').replace('~', getenv('HOME'))
+        user_metadata['pubkey_path'] = config.get('user', 'pubkey_path')\
+        .replace('~', getenv('HOME'))
         user_metadata['url'] = config.get('user', 'url')
-        user_metadata['auth'] = config.get('user', 'auth')
     except NoOptionError as error_msg:
         print "Can't read configuration file..."
         print error_msg
         exit(1)
+
+    try:
+        user_metadata['auth'] = 'ldap'
+        user_metadata['realname'] = config.get('ldap', 'realname')
+    except NoOptionError as error_msg:
+        print "Can't read configuration file..."
+        print error_msg
+        exit(1)
+    except NoSectionError:
+        user_metadata['auth'] = None
+        user_metadata['realname'] = None
+
     if not isfile(user_metadata['pubkey_path']):
         print "File %s does not exists" % user_metadata['pubkey_path']
         exit(1)
@@ -174,10 +185,11 @@ if __name__ == '__main__':
         print 'Example:'
         print '[user]'
         print 'name = user'
-        print 'realname = Ursula Ser'
         print 'pubkey_path = ~/.ssh/id_rsa.pub'
         print 'url = https://lbcssh.net'
-        print 'auth = None # None or ldap'
+        print ''
+        print '# [ldap]'
+        print '# realname = Ursula Ser'
         exit(1)
 
     PARSER = ArgumentParser()
