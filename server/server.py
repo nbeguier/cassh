@@ -3,6 +3,7 @@
 """
 Sign a user's SSH public key.
 """
+from __future__ import print_function
 from argparse import ArgumentParser
 from hashlib import md5
 from os import remove
