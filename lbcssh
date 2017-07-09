@@ -3,14 +3,15 @@
 """ LBCSSH CLI """
 
 # Standard library imports
+from __future__ import print_function
 from argparse import ArgumentParser
-from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 from getpass import getpass
 from os import getenv
 from os.path import isfile
 from sys import argv
 
 # Third party library imports
+from configparser import ConfigParser, NoOptionError, NoSectionError
 from requests import Session
 from requests.exceptions import ConnectionError
 from urllib3 import disable_warnings
@@ -26,7 +27,7 @@ def display_devices_type(devices_type):
     Display results.
     """
     for device_type in devices_type['results']:
-        print device_type['model']
+        print(device_type['model'])
 
 def read_conf(conf_path):
     """
@@ -41,23 +42,23 @@ def read_conf(conf_path):
         .replace('~', getenv('HOME'))
         user_metadata['url'] = config.get('user', 'url')
     except NoOptionError as error_msg:
-        print "Can't read configuration file..."
-        print error_msg
+        print("Can't read configuration file...")
+        print(error_msg)
         exit(1)
 
     try:
         user_metadata['auth'] = 'ldap'
         user_metadata['realname'] = config.get('ldap', 'realname')
     except NoOptionError as error_msg:
-        print "Can't read configuration file..."
-        print error_msg
+        print("Can't read configuration file...")
+        print(error_msg)
         exit(1)
     except NoSectionError:
         user_metadata['auth'] = None
         user_metadata['realname'] = None
 
     if not isfile(user_metadata['pubkey_path']):
-        print "File %s does not exists" % user_metadata['pubkey_path']
+        print("File %s does not exists" % user_metadata['pubkey_path'])
         exit(1)
 
     return user_metadata
@@ -108,12 +109,12 @@ class LBCSSH(object):
                 req = self.session.delete(self.url + '/admin/' + username +\
                     self.auth_url(), verify=False)
             else:
-                print 'Action should be : revoke, active or delete'
+                print('Action should be : revoke, active or delete')
                 exit(1)
         except ConnectionError:
-            print 'Connection error : %s' % self.url
+            print('Connection error : %s' % self.url)
             exit(1)
-        print req.text
+        print(req.text)
 
     def add(self):
         """
@@ -124,9 +125,9 @@ class LBCSSH(object):
             req = self.session.put(self.url + '/client/' + self.name +\
                 self.auth_url(), data=pubkey, verify=False)
         except ConnectionError:
-            print 'Connection error : %s' % self.url
+            print('Connection error : %s' % self.url)
             exit(1)
-        print req.text
+        print(req.text)
 
     def sign(self):
         """
@@ -137,9 +138,9 @@ class LBCSSH(object):
             req = self.session.post(self.url + '/client/' + self.name +\
                 self.auth_url(), data=pubkey, verify=False)
         except ConnectionError:
-            print 'Connection error : %s' % self.url
+            print('Connection error : %s' % self.url)
             exit(1)
-        print req.text
+        print(req.text)
 
     def status(self):
         """
@@ -149,9 +150,9 @@ class LBCSSH(object):
             req = self.session.get(self.url + '/client/' + self.name + self.auth_url(),\
                 verify=False)
         except ConnectionError:
-            print 'Connection error : %s' % self.url
+            print('Connection error : %s' % self.url)
             exit(1)
-        print req.text
+        print(req.text)
 
     def get_ca(self):
         """
@@ -160,9 +161,9 @@ class LBCSSH(object):
         try:
             req = self.session.get(self.url + '/ca', verify=False)
         except ConnectionError:
-            print 'Connection error : %s' % self.url
+            print('Connection error : %s' % self.url)
             exit(1)
-        print req.text
+        print(req.text)
 
     def get_krl(self):
         """
@@ -171,9 +172,9 @@ class LBCSSH(object):
         try:
             req = self.session.get(self.url + '/krl', verify=False)
         except ConnectionError:
-            print 'Connection error : %s' % self.url
+            print('Connection error : %s' % self.url)
             exit(1)
-        print req.text
+        print(req.text)
 
 
 if __name__ == '__main__':
@@ -181,15 +182,15 @@ if __name__ == '__main__':
     CONF_FILE = '%s/.lbcssh' % getenv('HOME')
 
     if not isfile(CONF_FILE):
-        print 'Config file missing : %s' % CONF_FILE
-        print 'Example:'
-        print '[user]'
-        print 'name = user'
-        print 'pubkey_path = ~/.ssh/id_rsa.pub'
-        print 'url = https://lbcssh.net'
-        print ''
-        print '# [ldap]'
-        print '# realname = Ursula Ser'
+        print('Config file missing : %s' % CONF_FILE)
+        print('Example:')
+        print('[user]')
+        print('name = user')
+        print('pubkey_path = ~/.ssh/id_rsa.pub')
+        print('url = https://lbcssh.net')
+        print('')
+        print('# [ldap]')
+        print('# realname = Ursula Ser')
         exit(1)
 
     PARSER = ArgumentParser()
@@ -219,6 +220,10 @@ if __name__ == '__main__':
     ARGS = PARSER.parse_args()
 
     LBC = LBCSSH(read_conf(CONF_FILE))
+
+    if len(argv) == 1:
+        PARSER.print_help()
+        exit(1)
 
     if argv[1] == 'add':
         LBC.add()

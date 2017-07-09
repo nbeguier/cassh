@@ -1,6 +1,7 @@
 # LBCSSH
 
 Easy SSH for admin ONLY !
+Developped for @leboncoin
 
 ## Prerequisites
 
@@ -12,15 +13,18 @@ sudo apt-get install docker.io
 sudo apt-get install python-psycopg2 python-webpy python-ldap
 
 mkdir test-keys
-
 ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
 
 
 # Client side
-sudo apt-get install python-requests
+# Python 3
+sudo apt-get install python3-pip
+
+# Python 2
+sudo apt-get install python-pip
 ```
 
-Then, initialize db
+Then, initialize a postgresql db. If you already have one, reconfigure server.py
 ```bash
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
 bash demo/server_init.sh
@@ -83,7 +87,16 @@ Generate key pair then sign it !
 
 ```bash
 # Generate key pair
+mkdir test-keys
 ssh-keygen -t rsa -b 4096 -o -a 100 -f test-keys/id_rsa
+
+rm -f ~/.lbcssh
+cat << EOF > ~/.lbcssh
+[user]
+name = user
+pubkey_path = ${PWD}/test-keys/id_rsa.pub
+url = http://localhost:8080
+EOF
 
 # List keys (just in case... it should be '[]')
 curl http://localhost:8080/client
