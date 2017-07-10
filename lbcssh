@@ -215,25 +215,32 @@ if __name__ == '__main__':
     SUBPARSERS = PARSER.add_subparsers(help='commands')
 
     # ADMIN Arguments
-    ADMIN_PARSER = SUBPARSERS.add_parser('admin', help='TODO')
-    ADMIN_PARSER.add_argument('username', action='store', help='TODO')
-    ADMIN_PARSER.add_argument('action', action='store', help='TODO')
+    ADMIN_PARSER = SUBPARSERS.add_parser('admin',\
+        help='Administrator command : active - revoke - delete keys')
+    ADMIN_PARSER.add_argument('username', action='store',\
+        help='Username of client\'s key')
+    ADMIN_PARSER.add_argument('action', action='store',\
+        help='Choice between : active - revoke - delete')
 
     # ADD Arguments
-    ADD_PARSER = SUBPARSERS.add_parser('add', help='TODO')
+    ADD_PARSER = SUBPARSERS.add_parser('add', help='Add a key to remote ssh ca server.')
 
     # SIGN Arguments
-    SIGN_PARSER = SUBPARSERS.add_parser('sign', help='TODO')
-    SIGN_PARSER.add_argument('-w', '--write-on-disk', action='store_true', help='TODO')
+    SIGN_PARSER = SUBPARSERS.add_parser('sign', help='Sign its key by remote ssh ca server.')
+    SIGN_PARSER.add_argument('-w', '--write-on-disk', action='store_true',\
+        help='Write the key on disk. Specified by \'key_signed_path\' in configuration file')
 
     # STATUS Arguments
-    STATUS_PARSER = SUBPARSERS.add_parser('status', help='TODO')
+    STATUS_PARSER = SUBPARSERS.add_parser('status',\
+        help='Display key current status on remote ssh ca server.')
 
     # CA Arguments
-    CA_PARSER = SUBPARSERS.add_parser('ca', help='TODO')
+    CA_PARSER = SUBPARSERS.add_parser('ca',\
+        help='Display CA public key.')
 
     # KRL Arguments
-    KRL_PARSER = SUBPARSERS.add_parser('krl', help='TODO')
+    KRL_PARSER = SUBPARSERS.add_parser('krl',\
+        help='Display CA KRL.')
 
     ARGS = PARSER.parse_args()
 
