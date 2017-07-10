@@ -108,7 +108,8 @@ rm -f ~/.lbcssh
 cat << EOF > ~/.lbcssh
 [user]
 name = user
-pubkey_path = ${PWD}/test-keys/id_rsa.pub
+key_path = ${PWD}/test-keys/id_rsa
+key_signed_path = ${PWD}/test-keys/id_rsa_signed
 url = http://localhost:8080
 EOF
 

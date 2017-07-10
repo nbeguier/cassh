@@ -90,7 +90,11 @@ def ldap_authentification(admin=False):
     Return True if user is well authentified
     """
     if ARGS.enable_ldap:
-        real_name = web_input()['realname']
+        try:
+            real_name = web_input()['realname']
+        except KeyError:
+            real_name = None
+            return False
         password = web_input()['password']
         if ARGS.ldap_host is None or ARGS.ldap_binddn is None:
             print('Cannot parse ldap args : Host=%s, BindDN=%s'\
@@ -112,7 +116,7 @@ class AllClientKeys():
         Get every client key status.
         """
         if not ldap_authentification():
-            return 'Authentication error'
+            return 'Error : Authentication'
         return list_keys()
 
 class Client():
@@ -124,7 +128,7 @@ class Client():
         Return informations.
         """
         if not ldap_authentification():
-            return 'Authentication error'
+            return 'Error : Authentication'
         return list_keys(username=username)
 
 
@@ -133,7 +137,7 @@ class Client():
         Ask to sign pub key.
         """
         if not ldap_authentification():
-            return 'Authentication error'
+            return 'Error : Authentication'
         pubkey = data()
         pubkey_hash = md5(pubkey).hexdigest()
         tmp_pubkey = NamedTemporaryFile(delete=False)
@@ -153,7 +157,7 @@ class Client():
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
-            return 'User absent, try PUT'
+            return 'Error : User or Key absent, add your key again.'
 
         if user[1] > 0:
             cur.close()
@@ -171,7 +175,7 @@ class Client():
             cur.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
                 % (time(), username))
         except:
-            cert_contents = 'Error signing key'
+            cert_contents = 'Error : signing key'
         remove(tmp_pubkey.name)
         pg_conn.commit()
         cur.close()
@@ -183,7 +187,7 @@ class Client():
         This function permit to add or update a ssh public key.
         """
         if not ldap_authentification():
-            return 'Authentication error'
+            return 'Error : Authentication'
         pubkey = data()
         pubkey_hash = md5(pubkey).hexdigest()
         tmp_pubkey = NamedTemporaryFile(delete=False)
@@ -226,7 +230,7 @@ class Admin():
         Revoke or Active keys.
         """
         if not ldap_authentification(admin=True):
-            return 'Authentication error'
+            return 'Error : Authentication'
         do_revoke = web_input()['revoke'] == 'true'
         pg_conn, message = pg_connection()
         if pg_conn is None:
@@ -272,7 +276,7 @@ class Admin():
         Delete keys (but DOESN'T REVOKE)
         """
         if not ldap_authentification(admin=True):
-            return 'Authentication error'
+            return 'Error : Authentication'
         pg_conn, message = pg_connection()
         if pg_conn is None:
             return message

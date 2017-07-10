@@ -6,8 +6,9 @@
 from __future__ import print_function
 from argparse import ArgumentParser
 from getpass import getpass
-from os import getenv
+from os import chmod, getenv, system
 from os.path import isfile
+from shutil import copyfile
 from sys import argv
 
 # Third party library imports
@@ -31,12 +32,18 @@ def read_conf(conf_path):
     user_metadata = {}
     try:
         user_metadata['name'] = config.get('user', 'name')
-        user_metadata['pubkey_path'] = config.get('user', 'pubkey_path')\
+        user_metadata['key_path'] = config.get('user', 'key_path')\
+        .replace('~', getenv('HOME'))
+        user_metadata['key_signed_path'] = config.get('user', 'key_signed_path')\
         .replace('~', getenv('HOME'))
         user_metadata['url'] = config.get('user', 'url')
     except NoOptionError as error_msg:
         print('Can\'t read configuration file...')
         print(error_msg)
+        exit(1)
+
+    if user_metadata['key_path'] == user_metadata['key_signed_path']:
+        print('You should put a different path for key_path and key_signed_path.')
         exit(1)
 
     try:
@@ -50,8 +57,8 @@ def read_conf(conf_path):
         user_metadata['auth'] = None
         user_metadata['realname'] = None
 
-    if not isfile(user_metadata['pubkey_path']):
-        print('File %s doesn\'t exists' % user_metadata['pubkey_path'])
+    if not isfile(user_metadata['key_path']):
+        print('File %s doesn\'t exists' % user_metadata['key_path'])
         exit(1)
 
     return user_metadata
@@ -65,7 +72,8 @@ class LBCSSH(object):
         Init file.
         """
         self.name = user_metadata['name']
-        self.pubkey_path = user_metadata['pubkey_path']
+        self.key_path = user_metadata['key_path']
+        self.key_signed_path = user_metadata['key_signed_path']
         self.session = Session()
         self.url = user_metadata['url']
         self.auth = user_metadata['auth']
@@ -116,7 +124,7 @@ class LBCSSH(object):
         """
         Add a public key.
         """
-        pubkey = open(self.pubkey_path, 'rb')
+        pubkey = open('%s.pub' % self.key_path, 'rb')
         try:
             req = self.session.put(self.url + '/client/' + self.name +\
                 self.auth_url(), data=pubkey, verify=False)
@@ -125,18 +133,30 @@ class LBCSSH(object):
             exit(1)
         print(req.text)
 
-    def sign(self):
+    def sign(self, do_write_on_disk):
         """
         Sign a public key.
         """
-        pubkey = open(self.pubkey_path, 'rb')
+        pubkey = open('%s.pub' % self.key_path, 'rb')
         try:
             req = self.session.post(self.url + '/client/' + self.name +\
                 self.auth_url(), data=pubkey, verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
-        print(req.text)
+        if 'Error' in req.text:
+            print(req.text)
+            exit(1)
+        if do_write_on_disk:
+            copyfile(self.key_path, self.key_signed_path)
+            chmod(self.key_signed_path, 0600)
+            pubkey_signed = open('%s.pub' % self.key_signed_path, 'w+')
+            pubkey_signed.write(req.text)
+            pubkey_signed.close()
+            print('Public key successfuly signed')
+            system('ssh-add %s' % self.key_signed_path)
+        else:
+            print(req.text)
 
     def status(self):
         """
@@ -182,7 +202,8 @@ if __name__ == '__main__':
         print('Example:')
         print('[user]')
         print('name = user')
-        print('pubkey_path = ~/.ssh/id_rsa.pub')
+        print('key_path = ~/.ssh/id_rsa')
+        print('key_signed_path = ~/.ssh/id_rsa_signed')
         print('url = https://lbcssh.net')
         print('')
         print('# [ldap]')
@@ -203,6 +224,7 @@ if __name__ == '__main__':
 
     # SIGN Arguments
     SIGN_PARSER = SUBPARSERS.add_parser('sign', help='TODO')
+    SIGN_PARSER.add_argument('-w', '--write-on-disk', action='store_true', help='TODO')
 
     # STATUS Arguments
     STATUS_PARSER = SUBPARSERS.add_parser('status', help='TODO')
@@ -224,7 +246,7 @@ if __name__ == '__main__':
     if argv[1] == 'add':
         LBC.add()
     elif argv[1] == 'sign':
-        LBC.sign()
+        LBC.sign(ARGS.write_on_disk)
     elif argv[1] == 'status':
         LBC.status()
     elif argv[1] == 'ca':
