@@ -19,7 +19,7 @@ from web.wsgiserver import CherryPyWSGIServer
 from ssh_utils import Authority
 
 # DEBUG
-# from pdb import set_trace as st
+from pdb import set_trace as st
 
 URLS = (
     '/client', 'AllClientKeys',
@@ -148,7 +148,8 @@ class Client():
         cur = pg_conn.cursor()
 
         # Search if key already exists
-        cur.execute("""SELECT * FROM USERS WHERE SSH_KEY_HASH='%s' AND NAME='%s'""" \
+        st()
+        cur.execute("""SELECT * FROM USERS WHERE SSH_KEY='%s' AND NAME='%s'""" \
             % (pubkey, username))
         user = cur.fetchone()
         if user is None:
@@ -202,15 +203,15 @@ class Client():
 
         # CREATE NEW USER
         if user is None:
-            cur.execute("""INSERT INTO USERS VALUES ('%s', %s, %s, '%s')""" \
-                % (username, 2, 0, pubkey))
+            cur.execute("""INSERT INTO USERS VALUES ('%s', %s, %s, '%s', '%s')""" \
+                % (username, 2, 0, '', pubkey))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
             return 'Create user=%s. Pending request.' % username
         else:
-            cur.execute("""UPDATE USERS SET SSH_KEY_HASH='%s', STATE=2, EXPIRATION=0 \
+            cur.execute("""UPDATE USERS SET SSH_KEY='%s', STATE=2, EXPIRATION=0 \
                 WHERE NAME = '%s'""" % (pubkey, username))
             pg_conn.commit()
             cur.close()

@@ -1,33 +1,18 @@
 #!/usr/bin/env python
-""" ssh-keygen lib """
+""" ssh_utils lib """
 
-import ConfigParser
-import os
-import subprocess
-import time
+from os import remove
+from subprocess import check_output
 
-class SSHCAException(Exception):
-    """ SSHCAException """
-    pass
-
-class SSHCAInvalidConfiguration(SSHCAException):
-    """ SSHCAInvalidConfiguration """
-    pass
-
-
-def get_config_value(config, section, name, required=False):
+def get_fingerprint(public_key_filename):
     """
-    Get config value
+    Return Fingerprint
     """
-    if config:
-        try:
-            return config.get(section, name)
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-            if required:
-                raise SSHCAInvalidConfiguration(
-                    "option '%s' is required in section '%s'" %
-                    (name, section))
-    return None
+    return check_output([
+        'ssh-keygen',
+        '-l',
+        '-f', public_key_filename,
+        '-E', 'md5']).split('\n')[0]
 
 def get_cert_contents(public_key_filename):
     """
@@ -38,7 +23,7 @@ def get_cert_contents(public_key_filename):
     cert_filename = public_key_filename + '-cert.pub'
     with open(cert_filename, 'r') as pub_key:
         cert_contents = pub_key.read()
-    os.remove(cert_filename)
+    remove(cert_filename)
     return cert_contents
 
 class Authority(object):
@@ -52,7 +37,7 @@ class Authority(object):
         """
         Sign public key
         """
-        subprocess.check_output([
+        check_output([
             'ssh-keygen',
             '-s', self.ca_key,
             '-I', username,
