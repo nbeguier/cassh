@@ -6,7 +6,7 @@
 from __future__ import print_function
 from argparse import ArgumentParser
 from getpass import getpass
-from os import chmod, getenv, system
+from os import chmod, getenv
 from os.path import isfile
 from shutil import copyfile
 from sys import argv
