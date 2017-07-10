@@ -30,8 +30,9 @@ class Authority(object):
     """
     Class which control authority certification
     """
-    def __init__(self, ca_key):
+    def __init__(self, ca_key, krl):
         self.ca_key = ca_key
+        self.krl = krl
 
     def sign_public_user_key(self, public_key_filename, username, duration, principals):
         """
@@ -45,3 +46,15 @@ class Authority(object):
             '-n', principals,
             public_key_filename])
         return get_cert_contents(public_key_filename)
+
+    def update_krl(self, public_key_filename):
+        """
+        Update KRL by revoking key.
+        """
+        check_output([
+            'ssh-keygen',
+            '-k',
+            '-f', self.krl,
+            '-u',
+            '-s', self.ca_key,
+            public_key_filename])

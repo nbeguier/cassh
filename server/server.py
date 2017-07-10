@@ -165,7 +165,7 @@ class Client():
             return "Status: %s" % STATES[user[1]]
 
         # Load SSH CA
-        ca_ssh = Authority(ARGS.ca)
+        ca_ssh = Authority(ARGS.ca, ARGS.krl)
 
         # Sign the key
         try:
@@ -247,9 +247,18 @@ class Admin():
         elif do_revoke:
             cur.execute("""UPDATE USERS SET STATE=1 WHERE NAME = '%s'""" % username)
             pg_conn.commit()
+            message = 'Revoke user=%s.' % username
+            # Load SSH CA and revoke key
+            ca_ssh = Authority(ARGS.ca, ARGS.krl)
+            cur.execute("""SELECT SSH_KEY FROM USERS WHERE NAME = '%s'""" % username)
+            pubkey = cur.fetchone()[0]
+            tmp_pubkey = NamedTemporaryFile(delete=False)
+            tmp_pubkey.write(pubkey)
+            tmp_pubkey.close()
+            ca_ssh.update_krl(tmp_pubkey.name)
             cur.close()
             pg_conn.close()
-            message = 'Revoke user=%s.' % username
+            remove(tmp_pubkey.name)
         # If user is in PENDING state
         elif user[1] == 2:
             cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)
