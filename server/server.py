@@ -5,7 +5,6 @@ Sign a user's SSH public key.
 """
 from __future__ import print_function
 from argparse import ArgumentParser
-from hashlib import md5
 from os import remove
 from tempfile import NamedTemporaryFile
 from time import time
@@ -139,7 +138,6 @@ class Client():
         if not ldap_authentification():
             return 'Error : Authentication'
         pubkey = data()
-        pubkey_hash = md5(pubkey).hexdigest()
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
@@ -151,7 +149,7 @@ class Client():
 
         # Search if key already exists
         cur.execute("""SELECT * FROM USERS WHERE SSH_KEY_HASH='%s' AND NAME='%s'""" \
-            % (pubkey_hash, username))
+            % (pubkey, username))
         user = cur.fetchone()
         if user is None:
             cur.close()
@@ -189,7 +187,6 @@ class Client():
         if not ldap_authentification():
             return 'Error : Authentication'
         pubkey = data()
-        pubkey_hash = md5(pubkey).hexdigest()
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
@@ -206,7 +203,7 @@ class Client():
         # CREATE NEW USER
         if user is None:
             cur.execute("""INSERT INTO USERS VALUES ('%s', %s, %s, '%s')""" \
-                % (username, 2, 0, pubkey_hash))
+                % (username, 2, 0, pubkey))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
@@ -214,7 +211,7 @@ class Client():
             return 'Create user=%s. Pending request.' % username
         else:
             cur.execute("""UPDATE USERS SET SSH_KEY_HASH='%s', STATE=2, EXPIRATION=0 \
-                WHERE NAME = '%s'""" % (pubkey_hash, username))
+                WHERE NAME = '%s'""" % (pubkey, username))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
