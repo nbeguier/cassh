@@ -37,6 +37,7 @@ STATES = {
 
 PARSER = ArgumentParser()
 PARSER.add_argument('--ca', action='store', help='CA private key')
+PARSER.add_argument('--krl', action='store', help='CA KRL')
 PARSER.add_argument('--enable-ldap', action='store_true', help='Enable LDAP authentication')
 PARSER.add_argument('--ldap-host', action='store', help='LDAP server hostname')
 PARSER.add_argument('--ldap-binddn', action='store', help='LDAP BindDN')
@@ -305,7 +306,7 @@ class Krl():
         """
         Return krl.
         """
-        return 'TODO'
+        return open(ARGS.krl, 'rb')
 
 class MyApplication(application):
     """
@@ -318,6 +319,8 @@ class MyApplication(application):
 if __name__ == "__main__":
     if not ARGS.ca:
         PARSER.error('--ca argument is required !')
+    if not ARGS.krl:
+        PARSER.error('--krl argument is required !')
 
     if ARGS.ssl and not (ARGS.ssl_certificate and ARGS.ssl_private_key):
         PARSER.error('You have to give --ssl-private-key and --ssl-certificate arguments')

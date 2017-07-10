@@ -24,6 +24,7 @@ sudo apt-get install python-psycopg2 python-webpy python-ldap
 
 mkdir test-keys
 ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
+ssh-keygen -k -f test-keys/revoked-keys
 
 
 #################
@@ -46,7 +47,7 @@ bash demo/server_init.sh
 
 Finally, start server
 ```bash
-bash demo/server_start.sh test-keys/id_rsa_ca
+bash demo/server_start.sh test-keys/id_rsa_ca test-keys/revoked-keys
 ```
 
 ## Client CLI
