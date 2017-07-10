@@ -16,10 +16,10 @@ from web import application, data, httpserver, input as web_input
 from web.wsgiserver import CherryPyWSGIServer
 
 # Own library
-from ssh_utils import Authority
+from ssh_utils import Authority, get_fingerprint
 
 # DEBUG
-from pdb import set_trace as st
+# from pdb import set_trace as st
 
 URLS = (
     '/client', 'AllClientKeys',
@@ -148,7 +148,6 @@ class Client():
         cur = pg_conn.cursor()
 
         # Search if key already exists
-        st()
         cur.execute("""SELECT * FROM USERS WHERE SSH_KEY='%s' AND NAME='%s'""" \
             % (pubkey, username))
         user = cur.fetchone()
@@ -191,6 +190,7 @@ class Client():
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
+        pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
         pg_conn, message = pg_connection()
         if pg_conn is None:
             remove(tmp_pubkey.name)
@@ -204,15 +204,15 @@ class Client():
         # CREATE NEW USER
         if user is None:
             cur.execute("""INSERT INTO USERS VALUES ('%s', %s, %s, '%s', '%s')""" \
-                % (username, 2, 0, '', pubkey))
+                % (username, 2, 0, pubkey_fingerprint, pubkey))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
             return 'Create user=%s. Pending request.' % username
         else:
-            cur.execute("""UPDATE USERS SET SSH_KEY='%s', STATE=2, EXPIRATION=0 \
-                WHERE NAME = '%s'""" % (pubkey, username))
+            cur.execute("""UPDATE USERS SET SSH_KEY='%s', SSH_KEY_HASH='%s', STATE=2, EXPIRATION=0 \
+                WHERE NAME = '%s'""" % (pubkey, pubkey_fingerprint, username))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
