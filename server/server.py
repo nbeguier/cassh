@@ -58,15 +58,12 @@ def pg_connection(dbname='postgres', user='postgres', host='localhost',\
         pg_conn = connect("dbname='%s' user='%s' host='%s' password='%s'"\
             % (dbname, user, host, password))
     except OperationalError:
-        message = 'Server cannot connect to datdabase'
-        pg_conn = None
+        return None, 'Server cannot connect to database'
     try:
         pg_conn.cursor().execute("""SELECT * FROM USERS""")
     except ProgrammingError:
-        message = 'Server cannot connect to table in database'
-        pg_conn = None
+        return None, 'Server cannot connect to table in database'
     return pg_conn, message
-
 
 def list_keys(username=None):
     """
