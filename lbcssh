@@ -154,7 +154,6 @@ class LBCSSH(object):
             pubkey_signed.write(req.text)
             pubkey_signed.close()
             print('Public key successfuly signed')
-            system('ssh-add %s' % self.key_signed_path)
         else:
             print(req.text)
 
