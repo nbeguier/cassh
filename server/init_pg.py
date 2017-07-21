@@ -33,9 +33,10 @@ def init_pg(pg_conn):
         exit(1)
     cur = pg_conn.cursor()
     cur.execute("""CREATE TABLE USERS(
-       NAME  TEXT  PRIMARY KEY  NOT NULL,
-       STATE          INT       NOT NULL,
-       EXPIRATION     INT       NOT NULL,
+       NAME           TEXT  PRIMARY KEY  NOT NULL,
+       REALNAME       TEXT               NOT NULL,
+       STATE          INT                NOT NULL,
+       EXPIRATION     INT                NOT NULL,
        SSH_KEY_HASH   TEXT,
        SSH_KEY        TEXT
     )""")

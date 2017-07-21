@@ -109,9 +109,20 @@ def ldap_authentification(admin=False):
             ldap_conn.bind_s(ARGS.ldap_binddn % real_name, password)
         except:
             return False
-        if admin and ARGS.ldap_admin_cn not in ldap_conn.search_s(ARGS.ldap_binddn % real_name, 2)[0][1]['memberOf']:
+        if admin and ARGS.ldap_admin_cn not in\
+            ldap_conn.search_s(ARGS.ldap_binddn % real_name, 2)[0][1]['memberOf']:
             return False
     return True
+
+def get_realname():
+    """
+    Return realname or None
+    """
+    try:
+        real_name = web_input()['realname']
+    except KeyError:
+        real_name = None
+    return real_name
 
 class AllClientKeys():
     """
@@ -121,9 +132,14 @@ class AllClientKeys():
         """
         Get every client key status.
         """
-        if not ldap_authentification():
+        if not ldap_authentification(admin=True):
             return 'Error : Authentication'
-        return list_keys()
+        try:
+            username = web_input()['username']
+        except KeyError:
+            username = None
+
+        return list_keys(username=username)
 
 class Client():
     """
@@ -154,6 +170,12 @@ class Client():
             return message
         cur = pg_conn.cursor()
 
+        # Check if realname is the same
+        cur.execute("""SELECT * FROM USERS WHERE NAME='%s' AND REALNAME='%s'"""\
+            % (username, get_realname()))
+        if cur.fetchone() is None:
+            return 'Error : Authentication'
+
         # Search if key already exists
         cur.execute("""SELECT * FROM USERS WHERE SSH_KEY='%s' AND NAME='%s'""" \
             % (pubkey, username))
@@ -164,7 +186,7 @@ class Client():
             remove(tmp_pubkey.name)
             return 'Error : User or Key absent, add your key again.'
 
-        if user[1] > 0:
+        if user[2] > 0:
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
@@ -210,14 +232,20 @@ class Client():
 
         # CREATE NEW USER
         if user is None:
-            cur.execute("""INSERT INTO USERS VALUES ('%s', %s, %s, '%s', '%s')""" \
-                % (username, 2, 0, pubkey_fingerprint, pubkey))
+            cur.execute("""INSERT INTO USERS VALUES ('%s', '%s', %s, %s, '%s', '%s')""" \
+                % (username, get_realname(), 2, 0, pubkey_fingerprint, pubkey))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
             return 'Create user=%s. Pending request.' % username
         else:
+            # Check if realname is the same
+            cur.execute("""SELECT * FROM USERS WHERE NAME='%s' AND REALNAME='%s'"""\
+                % (username, get_realname()))
+            if cur.fetchone() is None:
+                return 'Error : Authentication'
+            # Update entry into database
             cur.execute("""UPDATE USERS SET SSH_KEY='%s', SSH_KEY_HASH='%s', STATE=2, EXPIRATION=0 \
                 WHERE NAME = '%s'""" % (pubkey, pubkey_fingerprint, username))
             pg_conn.commit()
@@ -266,14 +294,14 @@ class Admin():
             pg_conn.close()
             remove(tmp_pubkey.name)
         # If user is in PENDING state
-        elif user[1] == 2:
+        elif user[2] == 2:
             cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)
             pg_conn.commit()
             cur.close()
             pg_conn.close()
             message = 'Active user=%s. SSH Key active but need to be signed.' % username
         # If user is in REVOKE state
-        elif user[1] == 1:
+        elif user[2] == 1:
             cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)
             pg_conn.commit()
             cur.close()

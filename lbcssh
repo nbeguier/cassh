@@ -112,8 +112,11 @@ class LBCSSH(object):
             elif action == 'delete':
                 req = self.session.delete(self.url + '/admin/' + username +\
                     self.auth_url(), verify=False)
+            elif action == 'status':
+                req = self.session.get(self.url + '/client' +\
+                    self.auth_url(prefix='?username=%s' % username), verify=False)
             else:
-                print('Action should be : revoke, active or delete')
+                print('Action should be : revoke, active, delete or status')
                 exit(1)
         except ConnectionError:
             print('Connection error : %s' % self.url)
@@ -215,11 +218,11 @@ if __name__ == '__main__':
 
     # ADMIN Arguments
     ADMIN_PARSER = SUBPARSERS.add_parser('admin',\
-        help='Administrator command : active - revoke - delete keys')
+        help='Administrator command : active - revoke - delete - status keys')
     ADMIN_PARSER.add_argument('username', action='store',\
         help='Username of client\'s key')
     ADMIN_PARSER.add_argument('action', action='store',\
-        help='Choice between : active - revoke - delete')
+        help='Choice between : active - revoke - delete - status')
 
     # ADD Arguments
     ADD_PARSER = SUBPARSERS.add_parser('add', help='Add a key to remote ssh ca server.')
