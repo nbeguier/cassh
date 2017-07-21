@@ -56,12 +56,13 @@ def sql_to_json(result):
     This function prettify a sql result into json
     """
     d_result = {}
-    d_result['username'] = result[0]
-    d_result['realname'] = result[1]
-    d_result['status'] = STATES[result[2]]
-    d_result['expiration'] = result[3]
-    d_result['ssh_key_hash'] = result[4]
-    return dumps(d_result)
+    if result is not None:
+        d_result['username'] = result[0]
+        d_result['realname'] = result[1]
+        d_result['status'] = STATES[result[2]]
+        d_result['expiration'] = result[3]
+        d_result['ssh_key_hash'] = result[4]
+    return dumps(d_result, indent=4, sort_keys=True)
 
 def pg_connection(dbname='postgres', user='postgres', host='localhost',\
     password='mysecretpassword'):
