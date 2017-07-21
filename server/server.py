@@ -41,6 +41,8 @@ PARSER.add_argument('--krl', action='store', help='CA KRL')
 PARSER.add_argument('--enable-ldap', action='store_true', help='Enable LDAP authentication')
 PARSER.add_argument('--ldap-host', action='store', help='LDAP server hostname')
 PARSER.add_argument('--ldap-binddn', action='store', help='LDAP BindDN')
+PARSER.add_argument('--ldap-admin_cn', action='store',\
+    help='LDAP Admin CN (Ex: CN=Admin,OU=Groupes,OU=Enterprise,DC=fr')
 PARSER.add_argument('--ssl', action='store_true', help='Active SSL/TLS')
 PARSER.add_argument('--ssl-certificate', action='store', help='SSL public certificate')
 PARSER.add_argument('--ssl-private-key', action='store', help='SSL private key')
@@ -96,14 +98,18 @@ def ldap_authentification(admin=False):
             real_name = None
             return False
         password = web_input()['password']
-        if ARGS.ldap_host is None or ARGS.ldap_binddn is None:
-            print('Cannot parse ldap args : Host=%s, BindDN=%s'\
-                % (ARGS.ldap_host, ARGS.ldap_binddn))
+        if ARGS.ldap_host is None\
+            or ARGS.ldap_binddn is None\
+            or ARGS.ldap_admin_cn is None:
+            print('Cannot parse ldap args : Host=%s, BindDN=%s, Admin_CN=%s'\
+                % (ARGS.ldap_host, ARGS.ldap_binddn, ARGS.ldap_admin_cn))
             return False
         ldap_conn = ldap_open(ARGS.ldap_host)
         try:
             ldap_conn.bind_s(ARGS.ldap_binddn % real_name, password)
         except:
+            return False
+        if admin and ARGS.ldap_admin_cn not in ldap_conn.search_s(ARGS.ldap_binddn % real_name, 2)[0][1]['memberOf']:
             return False
     return True
 
