@@ -95,7 +95,7 @@ python server/server.py --ca test-keys/id_rsa_ca --ssl --ssl-private-key ssl/ser
 
 ### Active LDAP
 ```bash
-python server/server.py --ca test-keys/id_rsa_ca --enable-ldap --ldap-host ldap.domain.fr --ldap-binddn 'CN=%s,OU=Utilisateurs,DC=fr'
+python server/server.py --ca test-keys/id_rsa_ca --enable-ldap --ldap-host ldap.domain.fr --ldap-binddn 'CN=%s,OU=Utilisateurs,DC=fr' --ldap-admin_cn 'CN=Admin,OU=Groupes,OU=Enterprise,DC=fr'
 ```
 
 
