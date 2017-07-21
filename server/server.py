@@ -5,6 +5,7 @@ Sign a user's SSH public key.
 """
 from __future__ import print_function
 from argparse import ArgumentParser
+from json import dumps
 from os import remove
 from tempfile import NamedTemporaryFile
 from time import time
@@ -50,6 +51,18 @@ PARSER.add_argument('--ssl-private-key', action='store', help='SSL private key')
 ARGS = PARSER.parse_args()
 
 
+def sql_to_json(result):
+    """
+    This function prettify a sql result into json
+    """
+    d_result = {}
+    d_result['username'] = result[0]
+    d_result['realname'] = result[1]
+    d_result['status'] = STATES[result[2]]
+    d_result['expiration'] = result[3]
+    d_result['ssh_key_hash'] = result[4]
+    return dumps(d_result)
+
 def pg_connection(dbname='postgres', user='postgres', host='localhost',\
     password='mysecretpassword'):
     """
@@ -85,7 +98,7 @@ def list_keys(username=None):
         result = cur.fetchall()
     cur.close()
     pg_conn.close()
-    return result
+    return sql_to_json(result)
 
 def ldap_authentification(admin=False):
     """
