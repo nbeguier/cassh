@@ -5,11 +5,12 @@
 # Standard library imports
 from __future__ import print_function
 from argparse import ArgumentParser
+from codecs import getwriter
 from getpass import getpass
 from os import chmod, getenv
 from os.path import isfile
 from shutil import copyfile
-from sys import argv
+import sys
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError, NoSectionError
@@ -19,6 +20,10 @@ from urllib3 import disable_warnings
 
 # Disable HTTPs warnings
 disable_warnings()
+
+# Change codec
+sys.stdout = getwriter('utf8')(sys.stdout)
+sys.stderr = getwriter('utf8')(sys.stderr)
 
 # Debug
 # from pdb import set_trace as st
@@ -248,21 +253,21 @@ if __name__ == '__main__':
 
     LBC = LBCSSH(read_conf(CONF_FILE))
 
-    if len(argv) == 1:
+    if len(sys.argv) == 1:
         PARSER.print_help()
         exit(1)
 
-    if argv[1] == 'add':
+    if sys.argv[1] == 'add':
         LBC.add()
-    elif argv[1] == 'sign':
+    elif sys.argv[1] == 'sign':
         LBC.sign(ARGS.write_on_disk)
-    elif argv[1] == 'status':
+    elif sys.argv[1] == 'status':
         LBC.status()
-    elif argv[1] == 'ca':
+    elif sys.argv[1] == 'ca':
         LBC.get_ca()
-    elif argv[1] == 'krl':
+    elif sys.argv[1] == 'krl':
         LBC.get_krl()
-    elif argv[1] == 'admin':
+    elif sys.argv[1] == 'admin':
         LBC.admin(ARGS.username, ARGS.action)
 
     exit(0)
