@@ -204,7 +204,7 @@ class Client():
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
-            return "Status: %s" % STATES[user[1]]
+            return "Status: %s" % STATES[user[2]]
 
         # Load SSH CA
         ca_ssh = Authority(ARGS.ca, ARGS.krl)
