@@ -80,6 +80,9 @@ python lbcssh admin <username> revoke
 
 # Delete Client 'username' key
 python lbcssh admin <username> delete
+
+# Status Client 'username' key
+python lbcssh admin <username> status
 ```
 
 
