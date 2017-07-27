@@ -52,6 +52,16 @@ SERVER_OPTS['krl'] = CONFIG.get('main', 'krl')
 SERVER_OPTS['ldap'] = False
 SERVER_OPTS['ssl'] = False
 
+if CONFIG.has_section('postgres'):
+    try:
+        SERVER_OPTS['db_host'] = CONFIG.get('postgres', 'host')
+        SERVER_OPTS['db_name'] = CONFIG.get('postgres', 'dbname')
+        SERVER_OPTS['db_user'] = CONFIG.get('postgres', 'user')
+        SERVER_OPTS['db_password'] = CONFIG.get('postgres', 'password')
+    except NoOptionError:
+        print('Option reading error (postgres).')
+        exit(1)
+
 if CONFIG.has_section('ldap'):
     try:
         SERVER_OPTS['ldap'] = True
@@ -84,8 +94,11 @@ def sql_to_json(result):
         d_result['ssh_key_hash'] = result[4]
     return dumps(d_result, indent=4, sort_keys=True)
 
-def pg_connection(dbname='postgres', user='postgres', host='localhost',\
-    password='mysecretpassword'):
+def pg_connection(
+        dbname=SERVER_OPTS['db_name'],
+        user=SERVER_OPTS['db_user'],
+        host=SERVER_OPTS['db_host'],
+        password=SERVER_OPTS['db_password']):
     """
     Return a connection to the db.
     """

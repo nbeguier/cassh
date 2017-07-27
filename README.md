@@ -20,7 +20,7 @@ sudo apt-get install libsasl2-dev python-dev libldap2-dev libssl-dev libpq-dev
 sudo apt-get install python-pip
 pip install -r server/requirements_python2.txt
 # or
-sudo apt-get install python-psycopg2 python-webpy python-ldap
+sudo apt-get install python-psycopg2 python-webpy python-ldap python-configparser python-request python-openssl
 
 mkdir test-keys
 ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
