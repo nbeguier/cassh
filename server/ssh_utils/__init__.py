@@ -11,8 +11,7 @@ def get_fingerprint(public_key_filename):
     return check_output([
         'ssh-keygen',
         '-l',
-        '-f', public_key_filename,
-        '-E', 'md5']).split('\n')[0]
+        '-f', public_key_filename]).split('/')[0]
 
 def get_cert_contents(public_key_filename):
     """
