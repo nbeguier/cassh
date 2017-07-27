@@ -391,5 +391,7 @@ if __name__ == "__main__":
     if SERVER_OPTS['ssl']:
         CherryPyWSGIServer.ssl_certificate = SERVER_OPTS['ssl_public_key']
         CherryPyWSGIServer.ssl_private_key = SERVER_OPTS['ssl_private_key']
+    print('SSL: %s' % SERVER_OPTS['ssl'])
+    print('LDAP: %s' % SERVER_OPTS['ldap'])
     APP = MyApplication(URLS, globals())
     APP.run()
