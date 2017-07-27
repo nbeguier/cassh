@@ -47,7 +47,8 @@ bash demo/server_init.sh
 
 Finally, start server
 ```bash
-bash demo/server_start.sh test-keys/id_rsa_ca test-keys/revoked-keys
+sed -i "s#__LBCSSH_PATH__#${PWD}#g" demo/lbcssh_dummy.conf
+python server/server.py --config demo/lbcssh_dummy.conf
 ```
 
 ## Client CLI
@@ -89,13 +90,26 @@ python lbcssh admin <username> status
 ## Features
 
 ### Active SSL
-```bash
-python server/server.py --ca test-keys/id_rsa_ca --ssl --ssl-private-key ssl/server.key --ssl-certificate ssl/server.pem
+```
+[main]
+ca = __LBCSSH_PATH__/test-keys/id_rsa_ca
+krl = __LBCSSH_PATH__/test-keys/revoked-keys
+
+[ssl]
+private_key = __LBCSSH_PATH__/ssl/server.key
+public_key = __LBCSSH_PATH__/ssl/server.pem
 ```
 
 ### Active LDAP
-```bash
-python server/server.py --ca test-keys/id_rsa_ca --enable-ldap --ldap-host ldap.domain.fr --ldap-binddn 'CN=%s,OU=Utilisateurs,DC=fr' --ldap-admin_cn 'CN=Admin,OU=Groupes,OU=Enterprise,DC=fr'
+```
+[main]
+ca = __LBCSSH_PATH__/test-keys/id_rsa_ca
+krl = __LBCSSH_PATH__/test-keys/revoked-keys
+
+[ldap]
+host = ad.domain.fr
+bind_dn = CN=%%s,OU=Utilisateurs,DC=Domain,DC=fr
+admin_cn = CN=Admin,OU=Groupes,DC=Domain,DC=fr
 ```
 
 

@@ -11,6 +11,7 @@ from tempfile import NamedTemporaryFile
 from time import time
 
 # Third party library imports
+from configparser import ConfigParser, NoOptionError
 from ldap import open as ldap_open
 from psycopg2 import connect, OperationalError, ProgrammingError
 from web import application, data, httpserver, input as web_input
@@ -37,19 +38,38 @@ STATES = {
 }
 
 PARSER = ArgumentParser()
-PARSER.add_argument('--ca', action='store', help='CA private key')
-PARSER.add_argument('--krl', action='store', help='CA KRL')
-PARSER.add_argument('--enable-ldap', action='store_true', help='Enable LDAP authentication')
-PARSER.add_argument('--ldap-host', action='store', help='LDAP server hostname')
-PARSER.add_argument('--ldap-binddn', action='store', help='LDAP BindDN')
-PARSER.add_argument('--ldap-admin_cn', action='store',\
-    help='LDAP Admin CN (Ex: CN=Admin,OU=Groupes,OU=Enterprise,DC=fr')
-PARSER.add_argument('--ssl', action='store_true', help='Active SSL/TLS')
-PARSER.add_argument('--ssl-certificate', action='store', help='SSL public certificate')
-PARSER.add_argument('--ssl-private-key', action='store', help='SSL private key')
-
+PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
 ARGS = PARSER.parse_args()
 
+if not ARGS.config:
+    PARSER.error('--config argument is required !')
+
+CONFIG = ConfigParser()
+CONFIG.read(ARGS.config)
+SERVER_OPTS = {}
+SERVER_OPTS['ca'] = CONFIG.get('main', 'ca')
+SERVER_OPTS['krl'] = CONFIG.get('main', 'krl')
+SERVER_OPTS['ldap'] = False
+SERVER_OPTS['ssl'] = False
+
+if CONFIG.has_section('ldap'):
+    try:
+        SERVER_OPTS['ldap'] = True
+        SERVER_OPTS['ldap_host'] = CONFIG.get('ldap', 'host')
+        SERVER_OPTS['ldap_bind_dn'] = CONFIG.get('ldap', 'bind_dn')
+        SERVER_OPTS['ldap_admin_cn'] = CONFIG.get('ldap', 'admin_cn')
+    except NoOptionError:
+        print('Option reading error (ldap).')
+        exit(1)
+
+if CONFIG.has_section('ssl'):
+    try:
+        SERVER_OPTS['ssl'] = True
+        SERVER_OPTS['ssl_private_key'] = CONFIG.get('ssl', 'private_key')
+        SERVER_OPTS['ssl_public_key'] = CONFIG.get('ssl', 'public_key')
+    except NoOptionError:
+        print('Option reading error (ssl).')
+        exit(1)
 
 def sql_to_json(result):
     """
@@ -105,26 +125,20 @@ def ldap_authentification(admin=False):
     """
     Return True if user is well authentified
     """
-    if ARGS.enable_ldap:
+    if SERVER_OPTS['ldap']:
         try:
             real_name = web_input()['realname']
         except KeyError:
             real_name = None
             return False
         password = web_input()['password']
-        if ARGS.ldap_host is None\
-            or ARGS.ldap_binddn is None\
-            or ARGS.ldap_admin_cn is None:
-            print('Cannot parse ldap args : Host=%s, BindDN=%s, Admin_CN=%s'\
-                % (ARGS.ldap_host, ARGS.ldap_binddn, ARGS.ldap_admin_cn))
-            return False
-        ldap_conn = ldap_open(ARGS.ldap_host)
+        ldap_conn = ldap_open(SERVER_OPTS['ldap_host'])
         try:
-            ldap_conn.bind_s(ARGS.ldap_binddn % real_name, password)
+            ldap_conn.bind_s(SERVER_OPTS['ldap_bind_dn'] % real_name, password)
         except:
             return False
-        if admin and ARGS.ldap_admin_cn not in\
-            ldap_conn.search_s(ARGS.ldap_binddn % real_name, 2)[0][1]['memberOf']:
+        if admin and SERVER_OPTS['ldap_admin_cn'] not in\
+            ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'] % real_name, 2)[0][1]['memberOf']:
             return False
     return True
 
@@ -207,7 +221,7 @@ class Client():
             return "Status: %s" % STATES[user[2]]
 
         # Load SSH CA
-        ca_ssh = Authority(ARGS.ca, ARGS.krl)
+        ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
 
         # Sign the key
         try:
@@ -297,7 +311,7 @@ class Admin():
             pg_conn.commit()
             message = 'Revoke user=%s.' % username
             # Load SSH CA and revoke key
-            ca_ssh = Authority(ARGS.ca, ARGS.krl)
+            ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
             cur.execute("""SELECT SSH_KEY FROM USERS WHERE NAME = '%s'""" % username)
             pubkey = cur.fetchone()[0]
             tmp_pubkey = NamedTemporaryFile(delete=False)
@@ -353,7 +367,7 @@ class Ca():
         """
         Return ca.
         """
-        return open(ARGS.ca + '.pub', 'rb')
+        return open(SERVER_OPTS['ca'] + '.pub', 'rb')
 
 class Krl():
     """
@@ -363,7 +377,7 @@ class Krl():
         """
         Return krl.
         """
-        return open(ARGS.krl, 'rb')
+        return open(SERVER_OPTS['krl'], 'rb')
 
 class MyApplication(application):
     """
@@ -374,16 +388,10 @@ class MyApplication(application):
         return httpserver.runsimple(func, ('0.0.0.0', port))
 
 if __name__ == "__main__":
-    if not ARGS.ca:
-        PARSER.error('--ca argument is required !')
-    if not ARGS.krl:
-        PARSER.error('--krl argument is required !')
-
-    if ARGS.ssl and not (ARGS.ssl_certificate and ARGS.ssl_private_key):
-        PARSER.error('You have to give --ssl-private-key and --ssl-certificate arguments')
-
-    if ARGS.ssl:
-        CherryPyWSGIServer.ssl_certificate = ARGS.ssl_certificate
-        CherryPyWSGIServer.ssl_private_key = ARGS.ssl_private_key
+    if SERVER_OPTS['ssl']:
+        CherryPyWSGIServer.ssl_certificate = SERVER_OPTS['ssl_public_key']
+        CherryPyWSGIServer.ssl_private_key = SERVER_OPTS['ssl_private_key']
+    print('SSL: %s' % SERVER_OPTS['ssl'])
+    print('LDAP: %s' % SERVER_OPTS['ldap'])
     APP = MyApplication(URLS, globals())
     APP.run()
