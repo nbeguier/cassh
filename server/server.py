@@ -49,6 +49,7 @@ CONFIG.read(ARGS.config)
 SERVER_OPTS = {}
 SERVER_OPTS['ca'] = CONFIG.get('main', 'ca')
 SERVER_OPTS['krl'] = CONFIG.get('main', 'krl')
+SERVER_OPTS['port'] = CONFIG.get('main', 'port')
 SERVER_OPTS['ldap'] = False
 SERVER_OPTS['ssl'] = False
 
@@ -396,7 +397,7 @@ class MyApplication(application):
     """
     Can change port or other stuff
     """
-    def run(self, port=8080, *middleware):
+    def run(self, port=SERVER_OPTS['port'], *middleware):
         func = self.wsgifunc(*middleware)
         return httpserver.runsimple(func, ('0.0.0.0', port))
 
