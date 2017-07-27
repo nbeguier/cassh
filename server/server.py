@@ -397,7 +397,7 @@ class MyApplication(application):
     """
     Can change port or other stuff
     """
-    def run(self, port=SERVER_OPTS['port'], *middleware):
+    def run(self, port=int(SERVER_OPTS['port']), *middleware):
         func = self.wsgifunc(*middleware)
         return httpserver.runsimple(func, ('0.0.0.0', port))
 
