@@ -39,7 +39,7 @@ STATES = {
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
-PARSER.add_argument('-v', '--verbose', action='store', help='Add verbosity')
+PARSER.add_argument('-v', '--verbose', action='store_true', default=False, help='Add verbosity')
 ARGS = PARSER.parse_args()
 
 if not ARGS.config:
