@@ -1,0 +1,15 @@
+# /lib/systemd/system/lbcssh.service
+[Unit]
+Description=lbcssh
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python /opt/lbcssh/server/server.py -c /etc/lbcssh/lbcssh.conf
+Restart=on-failure
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+
