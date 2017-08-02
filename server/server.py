@@ -39,6 +39,7 @@ STATES = {
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
+PARSER.add_argument('-v', '--verbose', action='store', help='Add verbosity')
 ARGS = PARSER.parse_args()
 
 if not ARGS.config:
@@ -60,7 +61,8 @@ if CONFIG.has_section('postgres'):
         SERVER_OPTS['db_user'] = CONFIG.get('postgres', 'user')
         SERVER_OPTS['db_password'] = CONFIG.get('postgres', 'password')
     except NoOptionError:
-        print('Option reading error (postgres).')
+        if ARGS.verbose:
+            print('Option reading error (postgres).')
         exit(1)
 
 if CONFIG.has_section('ldap'):
@@ -70,7 +72,8 @@ if CONFIG.has_section('ldap'):
         SERVER_OPTS['ldap_bind_dn'] = CONFIG.get('ldap', 'bind_dn')
         SERVER_OPTS['ldap_admin_cn'] = CONFIG.get('ldap', 'admin_cn')
     except NoOptionError:
-        print('Option reading error (ldap).')
+        if ARGS.verbose:
+            print('Option reading error (ldap).')
         exit(1)
 
 if CONFIG.has_section('ssl'):
@@ -79,7 +82,8 @@ if CONFIG.has_section('ssl'):
         SERVER_OPTS['ssl_private_key'] = CONFIG.get('ssl', 'private_key')
         SERVER_OPTS['ssl_public_key'] = CONFIG.get('ssl', 'public_key')
     except NoOptionError:
-        print('Option reading error (ssl).')
+        if ARGS.verbose:
+            print('Option reading error (ssl).')
         exit(1)
 
 def sql_to_json(result):
@@ -405,7 +409,8 @@ if __name__ == "__main__":
     if SERVER_OPTS['ssl']:
         CherryPyWSGIServer.ssl_certificate = SERVER_OPTS['ssl_public_key']
         CherryPyWSGIServer.ssl_private_key = SERVER_OPTS['ssl_private_key']
-    print('SSL: %s' % SERVER_OPTS['ssl'])
-    print('LDAP: %s' % SERVER_OPTS['ldap'])
+    if ARGS.verbose:
+        print('SSL: %s' % SERVER_OPTS['ssl'])
+        print('LDAP: %s' % SERVER_OPTS['ldap'])
     APP = MyApplication(URLS, globals())
     APP.run()
