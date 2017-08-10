@@ -5,84 +5,97 @@ Developped for @leboncoin
 
 ## Prerequisites
 
+### Server
+
 ```bash
-# Demo PG database
-sudo apt-get install docker.io
-
-#################
-## Server side ##
-#################
-# Python 3
-# Not working, python-ldap only in v2
-
-# Python 2
+# Install lbcssh python 2 service dependencies
 sudo apt-get install libsasl2-dev python-dev libldap2-dev libssl-dev libpq-dev
 sudo apt-get install python-pip
 pip install -r server/requirements_python2.txt
 # or
 sudo apt-get install python-psycopg2 python-webpy python-ldap python-configparser python-requests python-openssl
 
+# Generate CA ssh key and revocation key file
 mkdir test-keys
 ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
 ssh-keygen -k -f test-keys/revoked-keys
+```
 
+### Client
 
-#################
-## Client side ##
-#################
+```bash
 # Python 3
 sudo apt-get install python3-pip
 pip3 install -r requirements.txt
 
 # Python 2
 sudo apt-get install python-pip
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-Then, initialize a postgresql db. If you already have one, reconfigure server.py
+
+Then, initialize a postgresql db. If you don't have one, install demo database.
+
+### Optional: Demo database
 ```bash
+sudo apt-get install docker.io
+
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
 bash demo/server_init.sh
-```
 
-Finally, start server
-```bash
+# Finally, start server
 sed -i "s#__LBCSSH_PATH__#${PWD}#g" demo/lbcssh_dummy.conf
 python server/server.py --config demo/lbcssh_dummy.conf
 ```
 
-## Client CLI
+## Usage
 
-```bash
-# Add new key to lbcssh-server
-python lbcssh add
+### Client CLI
 
-# Sign pub key
-python lbcssh sign
+Add new key to lbcssh-server :
+```
+$ python lbcssh add
+```
 
-# Get public key status
-python lbcssh status
+Sign pub key :
+```
+$ python lbcssh sign
+```
 
-# Get ca public key
-python lbcssh ca
+Get public key status :
+```
+$ python lbcssh status
+```
 
-# Get ca krl
+Get ca public key :
+```
+$ python lbcssh ca
+```
+
+Get ca krl :
+```
 python lbcssh krl
 ```
 
-## Admin CLI
+### Admin CLI
 
-```bash
-# Active Client 'username' key
+Active Client **username** key :
+```
 python lbcssh admin <username> active
+```
 
-# Revoke Client 'username' key
+Revoke Client **username** key :
+```
 python lbcssh admin <username> revoke
+```
 
-# Delete Client 'username' key
+Delete Client **username** key :
+```
 python lbcssh admin <username> delete
+```
 
-# Status Client 'username' key
+Status Client **username** key :
+```
 python lbcssh admin <username> status
 ```
 
@@ -90,7 +103,7 @@ python lbcssh admin <username> status
 ## Features
 
 ### Active SSL
-```
+```ini
 [main]
 ca = __LBCSSH_PATH__/test-keys/id_rsa_ca
 krl = __LBCSSH_PATH__/test-keys/revoked-keys
@@ -101,7 +114,7 @@ public_key = __LBCSSH_PATH__/ssl/server.pem
 ```
 
 ### Active LDAP
-```
+```ini
 [main]
 ca = __LBCSSH_PATH__/test-keys/id_rsa_ca
 krl = __LBCSSH_PATH__/test-keys/revoked-keys
@@ -118,6 +131,9 @@ admin_cn = CN=Admin,OU=Groupes,DC=Domain,DC=fr
 Generate key pair then sign it !
 
 ```bash
+git clone https://github.com/Petlefeu/lbcssh.git /opt/lbcssh
+cd /opt/lbcssh
+
 # Generate key pair
 mkdir test-keys
 ssh-keygen -t rsa -b 4096 -o -a 100 -f test-keys/id_rsa
