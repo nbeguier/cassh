@@ -1,4 +1,4 @@
-# LBCSSH
+# CASSH
 
 Easy SSH for admin ONLY !
 Developped for @leboncoin
@@ -8,7 +8,7 @@ Developped for @leboncoin
 ### Server
 
 ```bash
-# Install lbcssh python 2 service dependencies
+# Install cassh python 2 service dependencies
 sudo apt-get install libsasl2-dev python-dev libldap2-dev libssl-dev libpq-dev
 sudo apt-get install python-pip
 pip install -r server/requirements_python2.txt
@@ -44,59 +44,59 @@ sudo apt-get install docker.io
 bash demo/server_init.sh
 
 # Finally, start server
-sed -i "s#__LBCSSH_PATH__#${PWD}#g" demo/lbcssh_dummy.conf
-python server/server.py --config demo/lbcssh_dummy.conf
+sed -i "s#__CASSH_PATH__#${PWD}#g" demo/cassh_dummy.conf
+python server/server.py --config demo/cassh_dummy.conf
 ```
 
 ## Usage
 
 ### Client CLI
 
-Add new key to lbcssh-server :
+Add new key to cassh-server :
 ```
-$ python lbcssh add
+$ python cassh add
 ```
 
 Sign pub key :
 ```
-$ python lbcssh sign
+$ python cassh sign
 ```
 
 Get public key status :
 ```
-$ python lbcssh status
+$ python cassh status
 ```
 
 Get ca public key :
 ```
-$ python lbcssh ca
+$ python cassh ca
 ```
 
 Get ca krl :
 ```
-python lbcssh krl
+python cassh krl
 ```
 
 ### Admin CLI
 
 Active Client **username** key :
 ```
-python lbcssh admin <username> active
+python cassh admin <username> active
 ```
 
 Revoke Client **username** key :
 ```
-python lbcssh admin <username> revoke
+python cassh admin <username> revoke
 ```
 
 Delete Client **username** key :
 ```
-python lbcssh admin <username> delete
+python cassh admin <username> delete
 ```
 
 Status Client **username** key :
 ```
-python lbcssh admin <username> status
+python cassh admin <username> status
 ```
 
 
@@ -105,19 +105,19 @@ python lbcssh admin <username> status
 ### Active SSL
 ```ini
 [main]
-ca = __LBCSSH_PATH__/test-keys/id_rsa_ca
-krl = __LBCSSH_PATH__/test-keys/revoked-keys
+ca = __CASSH_PATH__/test-keys/id_rsa_ca
+krl = __CASSH_PATH__/test-keys/revoked-keys
 
 [ssl]
-private_key = __LBCSSH_PATH__/ssl/server.key
-public_key = __LBCSSH_PATH__/ssl/server.pem
+private_key = __CASSH_PATH__/ssl/server.key
+public_key = __CASSH_PATH__/ssl/server.pem
 ```
 
 ### Active LDAP
 ```ini
 [main]
-ca = __LBCSSH_PATH__/test-keys/id_rsa_ca
-krl = __LBCSSH_PATH__/test-keys/revoked-keys
+ca = __CASSH_PATH__/test-keys/id_rsa_ca
+krl = __CASSH_PATH__/test-keys/revoked-keys
 
 [ldap]
 host = ad.domain.fr
@@ -131,15 +131,15 @@ admin_cn = CN=Admin,OU=Groupes,DC=Domain,DC=fr
 Generate key pair then sign it !
 
 ```bash
-git clone https://github.com/Petlefeu/lbcssh.git /opt/lbcssh
-cd /opt/lbcssh
+git clone https://github.com/Petlefeu/cassh.git /opt/cassh
+cd /opt/cassh
 
 # Generate key pair
 mkdir test-keys
 ssh-keygen -t rsa -b 4096 -o -a 100 -f test-keys/id_rsa
 
-rm -f ~/.lbcssh
-cat << EOF > ~/.lbcssh
+rm -f ~/.cassh
+cat << EOF > ~/.cassh
 [user]
 name = user
 key_path = ${PWD}/test-keys/id_rsa
@@ -148,15 +148,15 @@ url = http://localhost:8080
 EOF
 
 # List keys
-python lbcssh status
+python cassh status
 
 # Add it into server
-python lbcssh add
+python cassh add
 
 # ADMIN: Active key
-python lbcssh admin user active
+python cassh admin user active
 
 # Sign it !
-python lbcssh sign
+python cassh sign
 ```
 The output is the signing key.
