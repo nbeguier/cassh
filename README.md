@@ -41,11 +41,7 @@ Then, initialize a postgresql db. If you don't have one, install demo database.
 sudo apt-get install docker.io
 
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
-bash demo/server_init.sh
-
-# Finally, start server
-sed -i "s#__CASSH_PATH__#${PWD}#g" demo/cassh_dummy.conf
-python server/server.py --config demo/cassh_dummy.conf
+bash demo/launch_demo_server.sh
 ```
 
 ## Usage
