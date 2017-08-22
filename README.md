@@ -36,10 +36,13 @@ pip install -r requirements.txt
 
 Then, initialize a postgresql db. If you don't have one, install demo database.
 
-### Optional: Demo database
-```bash
-sudo apt-get install docker.io
 
+### Optional: Demo database
+
+Install docker : https://docs.docker.com/engine/installation/
+
+
+```bash
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
 bash demo/launch_demo_server.sh
 ```
