@@ -5,6 +5,7 @@ Sign a user's SSH public key.
 """
 from __future__ import print_function
 from argparse import ArgumentParser
+from datetime import datetime
 from json import dumps
 from os import remove
 from tempfile import NamedTemporaryFile
@@ -95,7 +96,7 @@ def sql_to_json(result):
         d_result['username'] = result[0]
         d_result['realname'] = result[1]
         d_result['status'] = STATES[result[2]]
-        d_result['expiration'] = result[3]
+        d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime('%Y-%m-%d %H:%M:%S (UTC+0000)')
         d_result['ssh_key_hash'] = result[4]
     return dumps(d_result, indent=4, sort_keys=True)
 
@@ -246,7 +247,7 @@ class Client():
             cert_contents = ca_ssh.sign_public_user_key(\
                 tmp_pubkey.name, username, '+1d', username)
             cur.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
-                % (time(), username))
+                % (time() + 24*60*60, username))
         except:
             cert_contents = 'Error : signing key'
         remove(tmp_pubkey.name)
@@ -414,3 +415,4 @@ if __name__ == "__main__":
         print('LDAP: %s' % SERVER_OPTS['ldap'])
     APP = MyApplication(URLS, globals())
     APP.run()
+

@@ -21,6 +21,10 @@ ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without
 ssh-keygen -k -f test-keys/revoked-keys
 ```
 
+### Server : Database
+
+You need to create a database.
+
 ### Client
 
 ```bash
@@ -34,16 +38,14 @@ pip install -r requirements.txt
 ```
 
 
-Then, initialize a postgresql db. If you don't have one, install demo database.
-
-
-### Optional: Demo database
+### Optional: Demo server
 
 Install docker : https://docs.docker.com/engine/installation/
 
 
 ```bash
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
+pip install psycopg2
 bash demo/launch_demo_server.sh
 ```
 
