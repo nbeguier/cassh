@@ -6,7 +6,9 @@
 from __future__ import print_function
 from argparse import ArgumentParser
 from codecs import getwriter
+from datetime import datetime
 from getpass import getpass
+from json import dumps, loads
 from os import chmod, getenv
 from os.path import isfile
 from shutil import copyfile
@@ -175,7 +177,14 @@ class CASSH(object):
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
-        print(req.text)
+        result = loads(req.text)
+        is_expired = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S') < datetime.now()
+        if result['status'] == 'ACTIVE':
+            if is_expired:
+                result['status'] = 'EXPIRED'
+            else:
+                result['status'] = 'SIGNED'
+        print(dumps(result, indent=4, sort_keys=True))
 
     def get_ca(self):
         """
