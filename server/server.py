@@ -96,7 +96,7 @@ def sql_to_json(result):
         d_result['username'] = result[0]
         d_result['realname'] = result[1]
         d_result['status'] = STATES[result[2]]
-        d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime('%Y-%m-%d %H:%M:%S (UTC+0000)')
+        d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime('%Y-%m-%d %H:%M:%S')
         d_result['ssh_key_hash'] = result[4]
     return dumps(d_result, indent=4, sort_keys=True)
 
