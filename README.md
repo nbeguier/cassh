@@ -132,7 +132,7 @@ admin_cn = CN=Admin,OU=Groupes,DC=Domain,DC=fr
 Generate key pair then sign it !
 
 ```bash
-git clone https://github.com/Petlefeu/cassh.git /opt/cassh
+git clone https://github.com/nbeguier/cassh.git /opt/cassh
 cd /opt/cassh
 
 # Generate key pair
