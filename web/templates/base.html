@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>CASSH : {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/reset.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/typography.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}" />
+</head>
+<body>
+    <div id="wrapper">
+        <div id="header">
+            <a href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='images/logo.png') }}" alt="CASSH" /></a>
+            <h1> CASSH <br /> Web interface</h1>
+        </div>
+        
+        <div id="menu">
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('cassh_add', path='location') }}">Add</a></li>
+                <li><a href="{{ url_for('cassh_sign', path='location') }}">Sign</a></li>
+                <li><a href="{{ url_for('cassh_status', path='location') }}">Status</a></li>
+            </ul>
+        </div>
+
+        <div id="content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    <div id="footer">
+        <p>Site powered by <a href="http://flask.pocoo.org">Flask</a></p>
+    </div>
+
+</body>
+</html>

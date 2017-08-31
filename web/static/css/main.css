@@ -1,0 +1,177 @@
+html {
+    height: 101%;
+}
+
+body {
+    background-color: #ff3300;
+}
+
+div#wrapper {
+    background-color: white;
+    width: 700px;
+    margin: 30px auto 10px auto;
+    padding-bottom: 50px;
+    overflow: auto;
+    min-height: 400px;
+    -webkit-border-radius: 20px;
+    -moz-border-radius: 20px;
+}
+
+div#header {
+    width: 100%;
+    overflow: auto;
+}
+
+div#header img {
+    display: block;
+    float: left;
+    margin: 10px;
+}
+
+h1, h2, h3, h4 {
+    font-weight: bold;
+    text-shadow: 0 1px 1px #CCC;
+}
+
+h2, h3, h4 {
+    border-bottom: 1px solid #DDD;
+}
+
+h4 {
+    margin-bottom: 0.25em;
+}
+
+h2 {
+    margin-top: 20px;
+}
+
+ul {
+    margin: 0;
+}
+
+div.meeting ul {
+    margin-bottom: 1.5em;
+}
+
+div#header h1 {
+    margin-top: 60px;
+    font-weight: bold;
+    float: left;
+}
+
+div#content {
+    width: 460px;
+    float: left;
+}
+
+div#menu {
+    width: 130px;
+    margin-left: 40px;
+    float: left;
+    font-size: 150%;
+}
+
+div#menu ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+div#menu ul li a {
+    color: #404040;
+    font-weight: bold;
+    text-decoration: none;
+    display: block;
+}
+
+div#menu ul li a:hover {
+    color: #333;
+    text-shadow: 0 1px 1px #AAA;
+}
+
+div#menu li.meetings a {
+    display: block;
+    float: left;
+}
+
+div#menu li.meetings a.feed {
+    margin-left: 5px;
+    margin-top: 1px;
+}
+
+div#footer {
+    width: 700px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+div.vevent {
+    margin-bottom: 20px;
+    border-left: 1px dotted #000;
+    padding-left: 10px;
+}
+
+div.vevent abbr {
+    border-bottom: none;
+}
+
+div.vevent p {
+    margin-bottom: 0.25em;
+}
+
+div.vevent p.summary {
+    border-bottom: 0;
+}
+
+div.vevent p.summary {
+    font-size: 120%;
+    font-weight: bold;
+}
+
+div.meeting h2 {
+    margin-bottom: 0;
+}
+
+div.past_meeting, div.alert {
+    background-color: #99FF99;
+    width: 440px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+div.past_meeting h4, div.alert h4 {
+    border: none;
+}
+
+div.past_meeting p:last-child {
+    margin-bottom: 0;
+}
+
+div.elsewhere h3 {
+    border: 0;
+}
+
+div.twtr-widget h1,
+div.twtr-widget h2,
+div.twtr-widget h3,
+div.twtr-widget h4,
+div.twtr-widget h5 {
+    border: 0;
+}
+
+#twitter {
+    width: 225px;
+    float: left;
+    padding-right: 5px;
+    border-right: 1px solid #DDD;
+}
+
+#googlegroup {
+    width: 220px;
+    float: left;
+    margin-left: 5px;
+}
+
+#googlegroup h4 {
+    border-bottom: 0;
+}
