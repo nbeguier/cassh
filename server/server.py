@@ -120,7 +120,7 @@ def pg_connection(
         return None, 'Server cannot connect to table in database'
     return pg_conn, message
 
-def list_keys(username=None):
+def list_keys(username=None, realname=None):
     """
     Return all keys.
     """
@@ -129,8 +129,10 @@ def list_keys(username=None):
         return message
     cur = pg_conn.cursor()
 
-    # Search if key already exists
-    if username is not None:
+    if realname is not None:
+        cur.execute("""SELECT * FROM USERS WHERE REALNAME='%s'""" % realname)
+        result = cur.fetchone()
+    elif username is not None:
         cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
         result = cur.fetchone()
     else:
@@ -177,16 +179,67 @@ class AllClientKeys():
     """
     def GET(self):
         """
-        Get every client key status.
+        Get client key status.
         """
-        if not ldap_authentification(admin=True):
-            return 'Error : Authentication'
         try:
-            username = web_input()['username']
+            realname = web_input()['realname']
         except KeyError:
-            username = None
+            return 'Error : No realname given'
 
-        return list_keys(username=username)
+        return list_keys(realname=realname)
+
+    def POST(self):
+        """
+        Ask to sign pub key.
+        """
+        if not ldap_authentification():
+            return 'Error : Authentication'
+        pubkey = data()
+        tmp_pubkey = NamedTemporaryFile(delete=False)
+        tmp_pubkey.write(pubkey)
+        tmp_pubkey.close()
+        pg_conn, message = pg_connection()
+        if pg_conn is None:
+            remove(tmp_pubkey.name)
+            return message
+        cur = pg_conn.cursor()
+
+        # Search if key already exists
+        cur.execute("""SELECT * FROM USERS WHERE SSH_KEY='%s' AND REALNAME='%s'""" \
+            % (pubkey, get_realname()))
+        user = cur.fetchone()
+        if user is None:
+            cur.close()
+            pg_conn.close()
+            remove(tmp_pubkey.name)
+            return 'Error : User or Key absent, add your key again.'
+
+        username = user[0]
+
+        if user[2] > 0:
+            cur.close()
+            pg_conn.close()
+            remove(tmp_pubkey.name)
+            return "Status: %s" % STATES[user[2]]
+
+        # Load SSH CA
+        ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
+
+        # Sign the key
+        try:
+            cert_contents = ca_ssh.sign_public_user_key(\
+                tmp_pubkey.name, username, '+1d', username)
+            cur.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
+                % (time() + 24*60*60, username))
+        except:
+            cert_contents = 'Error : signing key'
+        remove(tmp_pubkey.name)
+        pg_conn.commit()
+        cur.close()
+        pg_conn.close()
+        return cert_contents
+
+
 
 class Client():
     """

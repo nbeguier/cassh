@@ -25,6 +25,12 @@ ssh-keygen -k -f test-keys/revoked-keys
 
 You need to create a database.
 
+### Server : Client interface
+```bash
+pip3 insall -r requirements.txt
+python3 server/web/cassh_web.py
+```
+
 ### Client
 
 ```bash

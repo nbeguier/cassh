@@ -1,0 +1,4 @@
+# Configuration
+CASSH_URL = 'https://cassh.domain.fr'
+ENABLE_LDAP = True
+UPLOAD_FOLDER = '/tmp/'

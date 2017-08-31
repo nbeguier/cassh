@@ -1,2 +1,0 @@
-# Configuration
-CASSH = 'unused'

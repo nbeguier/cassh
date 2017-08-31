@@ -86,6 +86,7 @@ tr.even td  { background: #e5ecf9; }
 tfoot       { font-style: italic; }
 caption     { background: #eee; }
 
+.datagrid table { border-collapse: collapse; text-align: left; width: 100%; } .datagrid {font: normal 12px/150% Arial, Helvetica, sans-serif; background: #fff; overflow: hidden; -webkit-border-radius: 8px; -moz-border-radius: 8px; border-radius: 8px; }.datagrid table td, .datagrid table th { padding: 9px 7px; }.datagrid table thead th {background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #1EBEA5), color-stop(1, #128C7E) );background:-moz-linear-gradient( center top, #1EBEA5 5%, #128C7E 100% );filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#1EBEA5', endColorstr='#128C7E');background-color:#1EBEA5; color:#FFFFFF; font-size: 15px; font-weight: bold; border-left: 1px solid #12A178; } .datagrid table thead th:first-child { border: none; }.datagrid table tbody td { color: #000000; font-size: 13px;font-weight: normal; }.datagrid table tbody .alt td { background: #E4F2E7; color: #000000; }.datagrid table tbody td:first-child { border-left: none; }.datagrid table tbody tr:last-child td { border-bottom: none; }
 
 /* Misc classes
 -------------------------------------------------------------- */

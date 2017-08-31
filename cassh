@@ -149,7 +149,7 @@ class CASSH(object):
         """
         pubkey = open('%s.pub' % self.key_path, 'rb')
         try:
-            req = self.session.post(self.url + '/client/' + self.name +\
+            req = self.session.post(self.url + '/client' + \
                 self.auth_url(), data=pubkey, verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
