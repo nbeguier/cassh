@@ -25,11 +25,12 @@ from ssh_utils import Authority, get_fingerprint
 # from pdb import set_trace as st
 
 URLS = (
-    '/client', 'AllClientKeys',
-    '/client/([a-z]+)', 'Client',
     '/admin/([a-z]+)', 'Admin',
     '/ca', 'Ca',
+    '/client', 'Client_All',
+    '/client/([a-z]+)', 'Client',
     '/krl', 'Krl',
+    '/test_auth', 'Test_Auth',
 )
 
 STATES = {
@@ -173,7 +174,86 @@ def get_realname():
         real_name = None
     return real_name
 
-class AllClientKeys():
+
+class Admin():
+    """
+    Class admin to action or revoke keys.
+    """
+    def GET(self, username):
+        """
+        Revoke or Active keys.
+        """
+        if not ldap_authentification(admin=True):
+            return 'Error : Authentication'
+        do_revoke = web_input()['revoke'] == 'true'
+        pg_conn, message = pg_connection()
+        if pg_conn is None:
+            return message
+        cur = pg_conn.cursor()
+
+        # Search if key already exists
+        cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
+        user = cur.fetchone()
+        # If user dont exist
+        if user is None:
+            cur.close()
+            pg_conn.close()
+            message = "User '%s' does not exists." % username
+        elif do_revoke:
+            cur.execute("""UPDATE USERS SET STATE=1 WHERE NAME = '%s'""" % username)
+            pg_conn.commit()
+            message = 'Revoke user=%s.' % username
+            # Load SSH CA and revoke key
+            ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
+            cur.execute("""SELECT SSH_KEY FROM USERS WHERE NAME = '%s'""" % username)
+            pubkey = cur.fetchone()[0]
+            tmp_pubkey = NamedTemporaryFile(delete=False)
+            tmp_pubkey.write(pubkey)
+            tmp_pubkey.close()
+            ca_ssh.update_krl(tmp_pubkey.name)
+            cur.close()
+            pg_conn.close()
+            remove(tmp_pubkey.name)
+        # If user is in PENDING state
+        elif user[2] == 2:
+            cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)
+            pg_conn.commit()
+            cur.close()
+            pg_conn.close()
+            message = 'Active user=%s. SSH Key active but need to be signed.' % username
+        # If user is in REVOKE state
+        elif user[2] == 1:
+            cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)
+            pg_conn.commit()
+            cur.close()
+            pg_conn.close()
+            message = 'Active user=%s. SSH Key active but need to be signed.' % username
+        else:
+            cur.close()
+            pg_conn.close()
+            message = 'user=%s already active. Nothing done.' % username
+        return message
+
+    def DELETE(self, username):
+        """
+        Delete keys (but DOESN'T REVOKE)
+        """
+        if not ldap_authentification(admin=True):
+            return 'Error : Authentication'
+        pg_conn, message = pg_connection()
+        if pg_conn is None:
+            return message
+        cur = pg_conn.cursor()
+
+        # Search if key already exists
+        cur.execute("""DELETE FROM USERS WHERE NAME='%s'""" % username, )
+        pg_conn.commit()
+        cur.close()
+        pg_conn.close()
+        return 'OK'
+
+
+class Client_All():
     """
     Class which retrun all client keys.
     """
@@ -239,7 +319,15 @@ class AllClientKeys():
         pg_conn.close()
         return cert_contents
 
-
+class Ca():
+    """
+    Class CA.
+    """
+    def GET(self):
+        """
+        Return ca.
+        """
+        return open(SERVER_OPTS['ca'] + '.pub', 'rb')
 
 class Client():
     """
@@ -354,92 +442,6 @@ class Client():
             remove(tmp_pubkey.name)
             return 'Update user=%s. Pending request.' % username
 
-class Admin():
-    """
-    Class admin to action or revoke keys.
-    """
-    def GET(self, username):
-        """
-        Revoke or Active keys.
-        """
-        if not ldap_authentification(admin=True):
-            return 'Error : Authentication'
-        do_revoke = web_input()['revoke'] == 'true'
-        pg_conn, message = pg_connection()
-        if pg_conn is None:
-            return message
-        cur = pg_conn.cursor()
-
-        # Search if key already exists
-        cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
-        user = cur.fetchone()
-        # If user dont exist
-        if user is None:
-            cur.close()
-            pg_conn.close()
-            message = "User '%s' does not exists." % username
-        elif do_revoke:
-            cur.execute("""UPDATE USERS SET STATE=1 WHERE NAME = '%s'""" % username)
-            pg_conn.commit()
-            message = 'Revoke user=%s.' % username
-            # Load SSH CA and revoke key
-            ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
-            cur.execute("""SELECT SSH_KEY FROM USERS WHERE NAME = '%s'""" % username)
-            pubkey = cur.fetchone()[0]
-            tmp_pubkey = NamedTemporaryFile(delete=False)
-            tmp_pubkey.write(pubkey)
-            tmp_pubkey.close()
-            ca_ssh.update_krl(tmp_pubkey.name)
-            cur.close()
-            pg_conn.close()
-            remove(tmp_pubkey.name)
-        # If user is in PENDING state
-        elif user[2] == 2:
-            cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)
-            pg_conn.commit()
-            cur.close()
-            pg_conn.close()
-            message = 'Active user=%s. SSH Key active but need to be signed.' % username
-        # If user is in REVOKE state
-        elif user[2] == 1:
-            cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)
-            pg_conn.commit()
-            cur.close()
-            pg_conn.close()
-            message = 'Active user=%s. SSH Key active but need to be signed.' % username
-        else:
-            cur.close()
-            pg_conn.close()
-            message = 'user=%s already active. Nothing done.' % username
-        return message
-
-    def DELETE(self, username):
-        """
-        Delete keys (but DOESN'T REVOKE)
-        """
-        if not ldap_authentification(admin=True):
-            return 'Error : Authentication'
-        pg_conn, message = pg_connection()
-        if pg_conn is None:
-            return message
-        cur = pg_conn.cursor()
-
-        # Search if key already exists
-        cur.execute("""DELETE FROM USERS WHERE NAME='%s'""" % username, )
-        pg_conn.commit()
-        cur.close()
-        pg_conn.close()
-        return 'OK'
-
-class Ca():
-    """
-    Class CA.
-    """
-    def GET(self):
-        """
-        Return ca.
-        """
-        return open(SERVER_OPTS['ca'] + '.pub', 'rb')
 
 class Krl():
     """
@@ -450,6 +452,18 @@ class Krl():
         Return krl.
         """
         return open(SERVER_OPTS['krl'], 'rb')
+
+
+class Test_Auth():
+    """
+    Test authentication
+    """
+    def GET(self):
+        """
+        Return krl.
+        """
+        return 'Test Auth'
+
 
 class MyApplication(application):
     """
@@ -468,4 +482,3 @@ if __name__ == "__main__":
         print('LDAP: %s' % SERVER_OPTS['ldap'])
     APP = MyApplication(URLS, globals())
     APP.run()
-

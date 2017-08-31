@@ -6,7 +6,7 @@
 from __future__ import print_function
 from datetime import datetime
 from functools import wraps
-from json import decoder, dumps, loads
+from json import dumps, loads
 from os import getenv, path
 
 # Third party library imports
@@ -20,7 +20,7 @@ from werkzeug import secure_filename
 disable_warnings()
 
 # Debug
-from pdb import set_trace as st
+# from pdb import set_trace as st
 
 APP = Flask(__name__)
 APP.config.from_pyfile('settings.txt')
@@ -40,7 +40,7 @@ def check_auth_by_status(auth):
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
     try:
         result = loads(req.text)
-    except decoder.JSONDecodeError:
+    except:
         return False
     return True
 
@@ -63,7 +63,7 @@ def requires_auth(func):
         current_user['name'] = auth.username
         current_user['password'] = auth.password
         current_user['is_authenticated'] = True
-        return func(*args, **kwargs, current_user=current_user)
+        return func(current_user=current_user, *args, **kwargs)
     return decorated
 
 def auth_url(realname, password=None, prefix=None):
@@ -119,7 +119,7 @@ def cassh_status(current_user=None):
                 result['status'] = 'EXPIRED'
             else:
                 result['status'] = 'SIGNED'
-    except decoder.JSONDecodeError:
+    except:
         result = req.text
 
     return render_template('status.html', username=current_user['name'], result=result)
