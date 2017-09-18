@@ -49,7 +49,7 @@ def authenticate():
     return Response(
         'Could not verify your access level for that URL.\n'
         'You have to login with proper credentials', 401,
-        {'WWW-Authenticate': 'Basic realm="Login Required"'})
+        {'WWW-Authenticate': 'Basic realm="Login LDAP Required"'})
 
 def requires_auth(func):
     """ Wrapper which force authentication """
@@ -60,6 +60,13 @@ def requires_auth(func):
         current_user = {}
         if not auth or not check_auth_by_status(auth):
             return authenticate()
+        try:
+            req = get(APP.config['CASSH_URL'] + '/test_auth' +
+                auth_url(auth.username, password=auth.password), verify=False)
+            if 'Error' in req.text:
+                return authenticate()
+        except:
+            return Response('Connection error : %s' % APP.config['CASSH_URL'])
         current_user['name'] = auth.username
         current_user['password'] = auth.password
         current_user['is_authenticated'] = True
