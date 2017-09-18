@@ -131,7 +131,7 @@ def list_keys(username=None, realname=None):
     cur = pg_conn.cursor()
 
     if realname is not None:
-        cur.execute("""SELECT * FROM USERS WHERE REALNAME='%s'""" % realname)
+        cur.execute("""SELECT * FROM USERS WHERE lower(REALNAME)=lower('%s')""" % realname)
         result = cur.fetchone()
     elif username is not None:
         cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
