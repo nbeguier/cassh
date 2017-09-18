@@ -172,7 +172,7 @@ class CASSH(object):
         Get status of public key.
         """
         try:
-            req = self.session.get(self.url + '/client/' + self.name + self.auth_url(),\
+            req = self.session.get(self.url + '/client' + self.auth_url(),\
                 verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)

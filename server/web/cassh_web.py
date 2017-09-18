@@ -12,7 +12,7 @@ from os import getenv, path
 # Third party library imports
 from flask import Flask, render_template, request, Response, redirect, url_for, send_from_directory
 from urllib3 import disable_warnings
-from requests import get, post
+from requests import get, post, put
 from requests.exceptions import ConnectionError
 from werkzeug import secure_filename
 
@@ -101,7 +101,7 @@ def index(current_user=None):
 @requires_auth
 def cassh_add(current_user=None):
     """ Display add key page """
-    return render_template('add.html', username=current_user['name'], result=None)
+    return render_template('add.html', username=current_user['name'])
 
 @APP.route('/sign/')
 @requires_auth
@@ -150,6 +150,21 @@ def upload(current_user=None):
 
     return send_from_directory(APP.config['UPLOAD_FOLDER'], current_user['name'])
 
+# Route that will process the file upload
+@APP.route('/add/send', methods=['POST'])
+@requires_auth
+def send(current_user=None):
+    pubkey = request.files['file']
+    username = request.form['username']
+    try:
+        req = put(APP.config['CASSH_URL'] + '/client' +
+            auth_url(current_user['name'], password=current_user['password'], prefix='?username=%s' % username), \
+            data=pubkey, verify=False)
+    except ConnectionError:
+        return Response('Connection error : %s' % APP.config['CASSH_URL'])
+    if 'Error' in req.text:
+        return Response(req.text)
+    return redirect('/status')
 
 @APP.errorhandler(404)
 def page_not_found(_):
