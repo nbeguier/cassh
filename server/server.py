@@ -460,9 +460,11 @@ class Test_Auth():
     """
     def GET(self):
         """
-        Return krl.
+        Test authentication
         """
-        return 'Test Auth'
+        if not ldap_authentification(admin=True):
+            return 'Error : Authentication'
+        return 'OK'
 
 
 class MyApplication(application):
