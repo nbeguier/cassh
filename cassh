@@ -178,6 +178,9 @@ class CASSH(object):
             print('Connection error : %s' % self.url)
             exit(1)
         result = loads(req.text)
+        if result == {}:
+            print(dumps(result, indent=4, sort_keys=True))
+            return
         is_expired = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S') < datetime.now()
         if result['status'] == 'ACTIVE':
             if is_expired:
