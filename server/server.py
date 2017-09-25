@@ -27,8 +27,7 @@ from ssh_utils import Authority, get_fingerprint
 URLS = (
     '/admin/([a-z]+)', 'Admin',
     '/ca', 'Ca',
-    '/client', 'Client_All',
-    '/client/([a-z]+)', 'Client',
+    '/client', 'Client',
     '/krl', 'Krl',
     '/test_auth', 'Test_Auth',
 )
@@ -278,121 +277,7 @@ class Ca():
 
 class Client():
     """
-    Client class.
-    """
-    def GET(self, username):
-        """
-        Return informations.
-        """
-        if not ldap_authentification():
-            return 'Error : Authentication'
-        return list_keys(username=username)
-
-
-    def POST(self, username):
-        """
-        Ask to sign pub key.
-        """
-        if not ldap_authentification():
-            return 'Error : Authentication'
-        pubkey = data()
-        tmp_pubkey = NamedTemporaryFile(delete=False)
-        tmp_pubkey.write(pubkey)
-        tmp_pubkey.close()
-        pg_conn, message = pg_connection()
-        if pg_conn is None:
-            remove(tmp_pubkey.name)
-            return message
-        cur = pg_conn.cursor()
-
-        # Check if realname is the same
-        cur.execute("""SELECT * FROM USERS WHERE NAME='%s' AND lower(REALNAME)=lower('%s')"""\
-            % (username, get_realname()))
-        if cur.fetchone() is None:
-            return 'Error : Authentication'
-
-        # Search if key already exists
-        cur.execute("""SELECT * FROM USERS WHERE SSH_KEY='%s' AND NAME='%s'""" \
-            % (pubkey, username))
-        user = cur.fetchone()
-        if user is None:
-            cur.close()
-            pg_conn.close()
-            remove(tmp_pubkey.name)
-            return 'Error : User or Key absent, add your key again.'
-
-        if user[2] > 0:
-            cur.close()
-            pg_conn.close()
-            remove(tmp_pubkey.name)
-            return "Status: %s" % STATES[user[2]]
-
-        # Load SSH CA
-        ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
-
-        # Sign the key
-        try:
-            cert_contents = ca_ssh.sign_public_user_key(\
-                tmp_pubkey.name, username, '+1d', username)
-            cur.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
-                % (time() + 24*60*60, username))
-        except:
-            cert_contents = 'Error : signing key'
-        remove(tmp_pubkey.name)
-        pg_conn.commit()
-        cur.close()
-        pg_conn.close()
-        return cert_contents
-
-    def PUT(self, username):
-        """
-        This function permit to add or update a ssh public key.
-        """
-        if not ldap_authentification():
-            return 'Error : Authentication'
-        pubkey = data()
-        tmp_pubkey = NamedTemporaryFile(delete=False)
-        tmp_pubkey.write(pubkey)
-        tmp_pubkey.close()
-        pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
-        pg_conn, message = pg_connection()
-        if pg_conn is None:
-            remove(tmp_pubkey.name)
-            return message
-        cur = pg_conn.cursor()
-
-        # Search if key already exists
-        cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
-        user = cur.fetchone()
-
-        # CREATE NEW USER
-        if user is None:
-            cur.execute("""INSERT INTO USERS VALUES ('%s', '%s', %s, %s, '%s', '%s')""" \
-                % (username, get_realname(), 2, 0, pubkey_fingerprint, pubkey))
-            pg_conn.commit()
-            cur.close()
-            pg_conn.close()
-            remove(tmp_pubkey.name)
-            return 'Create user=%s. Pending request.' % username
-        else:
-            # Check if realname is the same
-            cur.execute("""SELECT * FROM USERS WHERE NAME='%s' AND REALNAME='%s'"""\
-                % (username, get_realname()))
-            if cur.fetchone() is None:
-                return 'Error : Authentication'
-            # Update entry into database
-            cur.execute("""UPDATE USERS SET SSH_KEY='%s', SSH_KEY_HASH='%s', STATE=2, EXPIRATION=0 \
-                WHERE NAME = '%s'""" % (pubkey, pubkey_fingerprint, username))
-            pg_conn.commit()
-            cur.close()
-            pg_conn.close()
-            remove(tmp_pubkey.name)
-            return 'Update user=%s. Pending request.' % username
-
-
-class Client_All():
-    """
-    Class which retrun all client keys.
+    Client main class.
     """
     def GET(self):
         """
