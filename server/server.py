@@ -73,6 +73,7 @@ if CONFIG.has_section('ldap'):
         SERVER_OPTS['ldap_host'] = CONFIG.get('ldap', 'host')
         SERVER_OPTS['ldap_bind_dn'] = CONFIG.get('ldap', 'bind_dn')
         SERVER_OPTS['ldap_admin_cn'] = CONFIG.get('ldap', 'admin_cn')
+        SERVER_OPTS['filterstr'] = CONFIG.get('ldap', 'filterstr')
     except NoOptionError:
         if ARGS.verbose:
             print('Option reading error (ldap).')
@@ -156,11 +157,13 @@ def ldap_authentification(admin=False):
         password = web_input()['password']
         ldap_conn = ldap_open(SERVER_OPTS['ldap_host'])
         try:
-            ldap_conn.bind_s(SERVER_OPTS['ldap_bind_dn'] % real_name, password)
+            ldap_conn.bind_s(real_name, password)
         except:
             return False
         if admin and SERVER_OPTS['ldap_admin_cn'] not in\
-            ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'] % real_name, 2)[0][1]['memberOf']:
+            ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'], 2,
+                               filterstr='(%s=%s)' % (SERVER_OPTS['filterstr'], real_name)
+                              )[0][1]['memberOf']:
             return False
     return True
 
