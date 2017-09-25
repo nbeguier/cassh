@@ -189,6 +189,10 @@ class Admin():
         if not ldap_authentification(admin=True):
             return 'Error : Authentication'
         do_revoke = web_input()['revoke'] == 'true'
+        try:
+            do_status = web_input()['status'] == 'true'
+        except:
+            do_status = False
         pg_conn, message = pg_connection()
         if pg_conn is None:
             return message
@@ -217,6 +221,9 @@ class Admin():
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
+        # Display status
+        elif do_status:
+            return list_keys(username=username)
         # If user is in PENDING state
         elif user[2] == 2:
             cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)

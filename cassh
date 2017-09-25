@@ -120,8 +120,8 @@ class CASSH(object):
                 req = self.session.delete(self.url + '/admin/' + username +\
                     self.auth_url(), verify=False)
             elif action == 'status':
-                req = self.session.get(self.url + '/client' +\
-                    self.auth_url(prefix='?username=%s' % username), verify=False)
+                req = self.session.get(self.url + '/admin/' + username +\
+                    self.auth_url(prefix='?revoke=false&status=true'), verify=False)
             else:
                 print('Action should be : revoke, active, delete or status')
                 exit(1)
