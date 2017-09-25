@@ -155,6 +155,8 @@ def ldap_authentification(admin=False):
             real_name = None
             return False
         password = web_input()['password']
+        if password == '':
+            return False
         ldap_conn = ldap_open(SERVER_OPTS['ldap_host'])
         try:
             ldap_conn.bind_s(real_name, password)
@@ -396,6 +398,8 @@ class Client_All():
         """
         Get client key status.
         """
+        if not ldap_authentification():
+            return 'Error : Authentication'
         try:
             realname = web_input()['realname']
         except KeyError:
