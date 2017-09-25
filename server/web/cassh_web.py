@@ -148,7 +148,7 @@ def upload(current_user=None):
     with open(path.join(APP.config['UPLOAD_FOLDER'], current_user['name']), 'w') as f:
         f.write(req.text)
 
-    return send_from_directory(APP.config['UPLOAD_FOLDER'], current_user['name'])
+    return send_from_directory(APP.config['UPLOAD_FOLDER'], current_user['name'], attachment_filename='id_rsa.pub', as_attachment=True)
 
 # Route that will process the file upload
 @APP.route('/add/send', methods=['POST'])
