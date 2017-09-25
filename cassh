@@ -177,7 +177,11 @@ class CASSH(object):
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
-        result = loads(req.text)
+        try:
+            result = loads(req.text)
+        except ValueError:
+            print(req.text)
+            return
         if result == {}:
             print(dumps(result, indent=4, sort_keys=True))
             return
