@@ -122,6 +122,23 @@ class CASSH(object):
             elif action == 'status':
                 req = self.session.get(self.url + '/admin/' + username +\
                     self.auth_url(prefix='?revoke=false&status=true'), verify=False)
+                try:
+                    result = loads(req.text)
+                except ValueError:
+                    print(req.text)
+                    return
+                if result == {}:
+                    print(dumps(result, indent=4, sort_keys=True))
+                    return
+                is_expired = datetime.strptime(result['expiration'],
+                    '%Y-%m-%d %H:%M:%S') < datetime.now()
+                if result['status'] == 'ACTIVE':
+                    if is_expired:
+                        result['status'] = 'EXPIRED'
+                    else:
+                        result['status'] = 'SIGNED'
+                print(dumps(result, indent=4, sort_keys=True))
+                return
             else:
                 print('Action should be : revoke, active, delete or status')
                 exit(1)
