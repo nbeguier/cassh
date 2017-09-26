@@ -24,8 +24,9 @@ from urllib3 import disable_warnings
 disable_warnings()
 
 # Change codec
-sys.stdout = getwriter('utf8')(sys.stdout)
-sys.stderr = getwriter('utf8')(sys.stderr)
+if sys.version_info < (3, 0):
+    sys.stdout = getwriter('utf8')(sys.stdout)
+    sys.stderr = getwriter('utf8')(sys.stderr)
 
 # Debug
 # from pdb import set_trace as st
@@ -176,7 +177,7 @@ class CASSH(object):
             exit(1)
         if do_write_on_disk:
             copyfile(self.key_path, self.key_signed_path)
-            chmod(self.key_signed_path, 0600)
+            chmod(self.key_signed_path, 0o600)
             pubkey_signed = open('%s.pub' % self.key_signed_path, 'w+')
             pubkey_signed.write(req.text)
             pubkey_signed.close()
@@ -246,8 +247,8 @@ if __name__ == '__main__':
         print('key_signed_path = ~/.ssh/id_rsa_signed')
         print('url = https://cassh.net')
         print('')
-        print('# [ldap]')
-        print('# realname = Ursula Ser')
+        print('[ldap]')
+        print('realname = ursula.ser@domain.fr')
         exit(1)
 
     PARSER = ArgumentParser()
