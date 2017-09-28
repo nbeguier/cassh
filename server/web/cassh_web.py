@@ -8,12 +8,13 @@ from datetime import datetime
 from functools import wraps
 from json import dumps, loads
 from os import getenv, path
+from ssl import PROTOCOL_TLSv1_2, SSLContext
 
 # Third party library imports
 from flask import Flask, render_template, request, Response, redirect, url_for, send_from_directory
-from urllib3 import disable_warnings
 from requests import get, post, put
 from requests.exceptions import ConnectionError
+from urllib3 import disable_warnings
 from werkzeug import secure_filename
 
 # Disable HTTPs warnings
@@ -172,5 +173,7 @@ def page_not_found(_):
     return render_template('404.html'), 404
 
 if __name__ == '__main__':
+    CONTEXT = SSLContext(PROTOCOL_TLSv1_2)
+    CONTEXT.load_cert_chain(APP.config['SSL_PUB_KEY'], APP.config['SSL_PRIV_KEY'])
     PORT = int(getenv('PORT', 5000))
-    APP.run(debug=True, host='0.0.0.0', port=PORT)
+    APP.run(debug=True, host='0.0.0.0', port=PORT, ssl_context=CONTEXT)
