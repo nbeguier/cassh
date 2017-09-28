@@ -183,8 +183,8 @@ class CASSH(object):
             pubkey_signed.close()
             if uid is not None:
                 try:
-                    chown(self.key_signed_path, uid, uid)
-                    chown('%s.pub' % self.key_signed_path, uid, uid)
+                    chown(self.key_signed_path, int(uid), int(uid))
+                    chown('%s.pub' % self.key_signed_path, int(uid), int(uid))
                 except OSError:
                     print('Error: Cannot change ownership...')
             print('Public key successfuly signed')
@@ -302,7 +302,7 @@ if __name__ == '__main__':
     if sys.argv[1] == 'add':
         LBC.add()
     elif sys.argv[1] == 'sign':
-        LBC.sign(not ARGS.display_only, uid=int(ARGS.uid))
+        LBC.sign(not ARGS.display_only, uid=ARGS.uid)
     elif sys.argv[1] == 'status':
         LBC.status()
     elif sys.argv[1] == 'ca':
