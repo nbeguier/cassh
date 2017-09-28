@@ -66,7 +66,7 @@ $ python cassh add
 
 Sign pub key :
 ```
-$ python cassh sign
+$ python cassh sign [--display-only] [--uid=UID]
 ```
 
 Get public key status :
@@ -150,7 +150,7 @@ cat << EOF > ~/.cassh
 [user]
 name = user
 key_path = ${PWD}/test-keys/id_rsa
-key_signed_path = ${PWD}/test-keys/id_rsa_signed
+key_signed_path = ${PWD}/test-keys/id_rsa-cert
 url = http://localhost:8080
 EOF
 
@@ -164,6 +164,5 @@ python cassh add
 python cassh admin user active
 
 # Sign it !
-python cassh sign
+python cassh sign [--display-only]
 ```
-The output is the signing key.

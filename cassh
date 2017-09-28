@@ -9,7 +9,7 @@ from codecs import getwriter
 from datetime import datetime
 from getpass import getpass
 from json import dumps, loads
-from os import chmod, getenv
+from os import chmod, chown, getenv
 from os.path import isfile
 from shutil import copyfile
 import sys
@@ -161,7 +161,7 @@ class CASSH(object):
             exit(1)
         print(req.text)
 
-    def sign(self, do_write_on_disk):
+    def sign(self, do_write_on_disk, uid=None):
         """
         Sign a public key.
         """
@@ -181,6 +181,12 @@ class CASSH(object):
             pubkey_signed = open('%s.pub' % self.key_signed_path, 'w+')
             pubkey_signed.write(req.text)
             pubkey_signed.close()
+            if uid is not None:
+                try:
+                    chown(self.key_signed_path, uid, uid)
+                    chown('%s.pub' % self.key_signed_path, uid, uid)
+                except OSError:
+                    print('Error: Cannot change ownership...')
             print('Public key successfuly signed')
         else:
             print(req.text)
@@ -268,8 +274,10 @@ if __name__ == '__main__':
 
     # SIGN Arguments
     SIGN_PARSER = SUBPARSERS.add_parser('sign', help='Sign its key by remote ssh ca server.')
-    SIGN_PARSER.add_argument('-w', '--write-on-disk', action='store_true',\
-        help='Write the key on disk. Specified by \'key_signed_path\' in configuration file')
+    SIGN_PARSER.add_argument('-d', '--display-only', action='store_true',\
+        help='Display key in shell only.')
+    SIGN_PARSER.add_argument('-u', '--uid', action='store',\
+        help='Force UID in key ownership.')
 
     # STATUS Arguments
     STATUS_PARSER = SUBPARSERS.add_parser('status',\
@@ -294,7 +302,7 @@ if __name__ == '__main__':
     if sys.argv[1] == 'add':
         LBC.add()
     elif sys.argv[1] == 'sign':
-        LBC.sign(ARGS.write_on_disk)
+        LBC.sign(not ARGS.display_only, uid=int(ARGS.uid))
     elif sys.argv[1] == 'status':
         LBC.status()
     elif sys.argv[1] == 'ca':
