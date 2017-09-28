@@ -2,3 +2,5 @@
 CASSH_URL = 'https://cassh.domain.fr'
 ENABLE_LDAP = True
 UPLOAD_FOLDER = '/tmp/'
+SSL_PUB_KEY = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
+SSL_PRIV_KEY = '/etc/ssl/private/ssl-cert-snakeoil.key'
