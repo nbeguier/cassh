@@ -131,10 +131,12 @@ class CASSH(object):
                 if result == {}:
                     print(dumps(result, indent=4, sort_keys=True))
                     return
-                is_expired = datetime.strptime(result['expiration'],
-                    '%Y-%m-%d %H:%M:%S') < datetime.now()
+                date_formatted = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S')
+                is_expired = date_formatted < datetime.now()
                 if result['status'] == 'ACTIVE':
-                    if is_expired:
+                    if is_expired and date_formatted.year == 1970:
+                        result['status'] = 'NEVER SIGNED'
+                    elif is_expired:
                         result['status'] = 'EXPIRED'
                     else:
                         result['status'] = 'SIGNED'
@@ -172,7 +174,7 @@ class CASSH(object):
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
-        if 'Error' in req.text:
+        if 'Error' in req.text or 'Status' in req.text:
             print(req.text)
             exit(1)
         if do_write_on_disk:
@@ -209,9 +211,12 @@ class CASSH(object):
         if result == {}:
             print(dumps(result, indent=4, sort_keys=True))
             return
-        is_expired = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S') < datetime.now()
+        date_formatted = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S')
+        is_expired = date_formatted < datetime.now()
         if result['status'] == 'ACTIVE':
-            if is_expired:
+            if is_expired and date_formatted.year == 1970:
+                result['status'] = 'NEVER SIGNED'
+            elif is_expired:
                 result['status'] = 'EXPIRED'
             else:
                 result['status'] = 'SIGNED'
@@ -260,6 +265,8 @@ if __name__ == '__main__':
     PARSER = ArgumentParser()
 
     SUBPARSERS = PARSER.add_subparsers(help='commands')
+
+    PARSER.add_argument('--version', action='version', version='%(prog)s 1.0.0')
 
     # ADMIN Arguments
     ADMIN_PARSER = SUBPARSERS.add_parser('admin',\
