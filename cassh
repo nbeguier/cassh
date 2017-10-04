@@ -247,26 +247,11 @@ class CASSH(object):
 
 if __name__ == '__main__':
 
-    CONF_FILE = '%s/.cassh' % getenv('HOME')
-
-    if not isfile(CONF_FILE):
-        print('Config file missing : %s' % CONF_FILE)
-        print('Example:')
-        print('[user]')
-        print('name = user')
-        print('key_path = ~/.ssh/id_rsa')
-        print('key_signed_path = ~/.ssh/id_rsa_signed')
-        print('url = https://cassh.net')
-        print('')
-        print('[ldap]')
-        print('realname = ursula.ser@domain.fr')
-        exit(1)
-
     PARSER = ArgumentParser()
 
     SUBPARSERS = PARSER.add_subparsers(help='commands')
 
-    PARSER.add_argument('--version', action='version', version='%(prog)s 1.0.0')
+    PARSER.add_argument('--version', action='version', version='%(prog)s 1.0.1')
 
     # ADMIN Arguments
     ADMIN_PARSER = SUBPARSERS.add_parser('admin',\
@@ -299,6 +284,21 @@ if __name__ == '__main__':
         help='Display CA KRL.')
 
     ARGS = PARSER.parse_args()
+
+    CONF_FILE = '%s/.cassh' % getenv('HOME')
+
+    if not isfile(CONF_FILE):
+        print('Config file missing : %s' % CONF_FILE)
+        print('Example:')
+        print('[user]')
+        print('name = user')
+        print('key_path = ~/.ssh/id_rsa')
+        print('key_signed_path = ~/.ssh/id_rsa_signed')
+        print('url = https://cassh.net')
+        print('')
+        print('[ldap]')
+        print('realname = ursula.ser@domain.fr')
+        exit(1)
 
     LBC = CASSH(read_conf(CONF_FILE))
 
