@@ -88,18 +88,31 @@ if CONFIG.has_section('ssl'):
             print('Option reading error (ssl).')
         exit(1)
 
-def sql_to_json(result):
+def sql_to_json(result, list=False):
     """
     This function prettify a sql result into json
     """
-    d_result = {}
-    if result is not None:
+    if result is None:
+        return None
+    if list:
+        d_result = {}
+        for res in result:
+            d_sub_result = {}
+            d_sub_result['username'] = res[0]
+            d_sub_result['realname'] = res[1]
+            d_sub_result['status'] = STATES[res[2]]
+            d_sub_result['expiration'] = datetime.fromtimestamp(res[3]).strftime('%Y-%m-%d %H:%M:%S')
+            d_sub_result['ssh_key_hash'] = res[4]
+            d_result[res[0]] = d_sub_result
+        return dumps(d_result, indent=4, sort_keys=True)
+    else:
+        d_result = {}
         d_result['username'] = result[0]
         d_result['realname'] = result[1]
         d_result['status'] = STATES[result[2]]
         d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime('%Y-%m-%d %H:%M:%S')
         d_result['ssh_key_hash'] = result[4]
-    return dumps(d_result, indent=4, sort_keys=True)
+        return dumps(d_result, indent=4, sort_keys=True)
 
 def pg_connection(
         dbname=SERVER_OPTS['db_name'],
@@ -129,6 +142,7 @@ def list_keys(username=None, realname=None):
     if pg_conn is None:
         return message
     cur = pg_conn.cursor()
+    is_list = False
 
     if realname is not None:
         cur.execute("""SELECT * FROM USERS WHERE lower(REALNAME)=lower('%s')""" % realname)
@@ -139,9 +153,10 @@ def list_keys(username=None, realname=None):
     else:
         cur.execute("""SELECT * FROM USERS""")
         result = cur.fetchall()
+        is_list = True
     cur.close()
     pg_conn.close()
-    return sql_to_json(result)
+    return sql_to_json(result, list=is_list)
 
 def ldap_authentification(admin=False):
     """
@@ -198,6 +213,9 @@ class Admin():
         if pg_conn is None:
             return message
         cur = pg_conn.cursor()
+
+        if username == 'all' and do_status:
+            return list_keys()
 
         # Search if key already exists
         cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
