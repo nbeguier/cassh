@@ -71,6 +71,21 @@ def read_conf(conf_path):
 
     return user_metadata
 
+
+def print_result(result):
+    """ Display result """
+    date_formatted = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S')
+    is_expired = date_formatted < datetime.now()
+    if result['status'] == 'ACTIVE':
+        if is_expired and date_formatted.year == 1970:
+            result['status'] = 'NEVER SIGNED'
+        elif is_expired:
+            result['status'] = 'EXPIRED'
+        else:
+            result['status'] = 'SIGNED'
+    print(dumps(result, indent=4, sort_keys=True))
+
+
 class CASSH(object):
     """
     Main CASSH class.
@@ -131,16 +146,11 @@ class CASSH(object):
                 if result == {}:
                     print(dumps(result, indent=4, sort_keys=True))
                     return
-                date_formatted = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S')
-                is_expired = date_formatted < datetime.now()
-                if result['status'] == 'ACTIVE':
-                    if is_expired and date_formatted.year == 1970:
-                        result['status'] = 'NEVER SIGNED'
-                    elif is_expired:
-                        result['status'] = 'EXPIRED'
-                    else:
-                        result['status'] = 'SIGNED'
-                print(dumps(result, indent=4, sort_keys=True))
+                if username == 'all':
+                    for user in result:
+                        print_result(result[user])
+                    return
+                print_result(result)
                 return
             else:
                 print('Action should be : revoke, active, delete or status')
@@ -211,16 +221,7 @@ class CASSH(object):
         if result == {}:
             print(dumps(result, indent=4, sort_keys=True))
             return
-        date_formatted = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S')
-        is_expired = date_formatted < datetime.now()
-        if result['status'] == 'ACTIVE':
-            if is_expired and date_formatted.year == 1970:
-                result['status'] = 'NEVER SIGNED'
-            elif is_expired:
-                result['status'] = 'EXPIRED'
-            else:
-                result['status'] = 'SIGNED'
-        print(dumps(result, indent=4, sort_keys=True))
+        print_result(result)
 
     def get_ca(self):
         """
@@ -251,13 +252,13 @@ if __name__ == '__main__':
 
     SUBPARSERS = PARSER.add_subparsers(help='commands')
 
-    PARSER.add_argument('--version', action='version', version='%(prog)s 1.0.1')
+    PARSER.add_argument('--version', action='version', version='%(prog)s 1.1.0')
 
     # ADMIN Arguments
     ADMIN_PARSER = SUBPARSERS.add_parser('admin',\
         help='Administrator command : active - revoke - delete - status keys')
     ADMIN_PARSER.add_argument('username', action='store',\
-        help='Username of client\'s key')
+        help='Username of client\'s key, if username is \'all\' status return all users')
     ADMIN_PARSER.add_argument('action', action='store',\
         help='Choice between : active - revoke - delete - status')
 
