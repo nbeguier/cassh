@@ -39,6 +39,9 @@ def check_auth_by_status(auth):
             auth_url(auth.username, password=auth.password), verify=False)
     except ConnectionError:
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
+    # If there is no account
+    if req.text == 'None':
+        return True
     try:
         result = loads(req.text)
     except:
