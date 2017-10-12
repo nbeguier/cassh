@@ -178,5 +178,5 @@ def page_not_found(_):
 if __name__ == '__main__':
     CONTEXT = SSLContext(PROTOCOL_TLSv1_2)
     CONTEXT.load_cert_chain(APP.config['SSL_PUB_KEY'], APP.config['SSL_PRIV_KEY'])
-    PORT = int(getenv('PORT', 5000))
+    PORT = int(getenv('PORT', 443))
     APP.run(debug=True, host='0.0.0.0', port=PORT, ssl_context=CONTEXT)
