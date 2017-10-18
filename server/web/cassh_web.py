@@ -59,7 +59,7 @@ def requires_auth(func):
         current_user = {}
         current_user['name'] = APP.config['USERNAME']
         current_user['password'] = APP.config['PASSWORD']
-         current_user['is_authenticated'] = True
+        current_user['is_authenticated'] = True
         if current_user['name'] == 'Unknown' and current_user['password'] == 'Unknown':
             current_user['is_authenticated'] = False
         return func(current_user=current_user, *args, **kwargs)
