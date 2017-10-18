@@ -428,7 +428,7 @@ class Test_Auth():
         """
         Test authentication
         """
-        if not ldap_authentification(admin=True):
+        if not ldap_authentification():
             return 'Error : Authentication'
         return 'OK'
 
