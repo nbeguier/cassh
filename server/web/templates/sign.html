@@ -4,11 +4,15 @@
 
 {% block content %}
 
+{% if logged_in %}
 <div>
     <form action="upload" method="post" enctype="multipart/form-data">
         <input type="file" name="file"><br /><br />
         <input type="submit" value="Sign my Key !">
     </form>
 </div>
+{% else %}
+<strong>Login first !</strong>
+{% endif %}
 
 {% endblock %}

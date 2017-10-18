@@ -27,6 +27,9 @@ APP = Flask(__name__)
 APP.config.from_pyfile('settings.txt')
 # These are the extension that we are accepting to be uploaded
 APP.config['ALLOWED_EXTENSIONS'] = set(['pub'])
+APP.config['USERNAME'] = 'Unknown'
+APP.config['PASSWORD'] = 'Unknown'
+APP.config['LAST_ATTEMPT_ERROR'] = False
 
 def allowed_file(filename):
     """ For a given file, return whether it's an allowed type or not """
@@ -48,32 +51,17 @@ def check_auth_by_status(auth):
         return False
     return True
 
-def authenticate():
-    """Sends a 401 response that enables basic auth"""
-    return Response(
-        'Could not verify your access level for that URL.\n'
-        'You have to login with proper credentials', 401,
-        {'WWW-Authenticate': 'Basic realm="Login LDAP Required"'})
-
 def requires_auth(func):
     """ Wrapper which force authentication """
     @wraps(func)
     def decorated(*args, **kwargs):
         """ Authentication wrapper """
-        auth = request.authorization
         current_user = {}
-        if not auth or not check_auth_by_status(auth):
-            return authenticate()
-        try:
-            req = get(APP.config['CASSH_URL'] + '/test_auth' +
-                auth_url(auth.username, password=auth.password), verify=False)
-            if 'Error' in req.text:
-                return authenticate()
-        except:
-            return Response('Connection error : %s' % APP.config['CASSH_URL'])
-        current_user['name'] = auth.username
-        current_user['password'] = auth.password
-        current_user['is_authenticated'] = True
+        current_user['name'] = APP.config['USERNAME']
+        current_user['password'] = APP.config['PASSWORD']
+         current_user['is_authenticated'] = True
+        if current_user['name'] == 'Unknown' and current_user['password'] == 'Unknown':
+            current_user['is_authenticated'] = False
         return func(current_user=current_user, *args, **kwargs)
     return decorated
 
@@ -99,19 +87,48 @@ def auth_url(realname, password=None, prefix=None):
 @requires_auth
 def index(current_user=None):
     """ Display home page """
-    return render_template('homepage.html', username=current_user['name'])
+    return render_template('homepage.html', username=current_user['name'], \
+        logged_in=current_user['is_authenticated'], display_error=APP.config['LAST_ATTEMPT_ERROR'])
+
+@APP.route('/login', methods=['POST'])
+@requires_auth
+def login(current_user=None):
+    username = request.form['username']
+    password = request.form['password']
+    APP.config['LAST_ATTEMPT_ERROR'] = False
+    try:
+        req = get(APP.config['CASSH_URL'] + '/test_auth' +
+            auth_url(username, password=password), verify=False)
+    except:
+        return Response('Connection error : %s' % APP.config['CASSH_URL'])
+    if 'OK' in req.text:
+        APP.config['USERNAME'] = username
+        APP.config['PASSWORD'] = password
+    else:
+        APP.config['LAST_ATTEMPT_ERROR'] = True
+    return redirect('/')
+
+@APP.route('/logout', methods=['POST'])
+@requires_auth
+def logout(current_user=None):
+    APP.config['LAST_ATTEMPT_ERROR'] = False
+    APP.config['USERNAME'] = 'Unknown'
+    APP.config['PASSWORD'] = 'Unknown'
+    return redirect('/')
 
 @APP.route('/add/')
 @requires_auth
 def cassh_add(current_user=None):
     """ Display add key page """
-    return render_template('add.html', username=current_user['name'])
+    return render_template('add.html', username=current_user['name'], \
+        logged_in=current_user['is_authenticated'])
 
 @APP.route('/sign/')
 @requires_auth
 def cassh_sign(current_user=None):
     """ Display sign page """
-    return render_template('sign.html', username=current_user['name'])
+    return render_template('sign.html', username=current_user['name'], \
+        logged_in=current_user['is_authenticated'])
 
 @APP.route('/status/')
 @requires_auth
@@ -133,7 +150,8 @@ def cassh_status(current_user=None):
     except:
         result = req.text
 
-    return render_template('status.html', username=current_user['name'], result=result)
+    return render_template('status.html', username=current_user['name'], result=result, \
+        logged_in=current_user['is_authenticated'])
 
 # Route that will process the file upload
 @APP.route('/sign/upload', methods=['POST'])
@@ -152,7 +170,8 @@ def upload(current_user=None):
     with open(path.join(APP.config['UPLOAD_FOLDER'], current_user['name']), 'w') as f:
         f.write(req.text)
 
-    return send_from_directory(APP.config['UPLOAD_FOLDER'], current_user['name'], attachment_filename='id_rsa-cert.pub', as_attachment=True)
+    return send_from_directory(APP.config['UPLOAD_FOLDER'], current_user['name'], \
+        attachment_filename='id_rsa-cert.pub', as_attachment=True)
 
 # Route that will process the file upload
 @APP.route('/add/send', methods=['POST'])
@@ -162,8 +181,8 @@ def send(current_user=None):
     username = request.form['username']
     try:
         req = put(APP.config['CASSH_URL'] + '/client' +
-            auth_url(current_user['name'], password=current_user['password'], prefix='?username=%s' % username), \
-            data=pubkey, verify=False)
+            auth_url(current_user['name'], password=current_user['password'], \
+                prefix='?username=%s' % username), data=pubkey, verify=False)
     except ConnectionError:
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
     if 'Error' in req.text:

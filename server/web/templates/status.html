@@ -4,6 +4,7 @@
 
 {% block content %}
 
+{% if logged_in %}
 <div class="datagrid"><table>
 <thead><tr><th>User</th><th>{{ result.realname }}</th></tr></thead>
 <tbody><tr><td>Status</td><td>{{ result.status }}</td></tr>
@@ -12,6 +13,8 @@
 <tr class="alt"><td>Username</td><td>{{ result.username }}</td></tr>
 </tbody>
 </table></div>
+{% else %}
+<strong>Login first !</strong>
+{% endif %}
 
 {% endblock %}
-

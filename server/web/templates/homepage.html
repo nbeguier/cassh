@@ -3,6 +3,25 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-    Welcome <strong>{{ username }}</strong>
+
+    {% if display_error %}
+    <strong>Login failed !</strong>
+    {% endif %}
+
+    {% if logged_in %}
+    Welcome <strong>{{ username }}</strong><br>
+    <form action="logout" method="post">
+        <input type="submit" value="Logout"/>
+    </form>
+    {% else %}
+    <form action="login" method="post" enctype="multipart/form-data">
+        Username:<br>
+        <input type="text" name="username"><br><br />
+        Password:<br>
+        <input type="password" name="password"><br><br />
+        <input type="submit" value="Send">
+        <input type="reset" value="Reset">
+    </form>
+    {% endif %}
 
 {% endblock %}

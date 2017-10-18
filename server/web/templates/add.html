@@ -4,6 +4,7 @@
 
 {% block content %}
 
+{% if logged_in %}
 <form action="send" method="post" enctype="multipart/form-data">
     Username:<br>
     <input type="text" name="username"><br><br />
@@ -11,5 +12,8 @@
     <input type="submit" value="Send">
     <input type="reset" value="Reset">
 </form>
+{% else %}
+<strong>Login first !</strong>
+{% endif %}
 
 {% endblock %}
