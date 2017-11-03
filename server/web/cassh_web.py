@@ -27,9 +27,6 @@ APP = Flask(__name__)
 APP.config.from_pyfile('settings.txt')
 # These are the extension that we are accepting to be uploaded
 APP.config['ALLOWED_EXTENSIONS'] = set(['pub'])
-APP.config['USERNAME'] = 'Unknown'
-APP.config['PASSWORD'] = 'Unknown'
-APP.config['LAST_ATTEMPT_ERROR'] = False
 
 def allowed_file(filename):
     """ For a given file, return whether it's an allowed type or not """
@@ -57,9 +54,9 @@ def requires_auth(func):
     def decorated(*args, **kwargs):
         """ Authentication wrapper """
         current_user = {}
-        current_user['name'] = APP.config['USERNAME']
-        current_user['password'] = APP.config['PASSWORD']
-        current_user['is_authenticated'] = True
+        current_user['name'] = request.cookies.get('username')
+        current_user['password'] = request.cookies.get('password')
+        current_user['is_authenticated'] = request.cookies.get('last_attempt_error') == 'False'
         if current_user['name'] == 'Unknown' and current_user['password'] == 'Unknown':
             current_user['is_authenticated'] = False
         return func(current_user=current_user, *args, **kwargs)
@@ -88,33 +85,38 @@ def auth_url(realname, password=None, prefix=None):
 def index(current_user=None):
     """ Display home page """
     return render_template('homepage.html', username=current_user['name'], \
-        logged_in=current_user['is_authenticated'], display_error=APP.config['LAST_ATTEMPT_ERROR'])
+        logged_in=current_user['is_authenticated'], display_error=request.cookies.get('last_attempt_error')=='True')
 
 @APP.route('/login', methods=['POST'])
 @requires_auth
 def login(current_user=None):
     username = request.form['username']
     password = request.form['password']
-    APP.config['LAST_ATTEMPT_ERROR'] = False
+    last_attempt_error = False
+    redirect_to_index = redirect('/')
+    response = APP.make_response(redirect_to_index)
     try:
         req = get(APP.config['CASSH_URL'] + '/test_auth' +
             auth_url(username, password=password), verify=False)
     except:
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
     if 'OK' in req.text:
-        APP.config['USERNAME'] = username
-        APP.config['PASSWORD'] = password
+        response.set_cookie('username',value=username)
+        response.set_cookie('password',value=password)
     else:
-        APP.config['LAST_ATTEMPT_ERROR'] = True
-    return redirect('/')
+        last_attempt_error = True
+    response.set_cookie('last_attempt_error',value=str(last_attempt_error))
+    return response
 
 @APP.route('/logout', methods=['POST'])
 @requires_auth
 def logout(current_user=None):
-    APP.config['LAST_ATTEMPT_ERROR'] = False
-    APP.config['USERNAME'] = 'Unknown'
-    APP.config['PASSWORD'] = 'Unknown'
-    return redirect('/')
+    redirect_to_index = redirect('/')
+    response = APP.make_response(redirect_to_index)
+    response.set_cookie('username',value='Unknown')
+    response.set_cookie('password',value='Unknown')
+    response.set_cookie('last_attempt_error',value='False')
+    return response
 
 @APP.route('/add/')
 @requires_auth
