@@ -4,3 +4,5 @@ ENABLE_LDAP = True
 UPLOAD_FOLDER = '/tmp/'
 SSL_PUB_KEY = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
 SSL_PRIV_KEY = '/etc/ssl/private/ssl-cert-snakeoil.key'
+ENCRYPTION_KEY = 'bSFEf9YNd1mXg5S5ko9NebHapQANJqFo'
+

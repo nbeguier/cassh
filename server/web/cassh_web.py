@@ -4,6 +4,7 @@
 
 # Standard library imports
 from __future__ import print_function
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import datetime
 from functools import wraps
 from json import dumps, loads
@@ -48,6 +49,23 @@ def check_auth_by_status(auth):
         return False
     return True
 
+def decode(key, enc):
+    dec = []
+    enc = urlsafe_b64decode(enc).decode()
+    for i in range(len(enc)):
+        key_c = key[i % len(key)]
+        dec_c = chr((256 + ord(enc[i]) - ord(key_c)) % 256)
+        dec.append(dec_c)
+    return "".join(dec)
+
+def encode(key, clear):
+    enc = []
+    for i in range(len(clear)):
+        key_c = key[i % len(key)]
+        enc_c = chr((ord(clear[i]) + ord(key_c)) % 256)
+        enc.append(enc_c)
+    return urlsafe_b64encode("".join(enc).encode()).decode()
+
 def requires_auth(func):
     """ Wrapper which force authentication """
     @wraps(func)
@@ -55,7 +73,10 @@ def requires_auth(func):
         """ Authentication wrapper """
         current_user = {}
         current_user['name'] = request.cookies.get('username')
-        current_user['password'] = request.cookies.get('password')
+        try:
+            current_user['password'] = decode(APP.config['ENCRYPTION_KEY'], request.cookies.get('password'))
+        except:
+            current_user['password'] = 'Unknown'
         current_user['is_authenticated'] = request.cookies.get('last_attempt_error') == 'False'
         if current_user['name'] == 'Unknown' and current_user['password'] == 'Unknown':
             current_user['is_authenticated'] = False
@@ -102,7 +123,7 @@ def login(current_user=None):
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
     if 'OK' in req.text:
         response.set_cookie('username',value=username)
-        response.set_cookie('password',value=password)
+        response.set_cookie('password',value=encode(APP.config['ENCRYPTION_KEY'], password))
     else:
         last_attempt_error = True
     response.set_cookie('last_attempt_error',value=str(last_attempt_error))
