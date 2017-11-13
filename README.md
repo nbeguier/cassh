@@ -3,6 +3,8 @@
 Easy SSH for admin ONLY !
 Developped for @leboncoin
 
+https://nicolasbeguier.shost.ca/cassh.html
+
 ## Prerequisites
 
 ### Server
