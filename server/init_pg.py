@@ -38,7 +38,9 @@ def init_pg(pg_conn):
        STATE          INT                NOT NULL,
        EXPIRATION     INT                NOT NULL,
        SSH_KEY_HASH   TEXT,
-       SSH_KEY        TEXT
+       SSH_KEY        TEXT,
+       EXPIRY         TEXT,
+       PRINCIPALS     TEXT,
     )""")
 
     pg_conn.commit()

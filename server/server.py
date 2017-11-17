@@ -5,7 +5,7 @@ Sign a user's SSH public key.
 """
 from __future__ import print_function
 from argparse import ArgumentParser
-from datetime import datetime
+from datetime import datetime, timedelta
 from json import dumps
 from os import remove
 from tempfile import NamedTemporaryFile
@@ -88,6 +88,19 @@ if CONFIG.has_section('ssl'):
             print('Option reading error (ssl).')
         exit(1)
 
+def str2date(string):
+    """
+    change xd => seconds
+    """
+    return timedelta(days=int(string.split('d')[0])).total_seconds()
+
+def get_principals(sql_result, username):
+    if sql_result is None or sql_result == '':
+        return [username]
+    else:
+        # TODO
+        return sql_result
+
 def sql_to_json(result, list=False):
     """
     This function prettify a sql result into json
@@ -103,6 +116,8 @@ def sql_to_json(result, list=False):
             d_sub_result['status'] = STATES[res[2]]
             d_sub_result['expiration'] = datetime.fromtimestamp(res[3]).strftime('%Y-%m-%d %H:%M:%S')
             d_sub_result['ssh_key_hash'] = res[4]
+            d_sub_result['expiry'] = res[6]
+            d_sub_result['principals'] = get_principals(res[7], res[0])
             d_result[res[0]] = d_sub_result
         return dumps(d_result, indent=4, sort_keys=True)
     else:
@@ -112,6 +127,8 @@ def sql_to_json(result, list=False):
         d_result['status'] = STATES[result[2]]
         d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime('%Y-%m-%d %H:%M:%S')
         d_result['ssh_key_hash'] = result[4]
+        d_result['expiry'] = result[6]
+        d_result['principals'] = get_principals(result[7], result[0])
         return dumps(d_result, indent=4, sort_keys=True)
 
 def pg_connection(
@@ -337,6 +354,7 @@ class Client():
             return 'Error : User or Key absent, add your key again.'
 
         username = user[0]
+        expiry = user[6]
 
         if user[2] > 0:
             cur.close()
@@ -350,9 +368,9 @@ class Client():
         # Sign the key
         try:
             cert_contents = ca_ssh.sign_public_user_key(\
-                tmp_pubkey.name, username, '+1d', username)
+                tmp_pubkey.name, username, expiry, username)
             cur.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
-                % (time() + 24*60*60, username))
+                % (time() + str2date(expiry), username))
         except:
             cert_contents = 'Error : signing key'
         remove(tmp_pubkey.name)
@@ -386,7 +404,7 @@ class Client():
 
         # CREATE NEW USER
         if user is None:
-            cur.execute("""INSERT INTO USERS VALUES ('%s', '%s', %s, %s, '%s', '%s')""" \
+            cur.execute("""INSERT INTO USERS VALUES ('%s', '%s', %s, %s, '%s', '%s', '+1d', '')""" \
                 % (username, get_realname(), 2, 0, pubkey_fingerprint, pubkey))
             pg_conn.commit()
             cur.close()
