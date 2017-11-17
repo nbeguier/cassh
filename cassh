@@ -121,7 +121,7 @@ class CASSH(object):
             else:
                 return prefix
 
-    def admin(self, username, action):
+    def admin(self, username, action, set_value=None):
         """
         Admin CLI
         """
@@ -135,6 +135,9 @@ class CASSH(object):
             elif action == 'delete':
                 req = self.session.delete(self.url + '/admin/' + username +\
                     self.auth_url(), verify=False)
+            elif action == 'set':
+                req = self.session.post(self.url + '/admin/' + username +\
+                    self.auth_url(prefix='?%s' % set_value.replace('+', '%2B')), verify=False)
             elif action == 'status':
                 req = self.session.get(self.url + '/admin/' + username +\
                     self.auth_url(prefix='?revoke=false&status=true'), verify=False)
@@ -252,15 +255,17 @@ if __name__ == '__main__':
 
     SUBPARSERS = PARSER.add_subparsers(help='commands')
 
-    PARSER.add_argument('--version', action='version', version='%(prog)s 1.1.1')
+    PARSER.add_argument('--version', action='version', version='%(prog)s 1.2.0')
 
     # ADMIN Arguments
     ADMIN_PARSER = SUBPARSERS.add_parser('admin',\
-        help='Administrator command : active - revoke - delete - status keys')
+        help='Administrator command : active - revoke - delete - status - set keys')
     ADMIN_PARSER.add_argument('username', action='store',\
         help='Username of client\'s key, if username is \'all\' status return all users')
     ADMIN_PARSER.add_argument('action', action='store',\
-        help='Choice between : active - revoke - delete - status')
+        help='Choice between : active - revoke - delete - status - set')
+    ADMIN_PARSER.add_argument('-s', '--set', action='store',\
+        help='CAUTION: Set value of a user.')
 
     # ADD Arguments
     ADD_PARSER = SUBPARSERS.add_parser('add', help='Add a key to remote ssh ca server.')
@@ -326,6 +331,6 @@ if __name__ == '__main__':
     elif sys.argv[1] == 'krl':
         LBC.get_krl()
     elif sys.argv[1] == 'admin':
-        LBC.admin(ARGS.username, ARGS.action)
+        LBC.admin(ARGS.username, ARGS.action, set_value=ARGS.set)
 
     exit(0)

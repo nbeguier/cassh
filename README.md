@@ -97,6 +97,12 @@ Status Client **username** key :
 python cassh admin <username> status
 ```
 
+Set Client **username** key :
+```
+python cassh admin <username> set --set='expiry=+7d'
+python cassh admin <username> set --set='principals=username,root'
+```
+
 
 ## Features on CASSH server
 
