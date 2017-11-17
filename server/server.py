@@ -24,19 +24,23 @@ from ssh_utils import Authority, get_fingerprint
 # DEBUG
 # from pdb import set_trace as st
 
-URLS = (
-    '/admin/([a-z]+)', 'Admin',
-    '/ca', 'Ca',
-    '/client', 'Client',
-    '/krl', 'Krl',
-    '/test_auth', 'Test_Auth',
-)
-
 STATES = {
     0: 'ACTIVE',
     1: 'REVOKED',
     2: 'PENDING',
 }
+
+URLS = (
+    '/admin/([a-z]+)', 'Admin',
+    '/ca', 'Ca',
+    '/client', 'Client',
+    '/health', 'Health',
+    '/krl', 'Krl',
+    '/ping', 'Ping',
+    '/test_auth', 'TestAuth',
+)
+
+VERSION = '1.1.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -433,6 +437,18 @@ class Client():
             remove(tmp_pubkey.name)
             return 'Update user=%s. Pending request.' % username
 
+class Health():
+    """
+    Class Ping
+    """
+    def GET(self):
+        """
+        Return a health check
+        """
+        health = {}
+        health['name'] = 'cassh'
+        health['version'] = VERSION
+        return dumps(health, indent=4, sort_keys=True)
 
 class Krl():
     """
@@ -444,8 +460,17 @@ class Krl():
         """
         return open(SERVER_OPTS['krl'], 'rb')
 
+class Ping():
+    """
+    Class Ping
+    """
+    def GET(self):
+        """
+        Return a pong
+        """
+        return 'pong'
 
-class Test_Auth():
+class TestAuth():
     """
     Test authentication
     """
