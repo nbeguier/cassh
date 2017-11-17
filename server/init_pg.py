@@ -40,7 +40,7 @@ def init_pg(pg_conn):
        SSH_KEY_HASH   TEXT,
        SSH_KEY        TEXT,
        EXPIRY         TEXT,
-       PRINCIPALS     TEXT,
+       PRINCIPALS     TEXT
     )""")
 
     pg_conn.commit()

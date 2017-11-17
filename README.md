@@ -46,17 +46,6 @@ pip install -r requirements.txt
 ```
 
 
-### Optional: Demo server
-
-Install docker : https://docs.docker.com/engine/installation/
-
-
-```bash
-# Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
-pip install psycopg2
-bash demo/launch_demo_server.sh
-```
-
 ## Usage
 
 ### Client CLI
@@ -109,7 +98,7 @@ python cassh admin <username> status
 ```
 
 
-## Features
+## Features on CASSH server
 
 ### Active SSL
 ```ini
@@ -137,6 +126,22 @@ admin_cn = CN=Admin,OU=Groupes,DC=Domain,DC=fr
 
 ## Quick test
 
+### Server side
+
+Install docker : https://docs.docker.com/engine/installation/
+
+
+```bash
+# Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
+pip install psycopg2
+bash demo/launch_demo_server.sh
+```
+
+LDAP and HTTPs are disable, but you still need to put [ldap] in client configuration.
+
+
+### Client side
+
 Generate key pair then sign it !
 
 ```bash
@@ -154,6 +159,9 @@ name = user
 key_path = ${PWD}/test-keys/id_rsa
 key_signed_path = ${PWD}/test-keys/id_rsa-cert
 url = http://localhost:8080
+
+[ldap]
+realname = user@test.fr
 EOF
 
 # List keys
@@ -168,3 +176,4 @@ python cassh admin user active
 # Sign it !
 python cassh sign [--display-only]
 ```
+
