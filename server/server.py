@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.2.0'
+VERSION = '1.2.1'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -305,7 +305,7 @@ class Admin():
 
     def POST(self, username):
         """
-        Set some value.
+        Set the first founded value.
         /admin/<username>
             key=value => Set the key value. Keys are in status output.
 
@@ -325,26 +325,24 @@ class Admin():
             value = web_input()[key]
             if key == 'expiry':
                 pattern = re_compile("^\+([0-9]+)+d$")
-                if pattern.match(value) == None:
-                    return 'ERROR: Value %s is malformed. Should match pattern ^\+([0-9]+)+d$' % value
+                if pattern.match(value) is None:
+                    return 'ERROR: Value %s is malformed. Should match pattern ^\+([0-9]+)+d$' \
+                        % value
                 cur.execute("""UPDATE USERS SET EXPIRY='%s' WHERE NAME='%s'""" \
                     % (value, username))
-                print("""UPDATE USERS SET EXPIRY='%s' WHERE NAME='%s'""" \
-                    % (value, username))
+                pg_conn.commit()
+                cur.close()
+                pg_conn.close()
+                return 'OK: %s=%s for %s' % (key, value, username)
             elif key == 'principals':
                 cur.execute("""UPDATE USERS SET PRINCIPALS='%s' WHERE NAME='%s'""" \
                     % (value, username))
-                print("""UPDATE USERS SET PRINCIPALS='%s' WHERE NAME='%s'""" \
-                    % (value, username))
+                pg_conn.commit()
+                cur.close()
+                pg_conn.close()
+                return 'OK: %s=%s for %s' % (key, value, username)
 
-                print(web_input()[key])
-            else:
-                return 'Error: Key %s is unknown' % key
-
-        pg_conn.commit()
-        cur.close()
-        pg_conn.close()
-        return 'OK %s for %s' % (web_input().keys(), username)
+        return 'WARNING: No key found...'
 
     def DELETE(self, username):
         """
