@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from json import dumps
 from os import remove
+from re import compile as re_compile
 from tempfile import NamedTemporaryFile
 from time import time
 
@@ -40,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.1.0'
+VERSION = '1.2.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -188,6 +189,8 @@ def list_keys(username=None, realname=None):
 def ldap_authentification(admin=False):
     """
     Return True if user is well authentified
+        realname=xxxxx@domain.fr
+        password=xxxxx
     """
     if SERVER_OPTS['ldap']:
         try:
@@ -228,10 +231,20 @@ class Admin():
     def GET(self, username):
         """
         Revoke or Active keys.
+        /admin/<username>
+            revoke=true/false => Revoke user
+            status=true/false => Display status
+
+            # Auth params:
+            realname=xxxxx@domain.fr
+            password=xxxxx
         """
         if not ldap_authentification(admin=True):
             return 'Error : Authentication'
-        do_revoke = web_input()['revoke'] == 'true'
+        try:
+            do_revoke = web_input()['revoke'] == 'true'
+        except KeyError:
+            do_revoke = False
         try:
             do_status = web_input()['status'] == 'true'
         except:
@@ -289,6 +302,49 @@ class Admin():
             pg_conn.close()
             message = 'user=%s already active. Nothing done.' % username
         return message
+
+    def POST(self, username):
+        """
+        Set some value.
+        /admin/<username>
+            key=value => Set the key value. Keys are in status output.
+
+            # Auth params:
+            realname=xxxxx@domain.fr
+            password=xxxxx
+        """
+        if not ldap_authentification(admin=True):
+            return 'Error : Authentication'
+
+        pg_conn, message = pg_connection()
+        if pg_conn is None:
+            return message
+        cur = pg_conn.cursor()
+
+        for key in web_input().keys():
+            value = web_input()[key]
+            if key == 'expiry':
+                pattern = re_compile("^\+([0-9]+)+d$")
+                if pattern.match(value) == None:
+                    return 'ERROR: Value %s is malformed. Should match pattern ^\+([0-9]+)+d$' % value
+                cur.execute("""UPDATE USERS SET EXPIRY='%s' WHERE NAME='%s'""" \
+                    % (value, username))
+                print("""UPDATE USERS SET EXPIRY='%s' WHERE NAME='%s'""" \
+                    % (value, username))
+            elif key == 'principals':
+                cur.execute("""UPDATE USERS SET PRINCIPALS='%s' WHERE NAME='%s'""" \
+                    % (value, username))
+                print("""UPDATE USERS SET PRINCIPALS='%s' WHERE NAME='%s'""" \
+                    % (value, username))
+
+                print(web_input()[key])
+            else:
+                return 'Error: Key %s is unknown' % key
+
+        pg_conn.commit()
+        cur.close()
+        pg_conn.close()
+        return 'OK %s for %s' % (web_input().keys(), username)
 
     def DELETE(self, username):
         """
@@ -437,6 +493,7 @@ class Client():
             remove(tmp_pubkey.name)
             return 'Update user=%s. Pending request.' % username
 
+
 class Health():
     """
     Class Ping
@@ -450,6 +507,7 @@ class Health():
         health['version'] = VERSION
         return dumps(health, indent=4, sort_keys=True)
 
+
 class Krl():
     """
     Class KRL.
@@ -460,6 +518,7 @@ class Krl():
         """
         return open(SERVER_OPTS['krl'], 'rb')
 
+
 class Ping():
     """
     Class Ping
@@ -469,6 +528,7 @@ class Ping():
         Return a pong
         """
         return 'pong'
+
 
 class TestAuth():
     """
