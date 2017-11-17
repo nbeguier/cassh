@@ -94,12 +94,18 @@ def str2date(string):
     """
     return timedelta(days=int(string.split('d')[0])).total_seconds()
 
-def get_principals(sql_result, username):
+def get_principals(sql_result, username, shell=False):
+    """
+    Transform sql principals into readable one
+    """
     if sql_result is None or sql_result == '':
+        if shell:
+            return username
         return [username]
     else:
-        # TODO
-        return sql_result
+        if shell:
+            return sql_result
+        return sql_result.split(',')
 
 def sql_to_json(result, list=False):
     """
@@ -355,6 +361,7 @@ class Client():
 
         username = user[0]
         expiry = user[6]
+        principals = get_principals(user[7], username, shell=True)
 
         if user[2] > 0:
             cur.close()
@@ -368,7 +375,7 @@ class Client():
         # Sign the key
         try:
             cert_contents = ca_ssh.sign_public_user_key(\
-                tmp_pubkey.name, username, expiry, username)
+                tmp_pubkey.name, username, expiry, principals)
             cur.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
                 % (time() + str2date(expiry), username))
         except:
