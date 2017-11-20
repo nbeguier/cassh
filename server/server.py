@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.2.1'
+VERSION = '1.3.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -381,6 +381,11 @@ class Client():
     def GET(self):
         """
         Get client key status.
+        /client
+            realname=xxxxx@domain.fr => This LDAP/AD user.
+
+            # Auth params:
+            password=xxxxx
         """
         if not ldap_authentification():
             return 'Error : Authentication'
@@ -394,13 +399,41 @@ class Client():
     def POST(self):
         """
         Ask to sign pub key.
+        /client
+            username=xxxxxx          => Unique username. Used by default to connect on server.
+            realname=xxxxx@domain.fr => This LDAP/AD user.
+
+            # Auth params:
+            password=xxxxx
+
         """
         if not ldap_authentification():
             return 'Error : Authentication'
+
+        try:
+            username = web_input()['username']
+        except KeyError:
+            return "Error: No username option given"
+
+        username_pattern = re_compile("^([a-z]+)$")
+        if username_pattern.match(username) is None or username == 'all':
+            return "Error: Username %s doesn't match pattern %s" \
+                % (username, username_pattern.pattern)
+
+        try:
+            realname = web_input()['realname']
+        except KeyError:
+            return "Error: No realname option given"
+
         pubkey = data()
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
+        pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
+        if pubkey_fingerprint == 'Unknown':
+            remove(tmp_pubkey.name)
+            return 'Error : Public key unprocessable'
+
         pg_conn, message = pg_connection()
         if pg_conn is None:
             remove(tmp_pubkey.name)
@@ -408,8 +441,8 @@ class Client():
         cur = pg_conn.cursor()
 
         # Search if key already exists
-        cur.execute("""SELECT * FROM USERS WHERE SSH_KEY='%s' AND lower(REALNAME)=lower('%s')""" \
-            % (pubkey, get_realname()))
+        cur.execute("""SELECT * FROM USERS WHERE SSH_KEY='%s' AND name=lower('%s')""" \
+            % (pubkey, username))
         user = cur.fetchone()
         if user is None:
             cur.close()
@@ -417,11 +450,17 @@ class Client():
             remove(tmp_pubkey.name)
             return 'Error : User or Key absent, add your key again.'
 
-        username = user[0]
+        if username != user[0] or realname != user[1]:
+            cur.close()
+            pg_conn.close()
+            remove(tmp_pubkey.name)
+            return 'Error : (username, realname) couple mismatch.'
+
+        status = user[2]
         expiry = user[6]
         principals = get_principals(user[7], username, shell=True)
 
-        if user[2] > 0:
+        if status > 0:
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
@@ -447,21 +486,45 @@ class Client():
     def PUT(self):
         """
         This function permit to add or update a ssh public key.
+        /client
+            username=xxxxxx          => Unique username. Used by default to connect on server.
+            realname=xxxxx@domain.fr => This LDAP/AD user.
+
+            # Auth params:
+            password=xxxxx
         """
         if not ldap_authentification():
             return 'Error : Authentication'
+
+        try:
+            username = web_input()['username']
+        except KeyError:
+            return "Error: No username option given"
+
+        username_pattern = re_compile("^([a-z]+)$")
+        if username_pattern.match(username) is None or username == 'all':
+            return "Error: Username %s doesn't match pattern %s" \
+                % (username, username_pattern.pattern)
+
+        try:
+            realname = web_input()['realname']
+        except KeyError:
+            return "Error: No realname option given"
+
         pubkey = data()
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
+        if pubkey_fingerprint == 'Unknown':
+            remove(tmp_pubkey.name)
+            return 'Error : Public key unprocessable'
+
         pg_conn, message = pg_connection()
         if pg_conn is None:
             remove(tmp_pubkey.name)
             return message
         cur = pg_conn.cursor()
-
-        username = web_input()['username']
 
         # Search if key already exists
         cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
@@ -470,7 +533,7 @@ class Client():
         # CREATE NEW USER
         if user is None:
             cur.execute("""INSERT INTO USERS VALUES ('%s', '%s', %s, %s, '%s', '%s', '+1d', '')""" \
-                % (username, get_realname(), 2, 0, pubkey_fingerprint, pubkey))
+                % (username, realname, 2, 0, pubkey_fingerprint, pubkey))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
@@ -479,9 +542,13 @@ class Client():
         else:
             # Check if realname is the same
             cur.execute("""SELECT * FROM USERS WHERE NAME='%s' AND lower(REALNAME)=lower('%s')"""\
-                % (username, get_realname()))
+                % (username, realname))
             if cur.fetchone() is None:
-                return 'Error : Authentication'
+                pg_conn.commit()
+                cur.close()
+                pg_conn.close()
+                remove(tmp_pubkey.name)
+                return 'Error : (username, realname) couple mismatch.'
             # Update entry into database
             cur.execute("""UPDATE USERS SET SSH_KEY='%s', SSH_KEY_HASH='%s', STATE=2, EXPIRATION=0 \
                 WHERE NAME = '%s'""" % (pubkey, pubkey_fingerprint, username))

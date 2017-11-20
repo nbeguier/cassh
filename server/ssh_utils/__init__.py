@@ -2,16 +2,20 @@
 """ ssh_utils lib """
 
 from os import remove
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 
 def get_fingerprint(public_key_filename):
     """
     Return Fingerprint
     """
-    return check_output([
-        'ssh-keygen',
-        '-l',
-        '-f', public_key_filename]).split('/')[0]
+    try:
+        fingerprint = check_output([
+            'ssh-keygen',
+            '-l',
+            '-f', public_key_filename]).split('/')[0]
+    except CalledProcessError:
+        fingerprint = 'Unknown'
+    return fingerprint
 
 def get_cert_contents(public_key_filename):
     """
