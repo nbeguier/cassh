@@ -140,7 +140,7 @@ Install docker : https://docs.docker.com/engine/installation/
 ```bash
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
 pip install psycopg2
-bash demo/launch_demo_server.sh
+bash tests/launch_demo_server.sh
 ```
 
 LDAP and HTTPs are disable, but you still need to put [ldap] in client configuration.
