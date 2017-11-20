@@ -183,7 +183,7 @@ class CASSH(object):
         pubkey = open('%s.pub' % self.key_path, 'rb')
         try:
             req = self.session.post(self.url + '/client' + \
-                self.auth_url(), data=pubkey, verify=False)
+                self.auth_url(prefix='?username=%s' % self.name), data=pubkey, verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
@@ -255,7 +255,7 @@ if __name__ == '__main__':
 
     SUBPARSERS = PARSER.add_subparsers(help='commands')
 
-    PARSER.add_argument('--version', action='version', version='%(prog)s 1.2.0')
+    PARSER.add_argument('--version', action='version', version='%(prog)s 1.3.0')
 
     # ADMIN Arguments
     ADMIN_PARSER = SUBPARSERS.add_parser('admin',\

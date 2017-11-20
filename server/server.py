@@ -413,7 +413,7 @@ class Client():
         try:
             username = web_input()['username']
         except KeyError:
-            return "Error: No username option given"
+            return "Error: No username option given. Update your CASSH >= 1.3.0"
 
         username_pattern = re_compile("^([a-z]+)$")
         if username_pattern.match(username) is None or username == 'all':
