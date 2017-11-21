@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -159,11 +159,11 @@ def pg_connection(
         pg_conn = connect("dbname='%s' user='%s' host='%s' password='%s'"\
             % (dbname, user, host, password))
     except OperationalError:
-        return None, 'Server cannot connect to database'
+        return None, 'Error : Server cannot connect to database'
     try:
         pg_conn.cursor().execute("""SELECT * FROM USERS""")
     except ProgrammingError:
-        return None, 'Server cannot connect to table in database'
+        return None, 'Error : Server cannot connect to table in database'
     return pg_conn, message
 
 def sign_key(tmp_pubkey_name, username, expiry, principals, db_cursor=None):
