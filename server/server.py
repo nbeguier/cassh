@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.3.0'
+VERSION = '1.3.1'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -198,6 +198,8 @@ def ldap_authentification(admin=False):
         except KeyError:
             real_name = None
             return False
+        except UnicodeDecodeError:
+            return False
         password = web_input()['password']
         if password == '':
             return False
@@ -213,15 +215,17 @@ def ldap_authentification(admin=False):
             return False
     return True
 
-def get_realname():
+def check_input():
     """
-    Return realname or None
+    Return True if input are not malicious
     """
     try:
-        real_name = web_input()['realname']
-    except KeyError:
-        real_name = None
-    return real_name
+        web_input()['realname']
+    except UnicodeDecodeError:
+        return False
+    except:
+        return True
+    return True
 
 
 class Admin():
@@ -239,6 +243,9 @@ class Admin():
             realname=xxxxx@domain.fr
             password=xxxxx
         """
+        if not check_input():
+            return 'Error : Wrong inputs.'
+
         if not ldap_authentification(admin=True):
             return 'Error : Authentication'
         try:
@@ -247,7 +254,7 @@ class Admin():
             do_revoke = False
         try:
             do_status = web_input()['status'] == 'true'
-        except:
+        except KeyError:
             do_status = False
         pg_conn, message = pg_connection()
         if pg_conn is None:
@@ -313,6 +320,9 @@ class Admin():
             realname=xxxxx@domain.fr
             password=xxxxx
         """
+        if not check_input():
+            return 'Error : Wrong inputs.'
+
         if not ldap_authentification(admin=True):
             return 'Error : Authentication'
 
@@ -387,6 +397,9 @@ class Client():
             # Auth params:
             password=xxxxx
         """
+        if not check_input():
+            return 'Error : Wrong inputs.'
+
         if not ldap_authentification():
             return 'Error : Authentication'
         try:
@@ -407,6 +420,9 @@ class Client():
             password=xxxxx
 
         """
+        if not check_input():
+            return 'Error : Wrong inputs.'
+
         if not ldap_authentification():
             return 'Error : Authentication'
 
@@ -493,6 +509,9 @@ class Client():
             # Auth params:
             password=xxxxx
         """
+        if not check_input():
+            return 'Error : Wrong inputs.'
+
         if not ldap_authentification():
             return 'Error : Authentication'
 
