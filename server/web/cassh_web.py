@@ -106,7 +106,9 @@ def auth_url(realname, password=None, prefix=None):
 def index(current_user=None):
     """ Display home page """
     return render_template('homepage.html', username=current_user['name'], \
-        logged_in=current_user['is_authenticated'], display_error=request.cookies.get('last_attempt_error')=='True')
+        logged_in=current_user['is_authenticated'], \
+        display_error=request.cookies.get('last_attempt_error')=='True', \
+        login_banner=APP.config['LOGIN_BANNER'])
 
 @APP.route('/login', methods=['POST'])
 @requires_auth
@@ -181,10 +183,11 @@ def cassh_status(current_user=None):
 @requires_auth
 def upload(current_user=None):
     pubkey = request.files['file']
+    username = request.form['username']
     try:
         req = post(APP.config['CASSH_URL'] + '/client' +
-            auth_url(current_user['name'], password=current_user['password']), \
-            data=pubkey, verify=False)
+            auth_url(current_user['name'], password=current_user['password'], \
+                prefix='?username=%s' % username), data=pubkey, verify=False)
     except ConnectionError:
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
     if 'Error' in req.text:
