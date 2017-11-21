@@ -23,11 +23,40 @@ ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without
 ssh-keygen -k -f test-keys/revoked-keys
 ```
 
+Configuration file example :
+```
+[main]
+ca = /etc/cassh/ca/id_rsa_ca
+krl = /etc/cassh/krl/revoked-keys
+port = 8080
+# Optionnal : admin_db_failover is used to bypass db when it fails.
+# admin_db_failover = False
+
+[postgres]
+host = cassh.domain.fr
+dbname = casshdb
+user = cassh
+password = xxxxxxxx
+
+# Highly recommended
+[ldap]
+host = ldap.domain.fr 
+bind_dn = OU=User,DC=domain,DC=fr
+admin_cn = CN=Admin,OU=Group,DC=domain,DC=fr
+# Key in user result to get his LDAP realname
+filterstr = userPrincipalName
+
+# Optionnal
+[ssl]
+private_key = /etc/cassh/ssl/cert.key
+public_key = /etc/cassh/ssl/cert.pem
+```
+
 ### Server : Database
 
 You need to create a database.
 
-### Server : Client interface
+### Server : Client web user interface
 ```bash
 pip3 insall -r requirements.txt
 python3 server/web/cassh_web.py
@@ -185,4 +214,3 @@ python cassh admin user active
 # Sign it !
 python cassh sign [--display-only]
 ```
-

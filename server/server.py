@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.3.1'
+VERSION = '1.4.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -57,6 +57,10 @@ SERVER_OPTS = {}
 SERVER_OPTS['ca'] = CONFIG.get('main', 'ca')
 SERVER_OPTS['krl'] = CONFIG.get('main', 'krl')
 SERVER_OPTS['port'] = CONFIG.get('main', 'port')
+try:
+    SERVER_OPTS['admin_db_failover'] = CONFIG.get('main', 'admin_db_failover')
+except NoOptionError:
+    SERVER_OPTS['admin_db_failover'] = False
 SERVER_OPTS['ldap'] = False
 SERVER_OPTS['ssl'] = False
 
@@ -162,6 +166,25 @@ def pg_connection(
         return None, 'Server cannot connect to table in database'
     return pg_conn, message
 
+def sign_key(tmp_pubkey_name, username, expiry, principals, db_cursor=None):
+    """
+    Sign a key and return cert_contents
+    """
+    # Load SSH CA
+    ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
+
+    # Sign the key
+    try:
+        cert_contents = ca_ssh.sign_public_user_key(\
+            tmp_pubkey_name, username, expiry, principals)
+        if db_cursor is not None:
+            db_cursor.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
+                % (time() + str2date(expiry), username))
+    except:
+        cert_contents = 'Error : signing key'
+    return cert_contents
+
+
 def list_keys(username=None, realname=None):
     """
     Return all keys.
@@ -193,24 +216,26 @@ def ldap_authentification(admin=False):
         password=xxxxx
     """
     if SERVER_OPTS['ldap']:
-        try:
-            real_name = web_input()['realname']
-        except KeyError:
-            real_name = None
+
+        if web_input().has_key('realname'):
+            realname = web_input()['realname']
+        else:
             return False
-        except UnicodeDecodeError:
+
+        if web_input().has_key('password'):
+            password = web_input()['password']
+        else:
             return False
-        password = web_input()['password']
         if password == '':
             return False
         ldap_conn = ldap_open(SERVER_OPTS['ldap_host'])
         try:
-            ldap_conn.bind_s(real_name, password)
+            ldap_conn.bind_s(realname, password)
         except:
             return False
         if admin and SERVER_OPTS['ldap_admin_cn'] not in\
             ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'], 2,
-                               filterstr='(%s=%s)' % (SERVER_OPTS['filterstr'], real_name)
+                               filterstr='(%s=%s)' % (SERVER_OPTS['filterstr'], realname)
                               )[0][1]['memberOf']:
             return False
     return True
@@ -248,14 +273,17 @@ class Admin():
 
         if not ldap_authentification(admin=True):
             return 'Error : Authentication'
-        try:
+
+
+        if web_input().has_key('revoke'):
             do_revoke = web_input()['revoke'] == 'true'
-        except KeyError:
+        else:
             do_revoke = False
-        try:
+        if web_input().has_key('status'):
             do_status = web_input()['status'] == 'true'
-        except KeyError:
+        else:
             do_status = False
+
         pg_conn, message = pg_connection()
         if pg_conn is None:
             return message
@@ -402,10 +430,11 @@ class Client():
 
         if not ldap_authentification():
             return 'Error : Authentication'
-        try:
+
+        if web_input().has_key('realname'):
             realname = web_input()['realname']
-        except KeyError:
-            return 'Error : No realname given'
+        else:
+            return "Error: No realname option given."
 
         return list_keys(realname=realname)
 
@@ -416,31 +445,44 @@ class Client():
             username=xxxxxx          => Unique username. Used by default to connect on server.
             realname=xxxxx@domain.fr => This LDAP/AD user.
 
+            # Optionnal
+            admin_force=true|false
+
             # Auth params:
             password=xxxxx
 
         """
+        # Verify inputs
         if not check_input():
             return 'Error : Wrong inputs.'
 
+        # LDAP authentication
         if not ldap_authentification():
             return 'Error : Authentication'
 
-        try:
-            username = web_input()['username']
-        except KeyError:
-            return "Error: No username option given. Update your CASSH >= 1.3.0"
+        # Check if user is an admin and want to force signature when db fail
+        force_sign = False
+        if ldap_authentification(admin=True) and SERVER_OPTS['admin_db_failover'] \
+            and 'admin_force' in web_input() and web_input()['admin_force'] == 'true':
+            force_sign = True
 
+        # Get username
+        if web_input().has_key('username'):
+            username = web_input()['username']
+        else:
+            return "Error: No username option given. Update your CASSH >= 1.3.0"
         username_pattern = re_compile("^([a-z]+)$")
         if username_pattern.match(username) is None or username == 'all':
             return "Error: Username %s doesn't match pattern %s" \
                 % (username, username_pattern.pattern)
 
-        try:
+        # Get realname
+        if web_input().has_key('realname'):
             realname = web_input()['realname']
-        except KeyError:
-            return "Error: No realname option given"
+        else:
+            return "Error: No realname option given."
 
+        # Get public key
         pubkey = data()
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
@@ -451,7 +493,13 @@ class Client():
             return 'Error : Public key unprocessable'
 
         pg_conn, message = pg_connection()
-        if pg_conn is None:
+        # Admin force signature case
+        if pg_conn is None and force_sign:
+            cert_contents = sign_key(tmp_pubkey.name, username, '+1d', username)
+            remove(tmp_pubkey.name)
+            return cert_contents
+        # Else, if db is down it fails.
+        elif pg_conn is None:
             remove(tmp_pubkey.name)
             return message
         cur = pg_conn.cursor()
@@ -482,17 +530,8 @@ class Client():
             remove(tmp_pubkey.name)
             return "Status: %s" % STATES[user[2]]
 
-        # Load SSH CA
-        ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
+        cert_contents = sign_key(tmp_pubkey.name, username, expiry, principals, db_cursor=cur)
 
-        # Sign the key
-        try:
-            cert_contents = ca_ssh.sign_public_user_key(\
-                tmp_pubkey.name, username, expiry, principals)
-            cur.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
-                % (time() + str2date(expiry), username))
-        except:
-            cert_contents = 'Error : signing key'
         remove(tmp_pubkey.name)
         pg_conn.commit()
         cur.close()
@@ -515,20 +554,20 @@ class Client():
         if not ldap_authentification():
             return 'Error : Authentication'
 
-        try:
+        if web_input().has_key('username'):
             username = web_input()['username']
-        except KeyError:
-            return "Error: No username option given"
+        else:
+            return "Error: No username option given."
 
         username_pattern = re_compile("^([a-z]+)$")
         if username_pattern.match(username) is None or username == 'all':
             return "Error: Username %s doesn't match pattern %s" \
                 % (username, username_pattern.pattern)
 
-        try:
+        if web_input().has_key('realname'):
             realname = web_input()['realname']
-        except KeyError:
-            return "Error: No realname option given"
+        else:
+            return "Error: No realname option given."
 
         pubkey = data()
         tmp_pubkey = NamedTemporaryFile(delete=False)
@@ -642,5 +681,6 @@ if __name__ == "__main__":
     if ARGS.verbose:
         print('SSL: %s' % SERVER_OPTS['ssl'])
         print('LDAP: %s' % SERVER_OPTS['ldap'])
+        print('Admin DB Failover: %s' % SERVER_OPTS['admin_db_failover'])
     APP = MyApplication(URLS, globals())
     APP.run()

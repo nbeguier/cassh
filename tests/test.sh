@@ -25,7 +25,7 @@ else
 fi
 
 RESP=$(curl -s -X PUT http://localhost:8080/client)
-if [ "${RESP}" == 'Error: No username option given' ]; then
+if [ "${RESP}" == 'Error: No username option given.' ]; then
     echo "[OK] Test add user without username"
 else
     echo "[FAIL] Test add user without username : ${RESP}"
@@ -39,7 +39,7 @@ else
 fi
 
 RESP=$(curl -s -X PUT http://localhost:8080/client?username=testuser)
-if [ "${RESP}" == 'Error: No realname option given' ]; then
+if [ "${RESP}" == 'Error: No realname option given.' ]; then
     echo "[OK] Test add user without realname"
 else
     echo "[FAIL] Test add user without realname : ${RESP}"
@@ -109,7 +109,7 @@ else
 fi
 
 RESP=$(curl -s -X POST http://localhost:8080/client?username=testuser)
-if [ "${RESP}" == 'Error: No realname option given' ]; then
+if [ "${RESP}" == 'Error: No realname option given.' ]; then
     echo "[OK] Test signing key without realname"
 else
     echo "[FAIL] Test signing key without realname: ${RESP}"
