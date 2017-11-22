@@ -81,55 +81,55 @@ pip install -r requirements.txt
 
 Add new key to cassh-server :
 ```
-$ python cassh add
+$ cassh add
 ```
 
 Sign pub key :
 ```
-$ python cassh sign [--display-only] [--uid=UID]
+$ cassh sign [--display-only] [--uid=UID] [--force]
 ```
 
 Get public key status :
 ```
-$ python cassh status
+$ cassh status
 ```
 
 Get ca public key :
 ```
-$ python cassh ca
+$ cassh ca
 ```
 
 Get ca krl :
 ```
-python cassh krl
+cassh krl
 ```
 
 ### Admin CLI
 
 Active Client **username** key :
 ```
-python cassh admin <username> active
+cassh admin <username> active
 ```
 
 Revoke Client **username** key :
 ```
-python cassh admin <username> revoke
+cassh admin <username> revoke
 ```
 
 Delete Client **username** key :
 ```
-python cassh admin <username> delete
+cassh admin <username> delete
 ```
 
 Status Client **username** key :
 ```
-python cassh admin <username> status
+cassh admin <username> status
 ```
 
 Set Client **username** key :
 ```
-python cassh admin <username> set --set='expiry=+7d'
-python cassh admin <username> set --set='principals=username,root'
+cassh admin <username> set --set='expiry=+7d'
+cassh admin <username> set --set='principals=username,root'
 ```
 
 
