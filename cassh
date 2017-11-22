@@ -31,7 +31,7 @@ if sys.version_info < (3, 0):
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.4.0'
+VERSION = '%(prog)s 1.4.1'
 
 def read_conf(conf_path):
     """
@@ -194,7 +194,7 @@ class CASSH(object):
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
-        if 'Error' in req.text or 'Status' in req.text:
+        if not 'ssh-rsa-cert' in req.text:
             print(req.text)
             exit(1)
         if do_write_on_disk:
