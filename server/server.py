@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.4.1'
+VERSION = '1.4.2'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -178,8 +178,8 @@ def sign_key(tmp_pubkey_name, username, expiry, principals, db_cursor=None):
         cert_contents = ca_ssh.sign_public_user_key(\
             tmp_pubkey_name, username, expiry, principals)
         if db_cursor is not None:
-            db_cursor.execute("""UPDATE USERS SET STATE=0, EXPIRATION=%s WHERE NAME='%s'"""\
-                % (time() + str2date(expiry), username))
+            db_cursor.execute('UPDATE USERS SET STATE=0, EXPIRATION=(%s) WHERE NAME=(%s)', \
+                (time() + str2date(expiry), username))
     except:
         cert_contents = 'Error : signing key'
     return cert_contents
@@ -196,13 +196,13 @@ def list_keys(username=None, realname=None):
     is_list = False
 
     if realname is not None:
-        cur.execute("""SELECT * FROM USERS WHERE lower(REALNAME)=lower('%s')""" % realname)
+        cur.execute('SELECT * FROM USERS WHERE REALNAME=lower((%s))', (realname,))
         result = cur.fetchone()
     elif username is not None:
-        cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
+        cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
         result = cur.fetchone()
     else:
-        cur.execute("""SELECT * FROM USERS""")
+        cur.execute('SELECT * FROM USERS')
         result = cur.fetchall()
         is_list = True
     cur.close()
@@ -220,25 +220,25 @@ def ldap_authentification(admin=False):
         if web_input().has_key('realname'):
             realname = web_input()['realname']
         else:
-            return False
+            return False, 'Error: No realname option given.'
 
         if web_input().has_key('password'):
             password = web_input()['password']
         else:
-            return False
+            return False, 'Error: No password option given.'
         if password == '':
-            return False
+            return False, 'Error: password is empty.'
         ldap_conn = ldap_open(SERVER_OPTS['ldap_host'])
         try:
             ldap_conn.bind_s(realname, password)
-        except:
-            return False
+        except Exception as e:
+            return False, 'Error: %s' % e
         if admin and SERVER_OPTS['ldap_admin_cn'] not in\
             ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'], 2,
                                filterstr='(%s=%s)' % (SERVER_OPTS['filterstr'], realname)
                               )[0][1]['memberOf']:
-            return False
-    return True
+            return False, 'Error: user %s is not an admin.' % realname
+    return True, 'OK'
 
 def check_input():
     """
@@ -271,9 +271,10 @@ class Admin():
         if not check_input():
             return 'Error : Wrong inputs.'
 
-        if not ldap_authentification(admin=True):
-            return 'Error : Authentication'
-
+        # LDAP authentication
+        is_admin_auth, message = ldap_authentification(admin=True)
+        if not is_admin_auth:
+            return message
 
         if web_input().has_key('revoke'):
             do_revoke = web_input()['revoke'] == 'true'
@@ -293,7 +294,7 @@ class Admin():
             return list_keys()
 
         # Search if key already exists
-        cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
+        cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
         user = cur.fetchone()
         # If user dont exist
         if user is None:
@@ -301,12 +302,12 @@ class Admin():
             pg_conn.close()
             message = "User '%s' does not exists." % username
         elif do_revoke:
-            cur.execute("""UPDATE USERS SET STATE=1 WHERE NAME = '%s'""" % username)
+            cur.execute('UPDATE USERS SET STATE=1 WHERE NAME=(%s)', (username,))
             pg_conn.commit()
             message = 'Revoke user=%s.' % username
             # Load SSH CA and revoke key
             ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
-            cur.execute("""SELECT SSH_KEY FROM USERS WHERE NAME = '%s'""" % username)
+            cur.execute('SELECT SSH_KEY FROM USERS WHERE NAME=(%s)', (username,))
             pubkey = cur.fetchone()[0]
             tmp_pubkey = NamedTemporaryFile(delete=False)
             tmp_pubkey.write(pubkey)
@@ -320,14 +321,14 @@ class Admin():
             return list_keys(username=username)
         # If user is in PENDING state
         elif user[2] == 2:
-            cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)
+            cur.execute('UPDATE USERS SET STATE=0 WHERE NAME=(%s)', (username,))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
             message = 'Active user=%s. SSH Key active but need to be signed.' % username
         # If user is in REVOKE state
         elif user[2] == 1:
-            cur.execute("""UPDATE USERS SET STATE=0 WHERE NAME = '%s'""" % username)
+            cur.execute('UPDATE USERS SET STATE=0 WHERE NAME=(%s)', (username,))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
@@ -351,8 +352,10 @@ class Admin():
         if not check_input():
             return 'Error : Wrong inputs.'
 
-        if not ldap_authentification(admin=True):
-            return 'Error : Authentication'
+        # LDAP authentication
+        is_admin_auth, message = ldap_authentification(admin=True)
+        if not is_admin_auth:
+            return message
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
@@ -366,15 +369,18 @@ class Admin():
                 if pattern.match(value) is None:
                     return 'ERROR: Value %s is malformed. Should match pattern ^\+([0-9]+)+d$' \
                         % value
-                cur.execute("""UPDATE USERS SET EXPIRY='%s' WHERE NAME='%s'""" \
-                    % (value, username))
+                cur.execute('UPDATE USERS SET EXPIRY=(%s) WHERE NAME=(%s)', (value, username))
                 pg_conn.commit()
                 cur.close()
                 pg_conn.close()
                 return 'OK: %s=%s for %s' % (key, value, username)
             elif key == 'principals':
-                cur.execute("""UPDATE USERS SET PRINCIPALS='%s' WHERE NAME='%s'""" \
-                    % (value, username))
+                pattern = re_compile("^([a-zA-Z]+)$")
+                for principal in value.split(','):
+                    if pattern.match(principal) is None:
+                        return 'ERROR: Value %s is malformed. Should match pattern ^([a-zA-Z]+)$' \
+                            % principal
+                cur.execute('UPDATE USERS SET PRINCIPALS=(%s) WHERE NAME=(%s)', (value, username))
                 pg_conn.commit()
                 cur.close()
                 pg_conn.close()
@@ -385,16 +391,23 @@ class Admin():
     def DELETE(self, username):
         """
         Delete keys (but DOESN'T REVOKE)
+        /admin/<username>
+            # Auth params:
+            realname=xxxxx@domain.fr
+            password=xxxxx
         """
-        if not ldap_authentification(admin=True):
-            return 'Error : Authentication'
+        # LDAP authentication
+        is_admin_auth, message = ldap_authentification(admin=True)
+        if not is_admin_auth:
+            return message
+
         pg_conn, message = pg_connection()
         if pg_conn is None:
             return message
         cur = pg_conn.cursor()
 
         # Search if key already exists
-        cur.execute("""DELETE FROM USERS WHERE NAME='%s'""" % username, )
+        cur.execute('DELETE FROM USERS WHERE NAME=(%s)', (username,))
         pg_conn.commit()
         cur.close()
         pg_conn.close()
@@ -428,8 +441,10 @@ class Client():
         if not check_input():
             return 'Error : Wrong inputs.'
 
-        if not ldap_authentification():
-            return 'Error : Authentication'
+        # LDAP authentication
+        is_auth, message = ldap_authentification()
+        if not is_auth:
+            return message
 
         if web_input().has_key('realname'):
             realname = web_input()['realname']
@@ -457,12 +472,17 @@ class Client():
             return 'Error : Wrong inputs.'
 
         # LDAP authentication
-        if not ldap_authentification():
-            return 'Error : Authentication'
+        is_auth, message = ldap_authentification()
+        if not is_auth:
+            return message
 
         # Check if user is an admin and want to force signature when db fail
         force_sign = False
-        if ldap_authentification(admin=True) and SERVER_OPTS['admin_db_failover'] \
+
+        # LDAP ADMIN authentication
+        is_admin_auth, _ = ldap_authentification(admin=True)
+
+        if is_admin_auth and SERVER_OPTS['admin_db_failover'] \
             and 'admin_force' in web_input() and web_input()['admin_force'] == 'true':
             force_sign = True
 
@@ -505,8 +525,7 @@ class Client():
         cur = pg_conn.cursor()
 
         # Search if key already exists
-        cur.execute("""SELECT * FROM USERS WHERE SSH_KEY='%s' AND name=lower('%s')""" \
-            % (pubkey, username))
+        cur.execute('SELECT * FROM USERS WHERE SSH_KEY=(%s) AND NAME=lower(%s)', (pubkey, username))
         user = cur.fetchone()
         if user is None:
             cur.close()
@@ -551,8 +570,10 @@ class Client():
         if not check_input():
             return 'Error : Wrong inputs.'
 
-        if not ldap_authentification():
-            return 'Error : Authentication'
+        # LDAP authentication
+        is_auth, message = ldap_authentification()
+        if not is_auth:
+            return message
 
         if web_input().has_key('username'):
             username = web_input()['username']
@@ -585,13 +606,14 @@ class Client():
         cur = pg_conn.cursor()
 
         # Search if key already exists
-        cur.execute("""SELECT * FROM USERS WHERE NAME='%s'""" % username)
+        cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
         user = cur.fetchone()
 
         # CREATE NEW USER
         if user is None:
-            cur.execute("""INSERT INTO USERS VALUES ('%s', '%s', %s, %s, '%s', '%s', '+1d', '')""" \
-                % (username, realname, 2, 0, pubkey_fingerprint, pubkey))
+            cur.execute('INSERT INTO USERS VALUES \
+                ((%s), (%s), (%s), (%s), (%s), (%s), (%s), (%s))', \
+                (username, realname, 2, 0, pubkey_fingerprint, pubkey, '+1d', ''))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
@@ -599,8 +621,8 @@ class Client():
             return 'Create user=%s. Pending request.' % username
         else:
             # Check if realname is the same
-            cur.execute("""SELECT * FROM USERS WHERE NAME='%s' AND lower(REALNAME)=lower('%s')"""\
-                % (username, realname))
+            cur.execute('SELECT * FROM USERS WHERE NAME=(%s) AND REALNAME=lower((%s))', \
+                (username, realname))
             if cur.fetchone() is None:
                 pg_conn.commit()
                 cur.close()
@@ -608,8 +630,8 @@ class Client():
                 remove(tmp_pubkey.name)
                 return 'Error : (username, realname) couple mismatch.'
             # Update entry into database
-            cur.execute("""UPDATE USERS SET SSH_KEY='%s', SSH_KEY_HASH='%s', STATE=2, EXPIRATION=0 \
-                WHERE NAME = '%s'""" % (pubkey, pubkey_fingerprint, username))
+            cur.execute('UPDATE USERS SET SSH_KEY=(%s), SSH_KEY_HASH=(%s), STATE=2, EXPIRATION=0 \
+                WHERE NAME=(%s)', (pubkey, pubkey_fingerprint, username))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
@@ -661,8 +683,10 @@ class TestAuth():
         """
         Test authentication
         """
-        if not ldap_authentification():
-            return 'Error : Authentication'
+        # LDAP authentication
+        is_auth, message = ldap_authentification()
+        if not is_auth:
+            return message
         return 'OK'
 
 
