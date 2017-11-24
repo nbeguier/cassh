@@ -40,7 +40,7 @@ password = xxxxxxxx
 
 # Highly recommended
 [ldap]
-host = ldap.domain.fr 
+host = ldap.domain.fr
 bind_dn = OU=User,DC=domain,DC=fr
 admin_cn = CN=Admin,OU=Group,DC=domain,DC=fr
 # Key in user result to get his LDAP realname
@@ -137,10 +137,6 @@ cassh admin <username> set --set='principals=username,root'
 
 ### Active SSL
 ```ini
-[main]
-ca = __CASSH_PATH__/test-keys/id_rsa_ca
-krl = __CASSH_PATH__/test-keys/revoked-keys
-
 [ssl]
 private_key = __CASSH_PATH__/ssl/server.key
 public_key = __CASSH_PATH__/ssl/server.pem
@@ -148,14 +144,12 @@ public_key = __CASSH_PATH__/ssl/server.pem
 
 ### Active LDAP
 ```ini
-[main]
-ca = __CASSH_PATH__/test-keys/id_rsa_ca
-krl = __CASSH_PATH__/test-keys/revoked-keys
-
 [ldap]
-host = ad.domain.fr
-bind_dn = CN=%%s,OU=Utilisateurs,DC=Domain,DC=fr
-admin_cn = CN=Admin,OU=Groupes,DC=Domain,DC=fr
+host = ldap.domain.fr
+bind_dn = OU=User,DC=domain,DC=fr
+admin_cn = CN=Admin,OU=Group,DC=domain,DC=fr
+# Key in user result to get his LDAP realname
+filterstr = userPrincipalName
 ```
 
 
