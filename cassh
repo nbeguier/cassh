@@ -13,6 +13,7 @@ from os import chmod, chown, getenv
 from os.path import isfile
 from shutil import copyfile
 import sys
+from urllib import urlencode
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError, NoSectionError
@@ -31,7 +32,7 @@ if sys.version_info < (3, 0):
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.4.1'
+VERSION = '%(prog)s 1.4.2'
 
 def read_conf(conf_path):
     """
@@ -107,21 +108,19 @@ class CASSH(object):
 
     def auth_url(self, prefix=None):
         """
-        Return a ?xxx=xxx to put at the end of a GET request.
+        Return a xxx=xxx to put at the end of a GET request.
         """
         passwd_message = 'Please type your LDAP password (user=%s): ' % self.realname
         if self.auth == 'ldap':
-            if prefix is None:
-                return '?realname=%s&password=%s'\
-                    % (self.realname, getpass(passwd_message))
-            else:
-                return prefix + '&realname=%s&password=%s'\
-                    % (self.realname, getpass(passwd_message))
+            auth = {'realname': self.realname, 'password': getpass(passwd_message)}
+            if prefix is not None:
+                auth.update(prefix)
+            return '?%s' % urlencode(auth)
         else:
             if prefix is None:
                 return ''
             else:
-                return prefix
+                return '?%s' % urlencode(prefix)
 
     def admin(self, username, action, set_value=None):
         """
@@ -130,19 +129,21 @@ class CASSH(object):
         try:
             if action == 'revoke':
                 req = self.session.get(self.url + '/admin/' + username +\
-                    self.auth_url(prefix='?revoke=true'), verify=False)
+                    self.auth_url(prefix={'revoke': True}), verify=False)
             elif action == 'active':
                 req = self.session.get(self.url + '/admin/' + username +\
-                    self.auth_url(prefix='?revoke=false'), verify=False)
+                    self.auth_url(prefix={'revoke': False}), verify=False)
             elif action == 'delete':
                 req = self.session.delete(self.url + '/admin/' + username +\
                     self.auth_url(), verify=False)
             elif action == 'set':
+                set_value_dict = {}
+                set_value_dict[set_value.split('=')[0]] = set_value.split('=')[1]
                 req = self.session.post(self.url + '/admin/' + username +\
-                    self.auth_url(prefix='?%s' % set_value.replace('+', '%2B')), verify=False)
+                    self.auth_url(prefix=set_value_dict), verify=False)
             elif action == 'status':
                 req = self.session.get(self.url + '/admin/' + username +\
-                    self.auth_url(prefix='?revoke=false&status=true'), verify=False)
+                    self.auth_url(prefix={'revoke': False, 'status': True}), verify=False)
                 try:
                     result = loads(req.text)
                 except ValueError:
@@ -172,7 +173,7 @@ class CASSH(object):
         pubkey = open('%s.pub' % self.key_path, 'rb')
         try:
             req = self.session.put(self.url + '/client' +\
-                self.auth_url(prefix='?username=%s' % self.name), data=pubkey, verify=False)
+                self.auth_url(prefix={'username': self.name}), data=pubkey, verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
@@ -186,11 +187,11 @@ class CASSH(object):
         try:
             if force:
                 req = self.session.post(self.url + '/client' + \
-                    self.auth_url(prefix='?username=%s&admin_force=true' % self.name), \
+                    self.auth_url(prefix={'username': self.name, 'admin_force': True}), \
                     data=pubkey, verify=False)
             else:
                 req = self.session.post(self.url + '/client' + \
-                    self.auth_url(prefix='?username=%s' % self.name), data=pubkey, verify=False)
+                    self.auth_url(prefix={'username': self.name}), data=pubkey, verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
