@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.4.2'
+VERSION = '1.4.3'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -277,11 +277,11 @@ class Admin():
             return message
 
         if web_input().has_key('revoke'):
-            do_revoke = web_input()['revoke'] == 'true'
+            do_revoke = web_input()['revoke'].lower() == 'true'
         else:
             do_revoke = False
         if web_input().has_key('status'):
-            do_status = web_input()['status'] == 'true'
+            do_status = web_input()['status'].lower() == 'true'
         else:
             do_status = False
 
@@ -483,7 +483,7 @@ class Client():
         is_admin_auth, _ = ldap_authentification(admin=True)
 
         if is_admin_auth and SERVER_OPTS['admin_db_failover'] \
-            and 'admin_force' in web_input() and web_input()['admin_force'] == 'true':
+            and 'admin_force' in web_input() and web_input()['admin_force'].lower() == 'true':
             force_sign = True
 
         # Get username

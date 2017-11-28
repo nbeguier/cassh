@@ -167,6 +167,11 @@ bash tests/launch_demo_server.sh
 
 # When 'http://0.0.0.0:8080/' appears, start it on another terminal
 bash tests/test.sh
+
+# Full debug
+bash tests/launch_demo_server.sh --server_file ${PWD}/server/server.py --debug
+$ /opt/cassh/server/server.py --config /opt/cassh/tests/cassh_dummy.conf
+
 ```
 
 LDAP and HTTPs are disable, but you still need to put [ldap] in client configuration.
