@@ -174,9 +174,6 @@ $ /opt/cassh/server/server.py --config /opt/cassh/tests/cassh_dummy.conf
 
 ```
 
-LDAP and HTTPs are disable, but you still need to put [ldap] in client configuration.
-
-
 ### Client side
 
 Generate key pair then sign it !
