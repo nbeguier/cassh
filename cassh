@@ -13,7 +13,12 @@ from os import chmod, chown, getenv
 from os.path import isfile
 from shutil import copyfile
 import sys
-from urllib import urlencode
+try:
+    # Python 3
+    from urllib.parse import urlencode
+except ImportError:
+    # Python 2
+    from urllib import urlencode
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError, NoSectionError
@@ -32,7 +37,7 @@ if sys.version_info < (3, 0):
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.4.4'
+VERSION = '%(prog)s 1.4.5'
 
 def read_conf(conf_path):
     """

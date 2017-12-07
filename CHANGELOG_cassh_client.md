@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Client
 -----
 
+1.4.5
+-----
+
+2017/12/07
+
+### Bug Fixes
+
+urlencode import error in python 3
+
 1.4.4
 -----
 
