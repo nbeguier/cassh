@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.4.3'
+VERSION = '1.4.4'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -100,8 +100,14 @@ if CONFIG.has_section('ssl'):
 def str2date(string):
     """
     change xd => seconds
+    change xh => seconds
     """
-    return timedelta(days=int(string.split('d')[0])).total_seconds()
+    delta = 0
+    if 'd' in string:
+        delta = timedelta(days=int(string.split('d')[0])).total_seconds()
+    elif 'h' in string:
+        delta = timedelta(hours=int(string.split('h')[0])).total_seconds()
+    return delta
 
 def get_principals(sql_result, username, shell=False):
     """
@@ -515,7 +521,7 @@ class Client():
         pg_conn, message = pg_connection()
         # Admin force signature case
         if pg_conn is None and force_sign:
-            cert_contents = sign_key(tmp_pubkey.name, username, '+1d', username)
+            cert_contents = sign_key(tmp_pubkey.name, username, '+12h', username)
             remove(tmp_pubkey.name)
             return cert_contents
         # Else, if db is down it fails.
@@ -613,7 +619,7 @@ class Client():
         if user is None:
             cur.execute('INSERT INTO USERS VALUES \
                 ((%s), (%s), (%s), (%s), (%s), (%s), (%s), (%s))', \
-                (username, realname, 2, 0, pubkey_fingerprint, pubkey, '+1d', ''))
+                (username, realname, 2, 0, pubkey_fingerprint, pubkey, '+12h', ''))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
