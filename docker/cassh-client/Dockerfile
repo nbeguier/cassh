@@ -1,11 +1,16 @@
 FROM alpine:latest
 
-RUN apk update; \
-    apk add git py2-pip; \
-    git clone https://github.com/nbeguier/cassh.git; \
-    pip install -r cassh/requirements.txt
+WORKDIR /app
 
-ENTRYPOINT ["/cassh/cassh"]
+RUN apk update \
+    apk add py2-pip
 
-CMD ["--help"] 
+COPY requirements.txt ./
+COPY cassh ./cassh
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+ENTRYPOINT ["python", "/app/cassh"]
+
+CMD ["--help"]
 
