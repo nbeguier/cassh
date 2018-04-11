@@ -2,8 +2,8 @@ FROM alpine:latest
 
 WORKDIR /app
 
-RUN apk update \
-    apk add py2-pip
+RUN apk update && apk add \
+    py2-pip
 
 COPY requirements.txt ./
 COPY cassh ./cassh
