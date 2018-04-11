@@ -2,8 +2,14 @@ FROM debian:latest
 
 WORKDIR /opt/cassh
 
-RUN apt-get update \
-    apt-get install -y git python-psycopg2 python-webpy python-ldap python-configparser python-requests python-openssl vim
+RUN apt-get update && apt-get install -y \
+    python-psycopg2 \
+    python-webpy \
+    python-ldap \
+    python-configparser \
+    python-requests \
+    python-openssl \
+    vim
 
 COPY . .
 
