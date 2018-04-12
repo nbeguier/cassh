@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.4.4'
+VERSION = '1.4.5'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -647,7 +647,7 @@ class Client():
 
 class Health():
     """
-    Class Ping
+    Class Health
     """
     def GET(self):
         """
