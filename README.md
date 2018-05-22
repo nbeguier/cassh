@@ -1,5 +1,7 @@
 # CASSH
 
+[![Build Status](https://travis-ci.org/nbeguier/cassh.svg?branch=master)](https://travis-ci.org/nbeguier/cassh)
+
 Easy SSH for admin ONLY !
 Developped for @leboncoin
 
