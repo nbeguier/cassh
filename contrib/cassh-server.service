@@ -1,6 +1,6 @@
 # /lib/systemd/system/cassh.service
 [Unit]
-Description=cassh
+Description=cassh-server
 After=network.target
 
 [Service]

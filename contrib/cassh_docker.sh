@@ -7,4 +7,4 @@ docker run --rm -it \
   --volume=${HOME}/.cassh:${HOME}/.cassh:ro \
   --volume=${HOME}/.ssh:${HOME}/.ssh \
   --workdir=${HOME} \
-  nbeguier/cassh-client "$@"
+  leboncoin/cassh "$@"
