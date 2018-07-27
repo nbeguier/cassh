@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.4.5'
+VERSION = '1.4.6'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -229,7 +229,7 @@ def ldap_authentification(admin=False):
             return False, 'Error: No realname option given.'
 
         if web_input().has_key('password'):
-            password = web_input()['password']
+            password = web_input()['password'].encode('utf-8')
         else:
             return False, 'Error: No password option given.'
         if password == '':
