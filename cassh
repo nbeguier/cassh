@@ -124,8 +124,7 @@ class CASSH(object):
         else:
             if prefix is None:
                 return ''
-            else:
-                return '?%s' % urlencode(prefix)
+            return '?%s' % urlencode(prefix)
 
     def admin(self, username, action, set_value=None):
         """

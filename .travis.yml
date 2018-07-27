@@ -1,0 +1,14 @@
+language: python
+python:
+  - '2.7'
+  - '3.3'
+  - '3.4'
+  - '3.5'
+  - '3.5-dev' # 3.5 development branch
+  - '3.6-dev' # 3.6 development branch
+# command to install dependencies
+install:
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.* ]]; then pip install -r requirements.txt; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.* ]]; then pip3 install -r requirements.txt; fi
+# command to run tests
+script: pylint cassh -d redefined-builtin
