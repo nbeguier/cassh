@@ -1,83 +1,69 @@
 # CASSH
 
-Easy SSH for admin ONLY !
+SSH keys management @scale !
+
+[![Build Status](https://travis-ci.org/leboncoin/cassh.svg?branch=master)](https://travis-ci.org/leboncoin/cassh)
+
+
+A client / server app to ease management of PKI based SSH keys.
+
 Developped for @leboncoin
 
 https://nicolasbeguier.shost.ca/cassh.html
 
-## Prerequisites
-
-### Server
-
-```bash
-# Install cassh python 2 service dependencies
-sudo apt-get install libsasl2-dev python-dev libldap2-dev libssl-dev libpq-dev
-sudo apt-get install python-pip
-pip install -r server/requirements_python2.txt
-# or
-sudo apt-get install python-psycopg2 python-webpy python-ldap python-configparser python-requests python-openssl
-
-# Generate CA ssh key and revocation key file
-mkdir test-keys
-ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
-ssh-keygen -k -f test-keys/revoked-keys
-```
-
-Configuration file example :
-```
-[main]
-ca = /etc/cassh/ca/id_rsa_ca
-krl = /etc/cassh/krl/revoked-keys
-port = 8080
-# Optionnal : admin_db_failover is used to bypass db when it fails.
-# admin_db_failover = False
-
-[postgres]
-host = cassh.domain.fr
-dbname = casshdb
-user = cassh
-password = xxxxxxxx
-
-# Highly recommended
-[ldap]
-host = ldap.domain.fr
-bind_dn = OU=User,DC=domain,DC=fr
-admin_cn = CN=Admin,OU=Group,DC=domain,DC=fr
-# Key in user result to get his LDAP realname
-filterstr = userPrincipalName
-
-# Optionnal
-[ssl]
-private_key = /etc/cassh/ssl/cert.key
-public_key = /etc/cassh/ssl/cert.pem
-```
-
-### Server : Database
-
-You need to create a database.
-
-### Server : Client web user interface
-```bash
-pip3 insall -r requirements.txt
-python3 server/web/cassh_web.py
-```
-
-### Client
-
-```bash
-# Python 3
-sudo apt-get install python3-pip
-pip3 install -r requirements.txt
-
-# Python 2
-sudo apt-get install python-pip
-pip install -r requirements.txt
-```
 
 
-## Usage
 
-### Client CLI
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [TL;DR](#tldr)
+  - [Requirements](#requirements)
+  - [Usage](#usage)
+    - [User](#user)
+    - [Admin](#admin)
+- [Install](#install)
+  - [Server](#server)
+    - [Install](#install-1)
+    - [Config](#config)
+    - [Init the Database](#init-the-database)
+    - [WebUI](#webui)
+  - [Client](#client)
+    - [Install](#install-2)
+    - [Config](#config-1)
+- [CASSH-server features](#cassh-server-features)
+  - [Active SSL](#active-ssl)
+  - [Active LDAP](#active-ldap)
+- [Dev setup](#dev-setup)
+  - [Requirements](#requirements-1)
+  - [Tests](#tests)
+  - [Developpement](#developpement)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
+
+## TL;DR
+
+### Requirements
+
+Server:
+* `Python`
+* `Postgres` as backend
+* `openssh-client` (`ssh-keygen`)
+
+CLI:
+* `Python`
+
+
+OR `docker`
+
+
+### Usage
+
+#### User
 
 Add new key to cassh-server :
 ```
@@ -104,7 +90,7 @@ Get ca krl :
 cassh krl
 ```
 
-### Admin CLI
+#### Admin
 
 Active Client **username** key :
 ```
@@ -133,7 +119,142 @@ cassh admin <username> set --set='principals=username,root'
 ```
 
 
-## Features on CASSH server
+
+## Install
+
+### Server
+
+#### Install
+
+```bash
+# Python Pip
+sudo apt-get install \
+    python-pip \
+    python-dev \
+    libsasl2-dev \
+    libldap2-dev \
+    libssl-dev \
+    libpq-dev
+
+pip install -r src/server/requirements.txt
+```
+OR
+
+```bash
+# Debian packages
+sudo apt-get install \
+    python-psycopg2 \
+    python-webpy \
+    python-ldap \
+    python-configparser \
+    python-requests \
+    python-openssl
+```
+
+OR
+
+```
+docker pull leboncoin/cassh-server
+```
+
+
+#### Config
+
+```bash
+# Generate CA ssh key and revocation key file
+mkdir test-keys
+ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
+ssh-keygen -k -f test-keys/revoked-keys
+```
+
+
+```bash
+# cassh.conf
+[main]
+ca = /etc/cassh/ca/id_rsa_ca
+krl = /etc/cassh/krl/revoked-keys
+port = 8080
+# Optionnal : admin_db_failover is used to bypass db when it fails.
+# admin_db_failover = False
+
+[postgres]
+host = cassh.domain.fr
+dbname = casshdb
+user = cassh
+password = xxxxxxxx
+
+# Highly recommended
+[ldap]
+host = ldap.domain.fr
+bind_dn = OU=User,DC=domain,DC=fr
+admin_cn = CN=Admin,OU=Group,DC=domain,DC=fr
+# Key in user result to get his LDAP realname
+filterstr = userPrincipalName
+
+# Optionnal
+[ssl]
+private_key = /etc/cassh/ssl/cert.key
+public_key = /etc/cassh/ssl/cert.pem
+```
+
+
+#### Init the Database
+
+* You need a database and a user's credentials 
+* Init the database with this sql statement: [SQL Model](src/server/sql/model.sql)
+* Update the `cassh-server` config with the user's credentials
+
+
+#### WebUI
+
+A webui based on `flask` is also available for client not familiar with CLI:
+
+```bash
+pip3 insall -r src/server/web/requirements.txt
+
+python3 src/server/web/cassh_web.py
+```
+
+
+
+### Client
+
+#### Install
+
+Python 3
+
+```bash
+sudo apt-get install python3-pip
+pip3 install -r src/client/requirements.txt
+
+alias cassh="${PWD}/src/client/cassh"
+```
+
+Python 2
+
+```bash
+sudo apt-get install python-pip
+pip install -r src/client/requirements.txt
+
+alias cassh="${PWD}/src/client/cassh"
+```
+
+Docker
+```bash
+./contrib/cassh_docker.sh
+
+alias cassh="${PWD}/contrib/cassh_docker.sh"
+```
+
+
+#### Config
+
+Sample available at [./src/client/cassh-client.conf](./src/client/cassh-client.conf)
+
+
+
+
+## CASSH-server features
 
 ### Active SSL
 ```ini
@@ -153,60 +274,59 @@ filterstr = userPrincipalName
 ```
 
 
-## Quick test
-
-### Server side
-
-Install docker : https://docs.docker.com/engine/installation/
 
 
-```bash
-# Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
-pip install psycopg2
-bash tests/launch_demo_server.sh
+## Dev setup
 
-# When 'http://0.0.0.0:8080/' appears, start it on another terminal
-bash tests/test.sh
+### Requirements
 
-# Full debug
-bash tests/launch_demo_server.sh --server_file ${PWD}/server/server.py --debug
-$ /opt/cassh/server/server.py --config /opt/cassh/tests/cassh_dummy.conf
+* `docker` : https://docs.docker.com/engine/installation/
+* `docker-compose`: https://docs.docker.com/compose/installation/
+* `bats`: https://github.com/sstephenson/bats
+* `curl`, `jq` & `openssh-client` with your distro packages manager
 
-```
 
-### Client side
-
-Generate key pair then sign it !
+### Tests
 
 ```bash
-git clone https://github.com/nbeguier/cassh.git /opt/cassh
-cd /opt/cassh
-
-# Generate key pair
-mkdir test-keys
-ssh-keygen -t rsa -b 4096 -o -a 100 -f test-keys/id_rsa
-
-rm -f ~/.cassh
-cat << EOF > ~/.cassh
-[user]
-name = user
-key_path = ${PWD}/test-keys/id_rsa
-key_signed_path = ${PWD}/test-keys/id_rsa-cert
-url = http://localhost:8080
-
-[ldap]
-realname = user@test.fr
-EOF
-
-# List keys
-python cassh status
-
-# Add it into server
-python cassh add
-
-# ADMIN: Active key
-python cassh admin user active
-
-# Sign it !
-python cassh sign [--display-only]
+tests/tests.sh
 ```
+
+
+### Developpement
+
+Start the server and its dependencies:
+
+```
+$ cd tests/
+$ docker-compose up cassh-server
+```
+
+
+In an other shell, submit `cassh` CLI commands:
+
+```
+$ cd tests/
+$ docker-compose run cassh-cli
+
+Starting tests_db_1 ... done
+Starting tests_cassh-server_1 ... done
+usage: cassh [-h] [--version] {admin,add,sign,status,ca,krl} ...
+
+positional arguments:
+  {admin,add,sign,status,ca,krl}
+                        commands
+    admin               Administrator command : active - revoke - delete -
+                        status - set keys
+    add                 Add a key to remote ssh ca server.
+    sign                Sign its key by remote ssh ca server.
+    status              Display key current status on remote ssh ca server.
+    ca                  Display CA public key.
+    krl                 Display CA KRL.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit
+```
+
+

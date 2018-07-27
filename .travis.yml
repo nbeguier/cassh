@@ -1,24 +1,44 @@
+---
+# Travis Doc:
+#
+# * Build Lifecycle
+#   - https://docs.travis-ci.com/user/customizing-the-build#The-Build-Lifecycle
+#
+# 1. OPTIONAL Install apt addons
+# 2. OPTIONAL Install cache components
+# .
+# 3. before_install
+# 4. install
+# 5. before_script
+# 6. script
+# 7. OPTIONAL before_cache (for cleaning up cache)
+# 8. after_success or after_failure
+# .
+# 9. OPTIONAL before_deploy
+# 10. OPTIONAL deploy
+# 11. OPTIONAL after_deploy
+# .
+# 12. after_script (just before shutting down the build environment)
+#
+#
 sudo: required
-language: python
-python:
-  - '2.7'
-  - '3.4'
-  - '3.5'
-  - '3.5-dev' # 3.5 development branch
-  - '3.6-dev' # 3.6 development branch
+services:
+  - docker
 
-# command to install dependencies
+language: python
+
 install:
-  - sudo start-docker-daemon
   - echo "---> Check Docker version" && docker version
-  - echo "---> Installing CI utils" && pip install docker-compose
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.* ]]; then pip install -r client/requirements.txt && pip install -r client/requirements-dev.txt && pip install -r server/requirements.txt fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.* ]]; then pip3 install -r client/requirements.txt && pip3 install -r client/requirements-dev.txt && pip3 install -r server/requirements.txt fi
-  - git clone https://github.com/sstephenson/bats.git && cd bats && ./install.sh /usr/local
+  - echo "---> Installing CI utils" && pip install docker-compose pylint
 
 # command to run tests
-script: 
-  - pylint client/cassh -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
-  - pylint server/server -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
-  - tests/tests.sh
+script:
+  # Lint
+  - pylint src/client/cassh -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
+  - pylint src/server/server -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
+  # Build
+  - docker-compose -f tests/docker-compose.yml build cassh-server || travis_terminate 1
+  - docker-compose -f tests/docker-compose.yml build cassh-cli || travis_terminate 1
+  # End2End
+  - tests/tests.sh || travis_terminate 1
 

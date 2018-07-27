@@ -2,8 +2,7 @@ FROM debian:latest
 
 # Container options (For layer optim)
 WORKDIR /opt/cassh
-ENTRYPOINT ["python", "/opt/cassh/server/server.py"]
-CMD ["--config", "/opt/cassh/server/conf/cassh.conf"]
+ENTRYPOINT ["/opt/cassh/server/docker-entrypoint"]
 
 RUN apt-get update \
     && apt-get install -yqq \
