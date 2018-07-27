@@ -12,13 +12,13 @@ install:
   - sudo start-docker-daemon
   - echo "---> Check Docker version" && docker version
   - echo "---> Installing CI utils" && pip install docker-compose
-  - echo "---> Checking Python installed packages" && pip list
   - if [[ $TRAVIS_PYTHON_VERSION == 2.* ]]; then pip install -r client/requirements.txt && pip install -r client/requirements-dev.txt && pip install -r server/requirements.txt fi
   - if [[ $TRAVIS_PYTHON_VERSION == 3.* ]]; then pip3 install -r client/requirements.txt && pip3 install -r client/requirements-dev.txt && pip3 install -r server/requirements.txt fi
+  - git clone https://github.com/sstephenson/bats.git && cd bats && ./install.sh /usr/local
 
 # command to run tests
 script: 
-- pylint client/cassh -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
-- pylint server/server -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
-- cd tests/; ./test.sh
+  - pylint client/cassh -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
+  - pylint server/server -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
+  - tests/tests.sh
 
