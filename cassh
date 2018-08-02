@@ -121,10 +121,9 @@ class CASSH(object):
             if prefix is not None:
                 auth.update(prefix)
             return '?%s' % urlencode(auth)
-        else:
-            if prefix is None:
-                return ''
-            return '?%s' % urlencode(prefix)
+        if prefix is None:
+            return ''
+        return '?%s' % urlencode(prefix)
 
     def admin(self, username, action, set_value=None):
         """
