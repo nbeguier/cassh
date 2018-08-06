@@ -29,16 +29,16 @@ language: python
 
 install:
   - echo "---> Check Docker version" && docker version
-  - echo "---> Installing CI utils" && pip install docker-compose pylint
+  - echo "---> Installing CI utils" && pip install docker-compose invoke
 
 # command to run tests
 script:
-  # Lint
-  - pylint src/client/cassh -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
-  - pylint src/server/server -d redefined-builtin -d useless-object-inheritance || travis_terminate 1
   # Build
-  - docker-compose -f tests/docker-compose.yml build cassh-server || travis_terminate 1
-  - docker-compose -f tests/docker-compose.yml build cassh-cli || travis_terminate 1
+  - invoke build.cassh-server || travis_terminate 1
+  - invoke build.cassh || travis_terminate 1
+  # Lint
+  - invoke test.lint-server || travis_terminate 1
+  - invoke test.lint-client || travis_terminate 1
   # End2End
-  - tests/tests.sh || travis_terminate 1
+  - invoke test.e2e || travis_terminate 1
 

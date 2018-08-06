@@ -337,23 +337,23 @@ if __name__ == '__main__':
         print('realname = ursula.ser@domain.fr')
         exit(1)
 
-    client = CASSH(read_conf(CONF_FILE))
+    CLIENT = CASSH(read_conf(CONF_FILE))
 
     if len(sys.argv) == 1:
         PARSER.print_help()
         exit(1)
 
     if sys.argv[1] == 'add':
-        client.add()
+        CLIENT.add()
     elif sys.argv[1] == 'sign':
-        client.sign(not ARGS.display_only, uid=ARGS.uid, force=ARGS.force)
+        CLIENT.sign(not ARGS.display_only, uid=ARGS.uid, force=ARGS.force)
     elif sys.argv[1] == 'status':
-        client.status()
+        CLIENT.status()
     elif sys.argv[1] == 'ca':
-        client.get_ca()
+        CLIENT.get_ca()
     elif sys.argv[1] == 'krl':
-        client.get_krl()
+        CLIENT.get_krl()
     elif sys.argv[1] == 'admin':
-        client.admin(ARGS.username, ARGS.action, set_value=ARGS.set)
+        CLIENT.admin(ARGS.username, ARGS.action, set_value=ARGS.set)
 
     exit(0)
