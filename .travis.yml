@@ -37,7 +37,7 @@ script:
   - invoke build.cassh-server || travis_terminate 1
   - invoke build.cassh || travis_terminate 1
   # Lint
-  - invoke test.lint-server || travis_terminate 1
+  #- invoke test.lint-server || travis_terminate 1
   - invoke test.lint-client || travis_terminate 1
   # End2End
   - invoke test.e2e || travis_terminate 1
