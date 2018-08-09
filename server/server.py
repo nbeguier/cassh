@@ -16,7 +16,8 @@ from time import time
 from configparser import ConfigParser, NoOptionError
 from ldap import open as ldap_open
 from psycopg2 import connect, OperationalError, ProgrammingError
-from web import application, data, httpserver, input as web_input
+from urllib import unquote
+from web import application, data, httpserver
 from web.wsgiserver import CherryPyWSGIServer
 
 # Own library
@@ -34,6 +35,7 @@ STATES = {
 URLS = (
     '/admin/([a-z]+)', 'Admin',
     '/ca', 'Ca',
+    '/client/status', 'ClientStatus',
     '/client', 'Client',
     '/health', 'Health',
     '/krl', 'Krl',
@@ -41,7 +43,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.4.6'
+VERSION = '1.5.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -215,6 +217,17 @@ def list_keys(username=None, realname=None):
     pg_conn.close()
     return sql_to_json(result, list=is_list)
 
+def data2map():
+    """
+    Returns a map from data POST
+    """
+    data_map = {}
+    if data() == '':
+        return data_map
+    for key in data().split('&'):
+        data_map[key.split('=')[0]] = unquote('='.join(key.split('=')[1:]))
+    return data_map
+
 def ldap_authentification(admin=False):
     """
     Return True if user is well authentified
@@ -222,14 +235,14 @@ def ldap_authentification(admin=False):
         password=xxxxx
     """
     if SERVER_OPTS['ldap']:
-
-        if web_input().has_key('realname'):
-            realname = web_input()['realname']
+        credentials = data2map()
+        if credentials.has_key('realname'):
+            realname = credentials['realname']
         else:
             return False, 'Error: No realname option given.'
 
-        if web_input().has_key('password'):
-            password = web_input()['password'].encode('utf-8')
+        if credentials.has_key('password'):
+            password = credentials['password']
         else:
             return False, 'Error: No password option given.'
         if password == '':
@@ -246,48 +259,37 @@ def ldap_authentification(admin=False):
             return False, 'Error: user %s is not an admin.' % realname
     return True, 'OK'
 
-def check_input():
-    """
-    Return True if input are not malicious
-    """
-    try:
-        web_input()['realname']
-    except UnicodeDecodeError:
-        return False
-    except:
-        return True
-    return True
-
-
 class Admin():
     """
     Class admin to action or revoke keys.
     """
-    def GET(self, username):
+    def GET(self, username='DEPRECATED'):
+        """
+        DEPRECATED Status
+        """
+        del username
+        return "Error: DEPRECATED option. Update your CASSH >= 1.5.0"
+
+    def POST(self, username):
         """
         Revoke or Active keys.
         /admin/<username>
             revoke=true/false => Revoke user
             status=true/false => Display status
-
-            # Auth params:
-            realname=xxxxx@domain.fr
-            password=xxxxx
         """
-        if not check_input():
-            return 'Error : Wrong inputs.'
-
         # LDAP authentication
         is_admin_auth, message = ldap_authentification(admin=True)
         if not is_admin_auth:
             return message
 
-        if web_input().has_key('revoke'):
-            do_revoke = web_input()['revoke'].lower() == 'true'
+        payload = data2map()
+
+        if payload.has_key('revoke'):
+            do_revoke = payload['revoke'].lower() == 'true'
         else:
             do_revoke = False
-        if web_input().has_key('status'):
-            do_status = web_input()['status'].lower() == 'true'
+        if payload.has_key('status'):
+            do_status = payload['status'].lower() == 'true'
         else:
             do_status = False
 
@@ -345,19 +347,12 @@ class Admin():
             message = 'user=%s already active. Nothing done.' % username
         return message
 
-    def POST(self, username):
+    def PATCH(self, username):
         """
         Set the first founded value.
         /admin/<username>
             key=value => Set the key value. Keys are in status output.
-
-            # Auth params:
-            realname=xxxxx@domain.fr
-            password=xxxxx
         """
-        if not check_input():
-            return 'Error : Wrong inputs.'
-
         # LDAP authentication
         is_admin_auth, message = ldap_authentification(admin=True)
         if not is_admin_auth:
@@ -368,12 +363,13 @@ class Admin():
             return message
         cur = pg_conn.cursor()
 
-        for key in web_input().keys():
-            value = web_input()[key]
+        payload = data2map()
+
+        for key, value in payload.items():
             if key == 'expiry':
-                pattern = re_compile("^\+([0-9]+)+d$")
+                pattern = re_compile('^\\+([0-9]+)+[dh]$')
                 if pattern.match(value) is None:
-                    return 'ERROR: Value %s is malformed. Should match pattern ^\+([0-9]+)+d$' \
+                    return 'ERROR: Value %s is malformed. Should match pattern ^\\+([0-9]+)+[dh]$' \
                         % value
                 cur.execute('UPDATE USERS SET EXPIRY=(%s) WHERE NAME=(%s)', (value, username))
                 pg_conn.commit()
@@ -398,9 +394,6 @@ class Admin():
         """
         Delete keys (but DOESN'T REVOKE)
         /admin/<username>
-            # Auth params:
-            realname=xxxxx@domain.fr
-            password=xxxxx
         """
         # LDAP authentication
         is_admin_auth, message = ldap_authentification(admin=True)
@@ -430,34 +423,41 @@ class Ca():
         """
         return open(SERVER_OPTS['ca'] + '.pub', 'rb')
 
-
-class Client():
+class ClientStatus():
     """
-    Client main class.
+    ClientStatus main class.
     """
-    def GET(self):
+    def POST(self):
         """
         Get client key status.
-        /client
-            realname=xxxxx@domain.fr => This LDAP/AD user.
-
-            # Auth params:
-            password=xxxxx
+        /client/status
         """
-        if not check_input():
-            return 'Error : Wrong inputs.'
-
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
             return message
 
-        if web_input().has_key('realname'):
-            realname = web_input()['realname']
+        payload = data2map()
+
+        if payload.has_key('realname'):
+            realname = payload['realname']
         else:
             return "Error: No realname option given."
 
         return list_keys(realname=realname)
+
+
+
+class Client():
+    """
+    Client main class.
+    """
+    def GET(self, username='DEPRECATED'):
+        """
+        DEPRECATED Status
+        """
+        del username
+        return "Error: DEPRECATED option. Update your CASSH >= 1.5.0"
 
     def POST(self):
         """
@@ -468,15 +468,7 @@ class Client():
 
             # Optionnal
             admin_force=true|false
-
-            # Auth params:
-            password=xxxxx
-
         """
-        # Verify inputs
-        if not check_input():
-            return 'Error : Wrong inputs.'
-
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
@@ -488,13 +480,15 @@ class Client():
         # LDAP ADMIN authentication
         is_admin_auth, _ = ldap_authentification(admin=True)
 
+        payload = data2map()
+
         if is_admin_auth and SERVER_OPTS['admin_db_failover'] \
-            and 'admin_force' in web_input() and web_input()['admin_force'].lower() == 'true':
+            and payload.has_key('admin_force') and payload['admin_force'].lower() == 'true':
             force_sign = True
 
         # Get username
-        if web_input().has_key('username'):
-            username = web_input()['username']
+        if payload.has_key('username'):
+            username = payload['username']
         else:
             return "Error: No username option given. Update your CASSH >= 1.3.0"
         username_pattern = re_compile("^([a-z]+)$")
@@ -503,13 +497,17 @@ class Client():
                 % (username, username_pattern.pattern)
 
         # Get realname
-        if web_input().has_key('realname'):
-            realname = web_input()['realname']
+        if payload.has_key('realname'):
+            realname = payload['realname']
         else:
             return "Error: No realname option given."
 
         # Get public key
-        pubkey = data()
+        if payload.has_key('pubkey'):
+            pubkey = unquote(payload['pubkey'])
+        else:
+            return "Error: No pubkey given."
+
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
@@ -569,20 +567,16 @@ class Client():
         /client
             username=xxxxxx          => Unique username. Used by default to connect on server.
             realname=xxxxx@domain.fr => This LDAP/AD user.
-
-            # Auth params:
-            password=xxxxx
         """
-        if not check_input():
-            return 'Error : Wrong inputs.'
-
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
             return message
 
-        if web_input().has_key('username'):
-            username = web_input()['username']
+        payload = data2map()
+
+        if payload.has_key('username'):
+            username = payload['username']
         else:
             return "Error: No username option given."
 
@@ -591,12 +585,16 @@ class Client():
             return "Error: Username %s doesn't match pattern %s" \
                 % (username, username_pattern.pattern)
 
-        if web_input().has_key('realname'):
-            realname = web_input()['realname']
+        if payload.has_key('realname'):
+            realname = payload['realname']
         else:
             return "Error: No realname option given."
 
-        pubkey = data()
+        if payload.has_key('pubkey'):
+            pubkey = unquote(payload['pubkey'])
+        else:
+            return "Error: No pubkey given."
+
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
@@ -685,7 +683,7 @@ class TestAuth():
     """
     Test authentication
     """
-    def GET(self):
+    def POST(self):
         """
         Test authentication
         """

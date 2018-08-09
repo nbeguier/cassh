@@ -13,12 +13,6 @@ from os import chmod, chown, getenv
 from os.path import isfile
 from shutil import copyfile
 import sys
-try:
-    # Python 3
-    from urllib.parse import urlencode
-except ImportError:
-    # Python 2
-    from urllib import urlencode
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError, NoSectionError
@@ -37,7 +31,7 @@ if sys.version_info < (3, 0):
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.4.5'
+VERSION = '%(prog)s 1.5.0'
 
 def read_conf(conf_path):
     """
@@ -79,7 +73,6 @@ def read_conf(conf_path):
 
     return user_metadata
 
-
 def print_result(result):
     """ Display result """
     date_formatted = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S')
@@ -110,43 +103,49 @@ class CASSH(object):
         self.auth = user_metadata['auth']
         self.realname = user_metadata['realname']
 
-
-    def auth_url(self, prefix=None):
+    def get_data(self, prefix=None):
         """
-        Return a xxx=xxx to put at the end of a GET request.
+        Return data for a POST request.
         """
+        data = {}
         passwd_message = 'Please type your LDAP password (user=%s): ' % self.realname
         if self.auth == 'ldap':
-            auth = {'realname': self.realname, 'password': getpass(passwd_message)}
-            if prefix is not None:
-                auth.update(prefix)
-            return '?%s' % urlencode(auth)
-        if prefix is None:
-            return ''
-        return '?%s' % urlencode(prefix)
+            data.update({'realname': self.realname, 'password': getpass(passwd_message)})
+        if prefix is not None:
+            data.update(prefix)
+        return data
 
     def admin(self, username, action, set_value=None):
         """
         Admin CLI
         """
+        payload = self.get_data()
         try:
             if action == 'revoke':
-                req = self.session.get(self.url + '/admin/' + username +\
-                    self.auth_url(prefix={'revoke': True}), verify=False)
+                payload.update({'revoke': True})
+                req = self.session.post(self.url + '/admin/' + username, \
+                    data=payload, \
+                    verify=False)
             elif action == 'active':
-                req = self.session.get(self.url + '/admin/' + username +\
-                    self.auth_url(), verify=False)
+                req = self.session.post(self.url + '/admin/' + username, \
+                    data=payload, \
+                    verify=False)
             elif action == 'delete':
-                req = self.session.delete(self.url + '/admin/' + username +\
-                    self.auth_url(), verify=False)
+                req = self.session.delete(self.url + '/admin/' + username, \
+                    data=payload, \
+                    verify=False)
             elif action == 'set':
                 set_value_dict = {}
                 set_value_dict[set_value.split('=')[0]] = set_value.split('=')[1]
-                req = self.session.post(self.url + '/admin/' + username +\
-                    self.auth_url(prefix=set_value_dict), verify=False)
+                payload.update(set_value_dict)
+                req = self.session.patch(self.url + '/admin/' + username, \
+                    data=payload, \
+                    verify=False)
             elif action == 'status':
-                req = self.session.get(self.url + '/admin/' + username +\
-                    self.auth_url(prefix={'status': True}), verify=False)
+                payload.update({'status': True})
+                req = self.session.post(self.url + '/admin/' + username, \
+                    data=payload, \
+                    verify=False)
                 try:
                     result = loads(req.text)
                 except ValueError:
@@ -173,10 +172,15 @@ class CASSH(object):
         """
         Add a public key.
         """
+        payload = self.get_data()
         pubkey = open('%s.pub' % self.key_path, 'rb')
+        payload.update({'pubkey': pubkey.read().replace(' ', '%20')})
+        pubkey.close()
         try:
-            req = self.session.put(self.url + '/client' +\
-                self.auth_url(prefix={'username': self.name}), data=pubkey, verify=False)
+            payload.update({'username': self.name})
+            req = self.session.put(self.url + '/client', \
+                data=payload, \
+                verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
@@ -186,15 +190,17 @@ class CASSH(object):
         """
         Sign a public key.
         """
+        payload = self.get_data()
         pubkey = open('%s.pub' % self.key_path, 'rb')
+        payload.update({'pubkey': pubkey.read().replace(' ', '%20')})
+        pubkey.close()
+        payload.update({'username': self.name})
         try:
             if force:
-                req = self.session.post(self.url + '/client' + \
-                    self.auth_url(prefix={'username': self.name, 'admin_force': True}), \
-                    data=pubkey, verify=False)
-            else:
-                req = self.session.post(self.url + '/client' + \
-                    self.auth_url(prefix={'username': self.name}), data=pubkey, verify=False)
+                payload.update({'admin_force': True})
+            req = self.session.post(self.url + '/client', \
+                data=payload, \
+                verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
@@ -221,8 +227,10 @@ class CASSH(object):
         """
         Get status of public key.
         """
+        payload = self.get_data()
         try:
-            req = self.session.get(self.url + '/client' + self.auth_url(),\
+            req = self.session.post(self.url + '/client/status', \
+                data=payload, \
                 verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
@@ -242,7 +250,8 @@ class CASSH(object):
         Get CA public key.
         """
         try:
-            req = self.session.get(self.url + '/ca', verify=False)
+            req = self.session.get(self.url + '/ca', \
+                verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
@@ -253,7 +262,8 @@ class CASSH(object):
         Get CA KRL.
         """
         try:
-            req = self.session.get(self.url + '/krl', verify=False)
+            req = self.session.get(self.url + '/krl', \
+                verify=False)
         except ConnectionError:
             print('Connection error : %s' % self.url)
             exit(1)
