@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Client
 -----
 
+1.5.1
+-----
+
+2018/08/09
+
+### Bug Fixes
+
+public key upload error in python 3
+
 1.5.0
 -----
 
