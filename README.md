@@ -29,7 +29,8 @@ https://nicolasbeguier.shost.ca/cassh.html
     - [Install](#install-1)
     - [Config](#config)
     - [Init the Database](#init-the-database)
-    - [WebUI](#webui)
+    - [Run](#run)
+  - [WebUI](#webui)
   - [Client](#client)
     - [Install](#install-2)
     - [Config](#config-1)
@@ -38,8 +39,10 @@ https://nicolasbeguier.shost.ca/cassh.html
   - [Active LDAP](#active-ldap)
 - [Dev setup](#dev-setup)
   - [Requirements](#requirements-1)
-  - [Tests](#tests)
   - [Developpement](#developpement)
+  - [Automated tasks](#automated-tasks)
+  - [Tests](#tests)
+  - [CI](#ci)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -67,22 +70,22 @@ OR `docker`
 
 Add new key to cassh-server :
 ```
-$ cassh add
+cassh add
 ```
 
 Sign pub key :
 ```
-$ cassh sign [--display-only] [--uid=UID] [--force]
+cassh sign [--display-only] [--uid=UID] [--force]
 ```
 
 Get public key status :
 ```
-$ cassh status
+cassh status
 ```
 
 Get ca public key :
 ```
-$ cassh ca
+cassh ca
 ```
 
 Get ca krl :
@@ -154,7 +157,7 @@ sudo apt-get install \
 OR
 
 ```
-docker pull leboncoin/cassh-server
+docker pull leboncoin/cassh-server:VERSION
 ```
 
 
@@ -163,16 +166,16 @@ docker pull leboncoin/cassh-server
 ```bash
 # Generate CA ssh key and revocation key file
 mkdir test-keys
-ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
-ssh-keygen -k -f test-keys/revoked-keys
+ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f /etc/cassh-server/ca/id_rsa_ca # without passphrase
+ssh-keygen -k -f /etc/cassh-server/krl/revoked-keys
 ```
 
 
 ```bash
 # cassh.conf
 [main]
-ca = /etc/cassh/ca/id_rsa_ca
-krl = /etc/cassh/krl/revoked-keys
+ca = /etc/cassh-server/ca/id_rsa_ca
+krl = /etc/cassh-server/krl/revoked-keys
 port = 8080
 # Optionnal : admin_db_failover is used to bypass db when it fails.
 # admin_db_failover = False
@@ -193,8 +196,8 @@ filterstr = userPrincipalName
 
 # Optionnal
 [ssl]
-private_key = /etc/cassh/ssl/cert.key
-public_key = /etc/cassh/ssl/cert.pem
+private_key = /etc/cassh-server/ssl/cert.key
+public_key = /etc/cassh-server/ssl/cert.pem
 ```
 
 
@@ -205,9 +208,28 @@ public_key = /etc/cassh/ssl/cert.pem
 * Update the `cassh-server` config with the user's credentials
 
 
-#### WebUI
+#### Run
 
-A webui based on `flask` is also available for client not familiar with CLI:
+```bash
+python src/server/server.py --config "/etc/cassh-server/cassh.conf"
+```
+
+or
+
+```bash
+docker run --rm \
+  --volume=/etc/cassh-server/cassh.conf:/opt/cassh/server/conf/cassh.conf \
+  --volume=${CASSH_KEYS_DIR}:${CASSH_KEYS_DIR} \
+  --publish "8080:8080" \
+  leboncoin/cassh-server
+```
+
+
+
+### WebUI
+
+A webui based on `flask` is also available for client not familiar with CLI.
+It must run on the same OS than the `cassh-server`.
 
 ```bash
 pip3 insall -r src/server/web/requirements.txt
@@ -240,11 +262,12 @@ alias cassh="${PWD}/src/client/cassh"
 ```
 
 Docker
+
 ```bash
 ./contrib/cassh_docker.sh
-
-alias cassh="${PWD}/contrib/cassh_docker.sh"
 ```
+
+Put in your Shell rc file `alias cassh="PATH_TO/contrib/cassh_docker.sh"`
 
 
 #### Config
@@ -280,17 +303,14 @@ filterstr = userPrincipalName
 
 ### Requirements
 
+Needed:
 * `docker` : https://docs.docker.com/engine/installation/
 * `docker-compose`: https://docs.docker.com/compose/installation/
+* `invoke`: http://www.pyinvoke.org/
+
+If installed and run locally:
 * `bats`: https://github.com/sstephenson/bats
 * `curl`, `jq` & `openssh-client` with your distro packages manager
-
-
-### Tests
-
-```bash
-tests/tests.sh
-```
 
 
 ### Developpement
@@ -329,4 +349,41 @@ optional arguments:
   --version             show program's version number and exit
 ```
 
+
+### Automated tasks
+
+Some redondent tasks are automated using `invoke`.
+They are defined in the [`tasks/`](./tasks/) directory.
+
+```bash
+$ invoke -l
+
+Available tasks:
+
+  build.all              Build cassh & cassh-server docker images
+  build.cassh            Build cassh CLI
+  build.cassh-server     Build cassh-server
+  release.all            Push cassh & cassh-server docker images to Docker hub
+  release.cassh          Push cassh CLI docker image to Docker hub
+  release.cassh-server   Push cassh-server docker image to Docker hub
+  test.e2e               End to End tests of CASSH-server and CASSH cli
+  test.lint-client       pylint cassh
+  test.lint-server       pylint cassh-server
+```
+
+
+### Tests
+
+```bash
+$ invoke test.e2e
+```
+
+
+### CI
+
+* CI jobs are configured on [Travis-ci.org](https://travis-ci.org/leboncoin/cassh).
+* You can configure and see what is run by reading [.travis.yml](.travis.yml).
+* On successful tests, docker images are published on docker hub 
+  - https://hub.docker.com/r/leboncoin/cassh/
+  - https://hub.docker.com/r/leboncoin/cassh-server/
 

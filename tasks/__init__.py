@@ -10,8 +10,7 @@ Doc:
 from invoke import Collection, task
 
 # Local modules split tasks
-#from . import test, build, release, deploy
-from . import test, build
+from . import build, test, release
 
 # == Create & Configure the top level namespace
 #
@@ -26,7 +25,7 @@ ns.configure({
 
 # == Register namespaces modules
 #
-ns.add_collection(test)
 ns.add_collection(build)
-# ns.add_collection(release)
+ns.add_collection(test)
+ns.add_collection(release)
 # ns.add_collection(deploy)
