@@ -4,6 +4,18 @@ CHANGELOG
 CASSH Client
 -----
 
+1.5.0
+-----
+
+2018/08/09
+
+### Changes
+
+  - Every GET routes are DEPRECATED.
+  - Authentication is in the payload now
+  - Update tests
+
+
 1.4.5
 -----
 
