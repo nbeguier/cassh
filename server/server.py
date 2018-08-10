@@ -181,7 +181,6 @@ def ldap_authentification(admin=False):
             realname = unquote_plus(credentials['realname'])
         else:
             return False, 'Error: No realname option given.'
-
         if credentials.has_key('password'):
             password = unquote_plus(credentials['password'])
         else:
@@ -453,7 +452,7 @@ class ClientStatus():
         payload = data2map()
 
         if payload.has_key('realname'):
-            realname = payload['realname']
+            realname = unquote_plus(payload['realname'])
         else:
             return "Error: No realname option given."
 
@@ -511,7 +510,7 @@ class Client():
 
         # Get realname
         if payload.has_key('realname'):
-            realname = payload['realname']
+            realname = unquote_plus(payload['realname'])
         else:
             return "Error: No realname option given."
 
@@ -598,7 +597,7 @@ class Client():
                 % (username, username_pattern.pattern)
 
         if payload.has_key('realname'):
-            realname = payload['realname']
+            realname = unquote_plus(payload['realname'])
         else:
             return "Error: No realname option given."
 
