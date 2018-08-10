@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Client
 -----
 
+1.5.3
+-----
+
+2018/08/10
+
+### Changes
+
+  - Support ecdsa keys
+
 1.5.2
 -----
 
