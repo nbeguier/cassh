@@ -15,7 +15,7 @@ from ssl import PROTOCOL_TLSv1_2, SSLContext
 from flask import Flask, render_template, request, Response, redirect, send_from_directory
 from requests import post, put
 from requests.exceptions import ConnectionError
-from urllib import quote_plus
+from urllib.parse import quote_plus
 from urllib3 import disable_warnings
 from werkzeug import secure_filename
 
