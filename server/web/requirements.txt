@@ -4,3 +4,4 @@ pyyaml==3.10
 waitress==0.8.5
 Werkzeug==0.12.2
 pyOpenSSL==0.14
+requests
