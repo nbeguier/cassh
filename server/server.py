@@ -16,7 +16,7 @@ from time import time
 from configparser import ConfigParser, NoOptionError
 from ldap import open as ldap_open
 from psycopg2 import connect, OperationalError, ProgrammingError
-from urllib import unquote
+from urllib import unquote_plus
 from web import application, data, httpserver
 from web.wsgiserver import CherryPyWSGIServer
 
@@ -43,7 +43,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.5.0'
+VERSION = '1.5.2'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -99,17 +99,17 @@ if CONFIG.has_section('ssl'):
             print('Option reading error (ssl).')
         exit(1)
 
-def str2date(string):
+# INDEPENDANT FUNCTIONS
+def data2map():
     """
-    change xd => seconds
-    change xh => seconds
+    Returns a map from data POST
     """
-    delta = 0
-    if 'd' in string:
-        delta = timedelta(days=int(string.split('d')[0])).total_seconds()
-    elif 'h' in string:
-        delta = timedelta(hours=int(string.split('h')[0])).total_seconds()
-    return delta
+    data_map = {}
+    if data() == '':
+        return data_map
+    for key in data().split('&'):
+        data_map[key.split('=')[0]] = '='.join(key.split('=')[1:])
+    return data_map
 
 def get_principals(sql_result, username, shell=False):
     """
@@ -123,6 +123,123 @@ def get_principals(sql_result, username, shell=False):
         if shell:
             return sql_result
         return sql_result.split(',')
+
+def unquote_custom(string):
+    """
+    Returns True is the string is quoted
+    """
+    if ' ' not in string:
+        string = unquote_plus(string)
+        if '+' in string and '%20' in string:
+            # Old custom quote
+            string = string.replace('%20', ' ')
+    return string
+
+def pg_connection(
+        dbname=SERVER_OPTS['db_name'],
+        user=SERVER_OPTS['db_user'],
+        host=SERVER_OPTS['db_host'],
+        password=SERVER_OPTS['db_password']):
+    """
+    Return a connection to the db.
+    """
+    message = ''
+    try:
+        pg_conn = connect("dbname='%s' user='%s' host='%s' password='%s'"\
+            % (dbname, user, host, password))
+    except OperationalError:
+        return None, 'Error : Server cannot connect to database'
+    try:
+        pg_conn.cursor().execute("""SELECT * FROM USERS""")
+    except ProgrammingError:
+        return None, 'Error : Server cannot connect to table in database'
+    return pg_conn, message
+
+def str2date(string):
+    """
+    change xd => seconds
+    change xh => seconds
+    """
+    delta = 0
+    if 'd' in string:
+        delta = timedelta(days=int(string.split('d')[0])).total_seconds()
+    elif 'h' in string:
+        delta = timedelta(hours=int(string.split('h')[0])).total_seconds()
+    return delta
+
+
+# OTHER FUNCTION
+def ldap_authentification(admin=False):
+    """
+    Return True if user is well authentified
+        realname=xxxxx@domain.fr
+        password=xxxxx
+    """
+    if SERVER_OPTS['ldap']:
+        credentials = data2map()
+        if credentials.has_key('realname'):
+            realname = unquote_plus(credentials['realname'])
+        else:
+            return False, 'Error: No realname option given.'
+        if credentials.has_key('password'):
+            password = unquote_plus(credentials['password'])
+        else:
+            return False, 'Error: No password option given.'
+        if password == '':
+            return False, 'Error: password is empty.'
+        ldap_conn = ldap_open(SERVER_OPTS['ldap_host'])
+        try:
+            ldap_conn.bind_s(realname, password)
+        except Exception as e:
+            return False, 'Error: %s' % e
+        if admin and SERVER_OPTS['ldap_admin_cn'] not in\
+            ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'], 2,
+                               filterstr='(%s=%s)' % (SERVER_OPTS['filterstr'], realname)
+                              )[0][1]['memberOf']:
+            return False, 'Error: user %s is not an admin.' % realname
+    return True, 'OK'
+
+def list_keys(username=None, realname=None):
+    """
+    Return all keys.
+    """
+    pg_conn, message = pg_connection()
+    if pg_conn is None:
+        return message
+    cur = pg_conn.cursor()
+    is_list = False
+
+    if realname is not None:
+        cur.execute('SELECT * FROM USERS WHERE REALNAME=lower((%s))', (realname,))
+        result = cur.fetchone()
+    elif username is not None:
+        cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
+        result = cur.fetchone()
+    else:
+        cur.execute('SELECT * FROM USERS')
+        result = cur.fetchall()
+        is_list = True
+    cur.close()
+    pg_conn.close()
+    return sql_to_json(result, list=is_list)
+
+def sign_key(tmp_pubkey_name, username, expiry, principals, db_cursor=None):
+    """
+    Sign a key and return cert_contents
+    """
+    # Load SSH CA
+    ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
+
+    # Sign the key
+    try:
+        cert_contents = ca_ssh.sign_public_user_key(\
+            tmp_pubkey_name, username, expiry, principals)
+        if db_cursor is not None:
+            db_cursor.execute('UPDATE USERS SET STATE=0, EXPIRATION=(%s) WHERE NAME=(%s)', \
+                (time() + str2date(expiry), username))
+    except:
+        cert_contents = 'Error : signing key'
+    return cert_contents
 
 def sql_to_json(result, list=False):
     """
@@ -153,111 +270,6 @@ def sql_to_json(result, list=False):
         d_result['expiry'] = result[6]
         d_result['principals'] = get_principals(result[7], result[0])
         return dumps(d_result, indent=4, sort_keys=True)
-
-def pg_connection(
-        dbname=SERVER_OPTS['db_name'],
-        user=SERVER_OPTS['db_user'],
-        host=SERVER_OPTS['db_host'],
-        password=SERVER_OPTS['db_password']):
-    """
-    Return a connection to the db.
-    """
-    message = ''
-    try:
-        pg_conn = connect("dbname='%s' user='%s' host='%s' password='%s'"\
-            % (dbname, user, host, password))
-    except OperationalError:
-        return None, 'Error : Server cannot connect to database'
-    try:
-        pg_conn.cursor().execute("""SELECT * FROM USERS""")
-    except ProgrammingError:
-        return None, 'Error : Server cannot connect to table in database'
-    return pg_conn, message
-
-def sign_key(tmp_pubkey_name, username, expiry, principals, db_cursor=None):
-    """
-    Sign a key and return cert_contents
-    """
-    # Load SSH CA
-    ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
-
-    # Sign the key
-    try:
-        cert_contents = ca_ssh.sign_public_user_key(\
-            tmp_pubkey_name, username, expiry, principals)
-        if db_cursor is not None:
-            db_cursor.execute('UPDATE USERS SET STATE=0, EXPIRATION=(%s) WHERE NAME=(%s)', \
-                (time() + str2date(expiry), username))
-    except:
-        cert_contents = 'Error : signing key'
-    return cert_contents
-
-
-def list_keys(username=None, realname=None):
-    """
-    Return all keys.
-    """
-    pg_conn, message = pg_connection()
-    if pg_conn is None:
-        return message
-    cur = pg_conn.cursor()
-    is_list = False
-
-    if realname is not None:
-        cur.execute('SELECT * FROM USERS WHERE REALNAME=lower((%s))', (realname,))
-        result = cur.fetchone()
-    elif username is not None:
-        cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
-        result = cur.fetchone()
-    else:
-        cur.execute('SELECT * FROM USERS')
-        result = cur.fetchall()
-        is_list = True
-    cur.close()
-    pg_conn.close()
-    return sql_to_json(result, list=is_list)
-
-def data2map():
-    """
-    Returns a map from data POST
-    """
-    data_map = {}
-    if data() == '':
-        return data_map
-    for key in data().split('&'):
-        data_map[key.split('=')[0]] = unquote('='.join(key.split('=')[1:]))
-    return data_map
-
-def ldap_authentification(admin=False):
-    """
-    Return True if user is well authentified
-        realname=xxxxx@domain.fr
-        password=xxxxx
-    """
-    if SERVER_OPTS['ldap']:
-        credentials = data2map()
-        if credentials.has_key('realname'):
-            realname = credentials['realname']
-        else:
-            return False, 'Error: No realname option given.'
-
-        if credentials.has_key('password'):
-            password = credentials['password']
-        else:
-            return False, 'Error: No password option given.'
-        if password == '':
-            return False, 'Error: password is empty.'
-        ldap_conn = ldap_open(SERVER_OPTS['ldap_host'])
-        try:
-            ldap_conn.bind_s(realname, password)
-        except Exception as e:
-            return False, 'Error: %s' % e
-        if admin and SERVER_OPTS['ldap_admin_cn'] not in\
-            ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'], 2,
-                               filterstr='(%s=%s)' % (SERVER_OPTS['filterstr'], realname)
-                              )[0][1]['memberOf']:
-            return False, 'Error: user %s is not an admin.' % realname
-    return True, 'OK'
 
 class Admin():
     """
@@ -440,7 +452,7 @@ class ClientStatus():
         payload = data2map()
 
         if payload.has_key('realname'):
-            realname = payload['realname']
+            realname = unquote_plus(payload['realname'])
         else:
             return "Error: No realname option given."
 
@@ -498,16 +510,15 @@ class Client():
 
         # Get realname
         if payload.has_key('realname'):
-            realname = payload['realname']
+            realname = unquote_plus(payload['realname'])
         else:
             return "Error: No realname option given."
 
         # Get public key
         if payload.has_key('pubkey'):
-            pubkey = unquote(payload['pubkey'])
+            pubkey = unquote_custom(payload['pubkey'])
         else:
             return "Error: No pubkey given."
-
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
@@ -586,15 +597,15 @@ class Client():
                 % (username, username_pattern.pattern)
 
         if payload.has_key('realname'):
-            realname = payload['realname']
+            realname = unquote_plus(payload['realname'])
         else:
             return "Error: No realname option given."
 
+        # Get public key
         if payload.has_key('pubkey'):
-            pubkey = unquote(payload['pubkey'])
+            pubkey = unquote_custom(payload['pubkey'])
         else:
             return "Error: No pubkey given."
-
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()

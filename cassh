@@ -31,7 +31,7 @@ if sys.version_info < (3, 0):
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.5.1'
+VERSION = '%(prog)s 1.5.2'
 
 def read_conf(conf_path):
     """
@@ -174,7 +174,7 @@ class CASSH(object):
         """
         payload = self.get_data()
         pubkey = open('%s.pub' % self.key_path, 'rb')
-        payload.update({'pubkey': pubkey.read().decode('UTF-8').replace(' ', '%20')})
+        payload.update({'pubkey': pubkey.read().decode('UTF-8')})
         pubkey.close()
         try:
             payload.update({'username': self.name})
@@ -192,7 +192,7 @@ class CASSH(object):
         """
         payload = self.get_data()
         pubkey = open('%s.pub' % self.key_path, 'rb')
-        payload.update({'pubkey': pubkey.read().decode('UTF-8').replace(' ', '%20')})
+        payload.update({'pubkey': pubkey.read().decode('UTF-8')})
         pubkey.close()
         payload.update({'username': self.name})
         try:

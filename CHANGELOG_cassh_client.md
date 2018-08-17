@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Client
 -----
 
+1.5.2
+-----
+
+2018/08/10
+
+### Bug Fixes
+
+Use quote_plus on client side to allow complex password
+
 1.5.1
 -----
 
