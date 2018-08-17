@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+
+# == Variables
+#
+# Overriddable by ENV variables
+CASSH_CONF_DIR="${CASSH_CONF_DIR:-/opt/cassh/server/conf}"
+CASSH_KEYS_DIR="${CASSH_KEYS_DIR:-/opt/cassh/server/keys}"
+
+
+# == Shell optiosn to fail fast
+#
+set -o errexit
+set -o nounset
+set -o pipefail
+
+
+# == Run
+#
+echo "===> START"
+
+echo "---> Testing CASSH-server SSH keys Directory"
+if [[ -d "${CASSH_KEYS_DIR}" ]]; then
+    echo "     * Directory 'CASSH_KEYS_DIR=${CASSH_KEYS_DIR}' already exists"
+
+else
+    echo "     * Creating 'CASSH_KEYS_DIR=${CASSH_KEYS_DIR}'"
+    mkdir -p "${CASSH_KEYS_DIR}"
+fi
+
+echo "---> Testing CASSH-server SSH keys"
+if [[ -e "${CASSH_KEYS_DIR}/id_rsa_ca" && -e "${CASSH_KEYS_DIR}/revoked-keys" ]]; then
+    echo "     * SSH Keys already exist, skipping SSH Keys creations"
+
+else
+    echo "     * Creating CASSH-server SSH Keys in 'CASSH_KEYS_DIR=${CASSH_KEYS_DIR}'"
+    ssh-keygen -t rsa -b 4096 -o -a 100 -N "" -f "${CASSH_KEYS_DIR}/id_rsa_ca"
+    ssh-keygen -k -f "${CASSH_KEYS_DIR}/revoked-keys"
+fi
+
+
+echo "---> Starting CASSH-server"
+echo "     * Using CASSH_CONF_DIR=${CASSH_CONF_DIR} (Config file 'cassh.conf')"
+echo "     * Using CASSH_KEYS_DIR=${CASSH_KEYS_DIR}"
+
+
+set -x 
+exec python /opt/cassh/server/server.py --config "${CASSH_CONF_DIR}/cassh.conf"

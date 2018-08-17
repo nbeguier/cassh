@@ -1,15 +1,86 @@
+---
+# Travis Doc:
+#
+# * Build Lifecycle
+#   - https://docs.travis-ci.com/user/customizing-the-build#The-Build-Lifecycle
+#
+# 1. OPTIONAL Install apt addons
+# 2. OPTIONAL Install cache components
+# .
+# 3. before_install
+# 4. install
+# 5. before_script
+# 6. script
+# 7. OPTIONAL before_cache (for cleaning up cache)
+# 8. after_success or after_failure
+# .
+# 9. OPTIONAL before_deploy
+# 10. OPTIONAL deploy
+# 11. OPTIONAL after_deploy
+# .
+# 12. after_script (just before shutting down the build environment)
+#
+#
+
+# == Testing env setup
+#
+sudo: required
+services:
+  - docker
+
 language: python
-python:
-  - '2.7'
-  - '3.4'
-  - "3.5"
-  - "3.5-dev"  # 3.5 development branch
-  - "3.6"
-  - "3.6-dev"  # 3.6 development branch
-  - "3.7-dev"  # 3.7 development branch
-# command to install dependencies
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+
+env:
+  # To avoid matrix jobs:
+  # https://docs.travis-ci.com/user/environment-variables/#Global-Variables
+  global:
+    - DOCKER_USERNAME='leboncoinci'
+    # DOCKER_PASSWORD
+    - secure: "ZLhjXbFJ/5HRFv1LJVgyakpvim96nhlmrKW9vTbEiA4WREstMBNXVt26DSNuUYiOB8JyINW698b/tGPJ6AyRqlZqiurRmFQC73rjhi7L7PJleLi0b9Q/uoY/E4W0wd+CiTkOQxZ77pWV5RgVt5MI85dZYtrLdNra7Fo/wg/t1u/9px3P+Q7COr5WQmbnIlansZ19zA9Nax2lwkQG6mhqfGIArwgp5z9sw2cDpAwLiag315W+k6dAyWzSv+ayIc7TwyfyEisliFvSVH/7tS56KBqlDEf1Udob4GgiHtH2F+vNvfnKdt8Gh+mZAmSCjW9hf71YJ+AzVMfNZEWu4/bjRGv+iDVUoXn2CEnyqVHrirWqqh0B1aza5Y9fm1WzJwqtV07XoJlvMQ2Fr+k4fxpt4vj48GLCIyKb6PftTJKJqa8KCijb4uIY90Zy4AlqsT/phobOhQ/TrQTX8LZrFlrm3UPsSYJnT6ir2hIiEUE/vDdAGGsYycT+IIYdGaTRRv1vFro+s64x4c3rttU3iHe8HC9KARPjN0cLYwC3fqPGWhN8U5sGj/1yCA+59kWb3R5tUWF8fOtrPpQG4bE8xywjX96wOCzCybAZN++NjwOy7vW54j+aBSaxFJgtNnMqYEr1owMRcNI2y7ZVW5Z109MJmXw8bWMy8neifv574OFfW40="
+
+branches:
+  only:
+  - master
+
+
+# == Tests
+#
 install:
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.* ]]; then pip install -r requirements.txt; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.* ]]; then pip3 install -r requirements.txt; fi
-# command to run tests
-script: pylint cassh -d redefined-builtin -d useless-object-inheritance
+  - echo "---> Check Docker version" && docker version
+  - echo "---> Installing CI utils" && pip install docker-compose invoke
+
+before_script:
+  - invoke release.docker-login
+
+script:
+  # Build
+  - invoke build.cassh-server || travis_terminate 1
+  - invoke build.cassh || travis_terminate 1
+  # Lint
+  #- invoke test.lint-server || travis_terminate 1
+  - invoke test.lint-client || travis_terminate 1
+  # End2End
+  - invoke test.e2e || travis_terminate 1
+
+
+# == Deploy
+#
+deploy:
+  # Push docker-image 'latest'
+  - provider: script
+    script: /usr/bin/env bash -c 'invoke release.all'
+    on:
+      branch: master
+
+  # https://docs.travis-ci.com/user/deployment
+  # This causes the branch condition to be ignored
+  #
+  # Push tagged image
+  - provider: script
+    script: /usr/bin/env bash -c 'invoke release.all'
+    on:
+      tags: true
