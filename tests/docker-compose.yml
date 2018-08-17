@@ -1,0 +1,70 @@
+version: '3'
+services:
+
+  # == Long running Services
+  #
+  cassh-server:
+    build:
+      context: ../src/server
+      dockerfile: Dockerfile
+    image: nbeguier/cassh-server
+    environment:
+      - CASSH_KEYS_DIR=/test-keys
+    volumes:
+      # Share code
+      - ../src/server:/opt/cassh/server/
+      # Tests config
+      - ./conf/cassh-server.conf:/opt/cassh/server/conf/cassh.conf
+      # Runtime directory
+      - tmpdir-server:/test-keys
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:9.5
+    environment:
+      POSTGRES_USER: cassh
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: cassh
+    # Init the DB
+    volumes:
+      - ../src/server/sql/model.sql:/docker-entrypoint-initdb.d/cassh_model.sql
+
+  #TODO: LDAP
+  
+
+  # == Docker-compose run
+  #
+  cassh-cli:
+    build:
+      context: ../src/client
+      dockerfile: Dockerfile
+    image: nbeguier/cassh-client
+    volumes:
+      # Code
+      - ../src/client/cassh:/app/cassh
+      # Test config
+      - ./conf/cassh-client.conf:/root/.cassh
+      - ./tmp/test-keys/client:/test-keys
+    depends_on:
+      - cassh-server
+
+  test-runner:
+    build:
+      context: ../utils/tests-runner/
+      dockerfile: Dockerfile
+    image: nbeguier/cassh-tests-runner
+    working_dir: /tests/
+    volumes:
+      # Tests
+      - ./:/tests/
+    depends_on:
+      - cassh-server
+
+ 
+# Container surviving data location
+volumes:
+  tmpdir-server:
+    driver: local
