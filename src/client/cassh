@@ -337,23 +337,23 @@ if __name__ == '__main__':
         print('realname = ursula.ser@domain.fr')
         exit(1)
 
-    LBC = CASSH(read_conf(CONF_FILE))
+    CLIENT = CASSH(read_conf(CONF_FILE))
 
     if len(sys.argv) == 1:
         PARSER.print_help()
         exit(1)
 
     if sys.argv[1] == 'add':
-        LBC.add()
+        CLIENT.add()
     elif sys.argv[1] == 'sign':
-        LBC.sign(not ARGS.display_only, uid=ARGS.uid, force=ARGS.force)
+        CLIENT.sign(not ARGS.display_only, uid=ARGS.uid, force=ARGS.force)
     elif sys.argv[1] == 'status':
-        LBC.status()
+        CLIENT.status()
     elif sys.argv[1] == 'ca':
-        LBC.get_ca()
+        CLIENT.get_ca()
     elif sys.argv[1] == 'krl':
-        LBC.get_krl()
+        CLIENT.get_krl()
     elif sys.argv[1] == 'admin':
-        LBC.admin(ARGS.username, ARGS.action, set_value=ARGS.set)
+        CLIENT.admin(ARGS.username, ARGS.action, set_value=ARGS.set)
 
     exit(0)
