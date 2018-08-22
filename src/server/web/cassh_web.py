@@ -15,7 +15,6 @@ from ssl import PROTOCOL_TLSv1_2, SSLContext
 from flask import Flask, render_template, request, Response, redirect, send_from_directory
 from requests import post, put
 from requests.exceptions import ConnectionError
-from urllib import quote_plus
 from urllib3 import disable_warnings
 from werkzeug import secure_filename
 
@@ -170,7 +169,7 @@ def upload(current_user=None):
     payload = {}
     payload.update({'realname': current_user['name'], 'password': current_user['password']})
     payload.update({'username': username})
-    payload.update({'pubkey': quote_plus(pubkey.read().decode('UTF-8'))})
+    payload.update({'pubkey': pubkey.read().decode('UTF-8')})
     try:
         req = post(APP.config['CASSH_URL'] + '/client', \
                 data=payload, \
@@ -198,7 +197,7 @@ def send(current_user=None):
     payload = {}
     payload.update({'realname': current_user['name'], 'password': current_user['password']})
     payload.update({'username': username})
-    payload.update({'pubkey': quote_plus(pubkey.read().decode('UTF-8'))})
+    payload.update({'pubkey': pubkey.read().decode('UTF-8')})
     try:
         req = put(APP.config['CASSH_URL'] + '/client', \
                 data=payload, \
