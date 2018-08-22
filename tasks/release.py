@@ -17,7 +17,7 @@ def docker_login(ctx):
     COLOR_NONE="\033[0m"
 
     echo "${SUCCESS}===> Logging to docker hub${COLOR_NONE}"
-    
+
     if [[ ! -e  ~/.docker/config.json ]]; then
         echo "${WARNING}     * No docker config file found ! ${COLOR_NONE}"
 
@@ -25,7 +25,7 @@ def docker_login(ctx):
         echo "${SUCCESS}     * DOCKER_USERNAME=${DOCKER_USERNAME} ${COLOR_NONE}"
         echo "${SUCCESS}     * DOCKER_PASSWORD=${DOCKER_PASSWORD} ${COLOR_NONE}"
 
-        echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin      
+        echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
     fi
     """)
 
@@ -35,8 +35,14 @@ def docker_tag(ctx, name):
     Tag and Push a docker image to Docker hub
     """
     ctx.run("""
+    # To avoid unset variable errors
+    TRAVIS_BRANCH="${{TRAVIS_BRANCH:-}}"
+    TRAVIS_TAG="${{TRAVIS_TAG:-}}"
+
     set -o errexit
-    
+    set -o pipefail
+    set -o nounset
+
     docker_image='leboncoin/{name}'
 
     FAIL="\033[0;31m"
@@ -48,7 +54,7 @@ def docker_tag(ctx, name):
 
 
     echo "${{SUCCESS}}---> Tagging image ${{COLOR_NONE}}"
-    
+
     GIT_TAG=$(git describe --tags | sed -e 's/^v\(.*\)/\1/')
     echo "${{SUCCESS}}     * Git Tag = ${{GIT_TAG}}${{COLOR_NONE}}"
 
@@ -59,17 +65,24 @@ def docker_tag(ctx, name):
         BRANCH_NAME=$(git symbolic-ref --short HEAD)
     fi
 
-    [[ "${{BRAN_NAME}}" != 'master' ]] \
-        && echo "${{WARNING}}     * NOT from branch 'master' (${{BRANCH_NAME}}), adding it to tag${{COLOR_NONE}}" \
-        && GIT_TAG="${{GIT_TAG}}-${{BRANCH_NAME}}"
-    
+    # Handling Tagged release
+    if [[ "${{BRANCH_NAME}}" != "master" ]]; then
+        echo "${{WARNING}}     * NOT from branch 'master' (${{BRANCH_NAME}}), adding it to tag${{COLOR_NONE}}"
+        GIT_TAG="${{GIT_TAG}}-${{BRANCH_NAME}}"
+
+    elif [[ -n "${{TRAVIS_TAG}}" && "${{TRAVIS_TAG}}" == "${{TRAVIS_BRANCH}}" ]]; then
+        echo "${{SUCCESS}}     * We are on a TAGGED release from TRAVIS${{COLOR_NONE}}"
+    else
+        echo "${{SUCCESS}}     * We are on a TAGGED release locally${{COLOR_NONE}}"
+    fi
+
     docker tag ${{docker_image}}:latest ${{docker_image}}:${{GIT_TAG}}
 
 
-    echo "${{SUCCESS}}---> Pushin image ${{COLOR_NONE}}"
+    echo "${{SUCCESS}}---> Pushing image ${{COLOR_NONE}}"
     echo "${{SUCCESS}}     * Latest ${{COLOR_NONE}}"
     docker push ${{docker_image}}:'latest'
-    
+
     echo "${{SUCCESS}}     * ${{GIT_TAG}}${{COLOR_NONE}}"
     docker push ${{docker_image}}:${{GIT_TAG}}
 

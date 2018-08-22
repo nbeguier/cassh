@@ -83,4 +83,5 @@ deploy:
   - provider: script
     script: /usr/bin/env bash -c 'invoke release.all'
     on:
-      tags: true
+      all_branches: true
+      condition: $TRAVIS_TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+
