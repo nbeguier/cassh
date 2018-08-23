@@ -180,19 +180,14 @@ def pretty_ssh_key_hash(pubkey_fingerprint):
     rate = 'UNKNOWN'
     if auth_type == 'DSA':
         rate = 'VERY LOW'
-    elif auth_type == 'RSA':
-        if key_bits >= 4096:
-            rate = 'HIGH'
-        elif key_bits >= 2048:
-            rate = 'MEDIUM'
-        else:
-            rate = 'LOW'
-    elif auth_type == 'ECDSA':
-        if key_bits >= 256:
-            rate = 'HIGH'
-    elif auth_type == 'ED25519':
-        if key_bits >= 256:
-            rate = 'VERY HIGH'
+    elif (auth_type == 'RSA' and key_bits >= 4096) or (auth_type == 'ECDSA' and key_bits >= 256):
+        rate = 'HIGH'
+    elif auth_type == 'RSA' and key_bits >= 2048:
+        rate = 'MEDIUM'
+    elif auth_type == 'RSA' and key_bits < 2048:
+        rate = 'LOW'
+    elif auth_type == 'ED25519' and key_bits >= 256:
+        rate = 'VERY HIGH'
 
     return {'bits': key_bits, 'hash': key_hash, 'auth_type': auth_type, 'rate': rate}
 

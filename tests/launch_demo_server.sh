@@ -6,7 +6,7 @@ MOUNT_VOL=
 function usage()
 {
     echo "Usage:"
-    echo "$0 [-d|--debug] [-h|---help] [-s|--server_file <filepath>]"
+    echo "$0 [-d|--debug] [-h|---help] [-s|--server_code_path <filepath>]"
     echo ""
     exit 0
 }
@@ -17,13 +17,13 @@ do
 key="$1"
 
 case $key in
-    -s|--server_file)
-    SERVER_FILE="$2"
-    if ! [ -f "/${SERVER_FILE}" ]; then
-        echo "Server file /${SERVER_FILE} doesn't exist."
+    -s|--server_code_path)
+    SERVER_CODE_PATH="$2"
+    if ! [ -d "/${SERVER_CODE_PATH}" ]; then
+        echo "Server code path /${SERVER_CODE_PATH} doesn't exist."
         exit 1
     fi
-    MOUNT_VOL="-v ${SERVER_FILE}:/opt/cassh/server/server.py"
+    MOUNT_VOL="-v ${SERVER_CODE_PATH}:/opt/cassh/server"
     shift # past argument
     shift # past value
     ;;
