@@ -4,6 +4,39 @@ CHANGELOG
 CASSH Client
 -----
 
+1.6.0
+-----
+
+2018/08/23
+
+### New Features
+
+  - timeout optional arg in cassh conf file, 2s by default
+  - verify optional arg in cassh conf file, True by default
+  - Add a User-Agent `HTTP_USER_AGENT : CASSH-CLIENT v1.6.0`
+  - Add the client version in header `HTTP_CLIENT_VERSION : 1.6.0`
+
+
+### Changes
+  - Read public key as text and not as a binary
+  - Remove of --uid : "Force UID in key ownership.", useless
+  - Remove disable_warning() for https requests
+
+
+### Bug Fixes
+
+  - fix timeout at 60s
+  - fix no tls certificate verification
+  - fix README
+
+### Other
+
+  - Reorder functions
+  - Less var in init function, more use of user_metadata shared var
+  - Wrap request function to unify headers, timeout and tls verification
+
+
+
 1.5.3
 -----
 
