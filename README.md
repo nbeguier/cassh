@@ -7,6 +7,88 @@ Developped for @leboncoin
 
 https://nicolasbeguier.shost.ca/cassh.html
 
+## Usage
+
+### Client CLI
+
+Add new key to cassh-server :
+```
+cassh add
+```
+
+Sign pub key :
+```
+cassh sign [--display-only] [--force]
+```
+
+Get public key status :
+```
+cassh status
+```
+
+Get ca public key :
+```
+cassh ca
+```
+
+Get ca krl :
+```
+cassh krl
+```
+
+### Admin CLI
+
+Active Client **username** key :
+```
+cassh admin <username> active
+```
+
+Revoke Client **username** key :
+```
+cassh admin <username> revoke
+```
+
+Delete Client **username** key :
+```
+cassh admin <username> delete
+```
+
+Status Client **username** key :
+```
+cassh admin <username> status
+```
+
+Set Client **username** key :
+```
+cassh admin <username> set --set='expiry=+7d'
+cassh admin <username> set --set='principals=username,root'
+```
+
+### Configuration file
+
+```ini
+[user]
+# name : this is the username you will use to log on every server
+name = user
+# key_path: This key path won\'t be used to log in, a copy will be made for the certificate.
+# We assume that `${key_path}` exists and `${key_path}.pub` as well.
+# WARNING: Never delete these keys
+key_path = ~/.ssh/id_rsa
+# key_signed_path: Every signed key via cassh will be put in this path.
+# At every sign, `${key_signed_path}` and `${key_signed_path}.pub` will be created
+key_signed_path = ~/.ssh/id_rsa-cert
+# url : URL of cassh server-side backend.
+url = https://cassh.net
+# [OPTIONNAL] timeout : requests timeout parameter in second. (timeout=2)
+# timeout = 2
+# [OPTIONNAL] verify : verifies SSL certificates for HTTPS requests. (verify=True)
+# verify = True
+
+[ldap]
+# realname : this is the LDAP/AD login user
+realname = ursula.ser@domain.fr
+```
+
 ## Prerequisites
 
 ### Server
@@ -26,7 +108,7 @@ ssh-keygen -k -f test-keys/revoked-keys
 ```
 
 Configuration file example :
-```
+```ini
 [main]
 ca = /etc/cassh/ca/id_rsa_ca
 krl = /etc/cassh/krl/revoked-keys
@@ -76,65 +158,6 @@ sudo apt-get install python-pip
 pip install -r requirements.txt
 ```
 
-
-## Usage
-
-### Client CLI
-
-Add new key to cassh-server :
-```
-$ cassh add
-```
-
-Sign pub key :
-```
-$ cassh sign [--display-only] [--uid=UID] [--force]
-```
-
-Get public key status :
-```
-$ cassh status
-```
-
-Get ca public key :
-```
-$ cassh ca
-```
-
-Get ca krl :
-```
-cassh krl
-```
-
-### Admin CLI
-
-Active Client **username** key :
-```
-cassh admin <username> active
-```
-
-Revoke Client **username** key :
-```
-cassh admin <username> revoke
-```
-
-Delete Client **username** key :
-```
-cassh admin <username> delete
-```
-
-Status Client **username** key :
-```
-cassh admin <username> status
-```
-
-Set Client **username** key :
-```
-cassh admin <username> set --set='expiry=+7d'
-cassh admin <username> set --set='principals=username,root'
-```
-
-
 ## Features on CASSH server
 
 ### Active SSL
@@ -167,9 +190,11 @@ Install docker : https://docs.docker.com/engine/installation/
 pip install psycopg2
 bash tests/launch_demo_server.sh
 
+## CHOICE 1
 # When 'http://0.0.0.0:8080/' appears, start it on another terminal
 bash tests/test.sh
 
+## CHOICE 2
 # Full debug
 bash tests/launch_demo_server.sh --server_file ${PWD}/server/server.py --debug
 $ /opt/cassh/server/server.py --config /opt/cassh/tests/cassh_dummy.conf
