@@ -5,33 +5,36 @@
 # Standard library imports
 from __future__ import print_function
 from argparse import ArgumentParser
-from codecs import getwriter
 from datetime import datetime
 from getpass import getpass
 from json import dumps, loads
-from os import chmod, chown, getenv
+from os import chmod, getenv
 from os.path import isfile
 from shutil import copyfile
-import sys
+from sys import argv
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError, NoSectionError
 from requests import Session
 from requests.exceptions import ConnectionError
-from urllib3 import disable_warnings
-
-# Disable HTTPs warnings
-disable_warnings()
-
-# Change codec
-if sys.version_info < (3, 0):
-    sys.stdout = getwriter('utf8')(sys.stdout)
-    sys.stderr = getwriter('utf8')(sys.stderr)
 
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.5.3'
+VERSION = '%(prog)s 1.6.0'
+
+def print_result(result):
+    """ Display result """
+    date_formatted = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S')
+    is_expired = date_formatted < datetime.now()
+    if result['status'] == 'ACTIVE':
+        if is_expired and date_formatted.year == 1970:
+            result['status'] = 'NEVER SIGNED'
+        elif is_expired:
+            result['status'] = 'EXPIRED'
+        else:
+            result['status'] = 'SIGNED'
+    print(dumps(result, indent=4, sort_keys=True))
 
 def read_conf(conf_path):
     """
@@ -51,6 +54,16 @@ def read_conf(conf_path):
         print('Can\'t read configuration file...')
         print(error_msg)
         exit(1)
+
+    if not config.has_option('user', 'timeout'):
+        user_metadata['timeout'] = 2
+    else:
+        user_metadata['timeout'] = config.get('user', 'timeout')
+
+    if not config.has_option('user', 'verify'):
+        user_metadata['verify'] = True
+    else:
+        user_metadata['verify'] = bool(config.get('user', 'verify') != 'False')
 
     if user_metadata['key_path'] == user_metadata['key_signed_path']:
         print('You should put a different path for key_path and key_signed_path.')
@@ -73,20 +86,6 @@ def read_conf(conf_path):
 
     return user_metadata
 
-def print_result(result):
-    """ Display result """
-    date_formatted = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S')
-    is_expired = date_formatted < datetime.now()
-    if result['status'] == 'ACTIVE':
-        if is_expired and date_formatted.year == 1970:
-            result['status'] = 'NEVER SIGNED'
-        elif is_expired:
-            result['status'] = 'EXPIRED'
-        else:
-            result['status'] = 'SIGNED'
-    print(dumps(result, indent=4, sort_keys=True))
-
-
 class CASSH(object):
     """
     Main CASSH class.
@@ -95,13 +94,98 @@ class CASSH(object):
         """
         Init file.
         """
-        self.name = user_metadata['name']
-        self.key_path = user_metadata['key_path']
-        self.key_signed_path = user_metadata['key_signed_path']
         self.session = Session()
-        self.url = user_metadata['url']
         self.auth = user_metadata['auth']
+        self.key_path = user_metadata['key_path']
+        self.name = user_metadata['name']
         self.realname = user_metadata['realname']
+        self.user_metadata = user_metadata
+        self.user_metadata['headers'] = {
+            'User-Agent': 'CASSH-CLIENT v%s' % VERSION.split(' ')[1],
+            'CLIENT_VERSION': VERSION.split(' ')[1],
+        }
+
+    ########################
+    ## REQUESTS FUNCTIONS ##
+    ########################
+
+    def delete(self, uri, data):
+        """
+        Rebuilt DELETE function for CASSH purpose
+        """
+        try:
+            req = self.session.delete(self.user_metadata['url'] + uri,
+                                      data=data,
+                                      headers=self.user_metadata['headers'],
+                                      timeout=self.user_metadata['timeout'],
+                                      verify=self.user_metadata['verify'])
+        except ConnectionError:
+            print('Connection error : %s' % self.user_metadata['url'])
+            exit(1)
+        return req
+
+    def get(self, uri):
+        """
+        Rebuilt GET function for CASSH purpose
+        """
+        try:
+            req = self.session.get(self.user_metadata['url'] + uri,
+                                   headers=self.user_metadata['headers'],
+                                   timeout=self.user_metadata['timeout'],
+                                   verify=self.user_metadata['verify'])
+        except ConnectionError:
+            print('Connection error : %s' % self.user_metadata['url'])
+            exit(1)
+        return req
+
+    def patch(self, uri, data):
+        """
+        Rebuilt PATCH function for CASSH purpose
+        """
+        try:
+            req = self.session.patch(self.user_metadata['url'] + uri,
+                                     data=data,
+                                     headers=self.user_metadata['headers'],
+                                     timeout=self.user_metadata['timeout'],
+                                     verify=self.user_metadata['verify'])
+        except ConnectionError:
+            print('Connection error : %s' % self.user_metadata['url'])
+            exit(1)
+        return req
+
+    def post(self, uri, data):
+        """
+        Rebuilt POST function for CASSH purpose
+        """
+        try:
+            req = self.session.post(self.user_metadata['url'] + uri,
+                                    data=data,
+                                    headers=self.user_metadata['headers'],
+                                    timeout=self.user_metadata['timeout'],
+                                    verify=self.user_metadata['verify'])
+        except ConnectionError:
+            print('Connection error : %s' % self.user_metadata['url'])
+            exit(1)
+        return req
+
+    def put(self, uri, data):
+        """
+        Rebuilt PUT function for CASSH purpose
+        """
+        try:
+            req = self.session.put(self.user_metadata['url'] + uri,
+                                   data=data,
+                                   headers=self.user_metadata['headers'],
+                                   timeout=self.user_metadata['timeout'],
+                                   verify=self.user_metadata['verify'])
+        except ConnectionError:
+            print('Connection error : %s' % self.user_metadata['url'])
+            exit(1)
+        return req
+
+    ########################
+    ##   MAIN FUNCTIONS   ##
+    ########################
 
     def get_data(self, prefix=None):
         """
@@ -120,51 +204,37 @@ class CASSH(object):
         Admin CLI
         """
         payload = self.get_data()
-        try:
-            if action == 'revoke':
-                payload.update({'revoke': True})
-                req = self.session.post(self.url + '/admin/' + username, \
-                    data=payload, \
-                    verify=False)
-            elif action == 'active':
-                req = self.session.post(self.url + '/admin/' + username, \
-                    data=payload, \
-                    verify=False)
-            elif action == 'delete':
-                req = self.session.delete(self.url + '/admin/' + username, \
-                    data=payload, \
-                    verify=False)
-            elif action == 'set':
-                set_value_dict = {}
-                set_value_dict[set_value.split('=')[0]] = set_value.split('=')[1]
-                payload.update(set_value_dict)
-                req = self.session.patch(self.url + '/admin/' + username, \
-                    data=payload, \
-                    verify=False)
-            elif action == 'status':
-                payload.update({'status': True})
-                req = self.session.post(self.url + '/admin/' + username, \
-                    data=payload, \
-                    verify=False)
-                try:
-                    result = loads(req.text)
-                except ValueError:
-                    print(req.text)
-                    return
-                if result == {}:
-                    print(dumps(result, indent=4, sort_keys=True))
-                    return
-                if username == 'all':
-                    for user in result:
-                        print_result(result[user])
-                    return
-                print_result(result)
+        if action == 'revoke':
+            payload.update({'revoke': True})
+            req = self.post('/admin/' + username, payload)
+        elif action == 'active':
+            req = self.post('/admin/' + username, payload)
+        elif action == 'delete':
+            req = self.delete('/admin/' + username, payload)
+        elif action == 'set':
+            set_value_dict = {}
+            set_value_dict[set_value.split('=')[0]] = set_value.split('=')[1]
+            payload.update(set_value_dict)
+            req = self.patch('/admin/' + username, payload)
+        elif action == 'status':
+            payload.update({'status': True})
+            req = self.post('/admin/' + username, payload)
+            try:
+                result = loads(req.text)
+            except ValueError:
+                print(req.text)
                 return
-            else:
-                print('Action should be : revoke, active, delete or status')
-                exit(1)
-        except ConnectionError:
-            print('Connection error : %s' % self.url)
+            if result == {}:
+                print(dumps(result, indent=4, sort_keys=True))
+                return
+            if username == 'all':
+                for user in result:
+                    print_result(result[user])
+                return
+            print_result(result)
+            return
+        else:
+            print('Action should be : revoke, active, delete or status')
             exit(1)
         print(req.text)
 
@@ -173,52 +243,35 @@ class CASSH(object):
         Add a public key.
         """
         payload = self.get_data()
-        pubkey = open('%s.pub' % self.key_path, 'rb')
-        payload.update({'pubkey': pubkey.read().decode('UTF-8')})
+        pubkey = open('%s.pub' % self.key_path, 'r')
+        payload.update({'pubkey': pubkey.read()})
         pubkey.close()
-        try:
-            payload.update({'username': self.name})
-            req = self.session.put(self.url + '/client', \
-                data=payload, \
-                verify=False)
-        except ConnectionError:
-            print('Connection error : %s' % self.url)
-            exit(1)
+        payload.update({'username': self.name})
+        req = self.put('/client', payload)
         print(req.text)
 
-    def sign(self, do_write_on_disk, uid=None, force=False):
+    def sign(self, do_write_on_disk, force=False):
         """
         Sign a public key.
         """
         payload = self.get_data()
-        pubkey = open('%s.pub' % self.key_path, 'rb')
-        payload.update({'pubkey': pubkey.read().decode('UTF-8')})
+        pubkey = open('%s.pub' % self.key_path, 'r')
+        payload.update({'pubkey': pubkey.read()})
         pubkey.close()
         payload.update({'username': self.name})
-        try:
-            if force:
-                payload.update({'admin_force': True})
-            req = self.session.post(self.url + '/client', \
-                data=payload, \
-                verify=False)
-        except ConnectionError:
-            print('Connection error : %s' % self.url)
-            exit(1)
+        if force:
+            payload.update({'admin_force': True})
+        req = self.post('/client', payload)
         if not 'ssh-' in req.text and not 'ecdsa-' in req.text:
             print(req.text)
             exit(1)
         if do_write_on_disk:
-            copyfile(self.key_path, self.key_signed_path)
-            chmod(self.key_signed_path, 0o600)
-            pubkey_signed = open('%s.pub' % self.key_signed_path, 'w+')
+            key_signed_path = self.user_metadata['key_signed_path']
+            copyfile(self.key_path, key_signed_path)
+            chmod(key_signed_path, 0o600)
+            pubkey_signed = open('%s.pub' % key_signed_path, 'w+')
             pubkey_signed.write(req.text)
             pubkey_signed.close()
-            if uid is not None:
-                try:
-                    chown(self.key_signed_path, int(uid), int(uid))
-                    chown('%s.pub' % self.key_signed_path, int(uid), int(uid))
-                except OSError:
-                    print('Error: Cannot change ownership...')
             print('Public key successfuly signed')
         else:
             print(req.text)
@@ -228,13 +281,7 @@ class CASSH(object):
         Get status of public key.
         """
         payload = self.get_data()
-        try:
-            req = self.session.post(self.url + '/client/status', \
-                data=payload, \
-                verify=False)
-        except ConnectionError:
-            print('Connection error : %s' % self.url)
-            exit(1)
+        req = self.post('/client/status', payload)
         try:
             result = loads(req.text)
         except ValueError:
@@ -249,24 +296,14 @@ class CASSH(object):
         """
         Get CA public key.
         """
-        try:
-            req = self.session.get(self.url + '/ca', \
-                verify=False)
-        except ConnectionError:
-            print('Connection error : %s' % self.url)
-            exit(1)
+        req = self.get('/ca')
         print(req.text)
 
     def get_krl(self):
         """
         Get CA KRL.
         """
-        try:
-            req = self.session.get(self.url + '/krl', \
-                verify=False)
-        except ConnectionError:
-            print('Connection error : %s' % self.url)
-            exit(1)
+        req = self.get('/krl')
         print(req.text)
 
 
@@ -297,8 +334,6 @@ if __name__ == '__main__':
         help='Display key in shell only.')
     SIGN_PARSER.add_argument('-f', '--force', action='store_true',\
         help='Admin can force signature if server enable it.')
-    SIGN_PARSER.add_argument('-u', '--uid', action='store',\
-        help='Force UID in key ownership.')
 
     # STATUS Arguments
     STATUS_PARSER = SUBPARSERS.add_parser('status',\
@@ -320,17 +355,21 @@ if __name__ == '__main__':
         print('Config file missing : %s' % CONF_FILE)
         print('Example:')
         print('[user]')
-        print('# name : it\'s the user you will use to log in every server')
+        print('# name : this is the username you will use to log on every server')
         print('name = user')
-        print('# key_path : This key path won\'t be use to log in, a copy will be made.')
-        print('# We assume that `${key_path}` exists and `${key_path}.pub` too.')
+        print('# key_path: This key path won\'t be used to log in, a copy will be made.')
+        print('# We assume that `${key_path}` exists and `${key_path}.pub` as well.')
         print('# WARNING: Never delete these keys')
         print('key_path = ~/.ssh/id_rsa')
-        print('# key_signed_path : Every signed key via cassh will be put in this path.')
-        print('# At every sign, `${key_signed_path}` and `${key_signed_path}.pub` will be create.')
+        print('# key_signed_path: Every signed key via cassh will be put in this path.')
+        print('# At every sign, `${key_signed_path}` and `${key_signed_path}.pub` will be created')
         print('key_signed_path = ~/.ssh/id_rsa-cert')
-        print(' url : URL of cassh server-side backend.')
+        print('# url : URL of cassh server-side backend.')
         print('url = https://cassh.net')
+        print('# [OPTIONNAL] timeout : requests timeout parameter in second. (timeout=2)')
+        print('# timeout = 2')
+        print('# [OPTIONNAL] verify : verifies SSL certificates for HTTPS requests. (verify=True)')
+        print('# verify = True')
         print('')
         print('[ldap]')
         print('# realname : this is the LDAP/AD login user')
@@ -339,21 +378,21 @@ if __name__ == '__main__':
 
     CLIENT = CASSH(read_conf(CONF_FILE))
 
-    if len(sys.argv) == 1:
+    if len(argv) == 1:
         PARSER.print_help()
         exit(1)
 
-    if sys.argv[1] == 'add':
+    if argv[1] == 'add':
         CLIENT.add()
-    elif sys.argv[1] == 'sign':
-        CLIENT.sign(not ARGS.display_only, uid=ARGS.uid, force=ARGS.force)
-    elif sys.argv[1] == 'status':
+    elif argv[1] == 'sign':
+        CLIENT.sign(not ARGS.display_only, force=ARGS.force)
+    elif argv[1] == 'status':
         CLIENT.status()
-    elif sys.argv[1] == 'ca':
+    elif argv[1] == 'ca':
         CLIENT.get_ca()
-    elif sys.argv[1] == 'krl':
+    elif argv[1] == 'krl':
         CLIENT.get_krl()
-    elif sys.argv[1] == 'admin':
+    elif argv[1] == 'admin':
         CLIENT.admin(ARGS.username, ARGS.action, set_value=ARGS.set)
 
     exit(0)

@@ -75,7 +75,7 @@ cassh add
 
 Sign pub key :
 ```
-cassh sign [--display-only] [--uid=UID] [--force]
+cassh sign [--display-only] [--force]
 ```
 
 Get public key status :
@@ -121,6 +121,30 @@ cassh admin <username> set --set='expiry=+7d'
 cassh admin <username> set --set='principals=username,root'
 ```
 
+#### Configuration file
+
+```ini
+[user]
+# name : this is the username you will use to log on every server
+name = user
+# key_path: This key path won\'t be used to log in, a copy will be made for the certificate.
+# We assume that `${key_path}` exists and `${key_path}.pub` as well.
+# WARNING: Never delete these keys
+key_path = ~/.ssh/id_rsa
+# key_signed_path: Every signed key via cassh will be put in this path.
+# At every sign, `${key_signed_path}` and `${key_signed_path}.pub` will be created
+key_signed_path = ~/.ssh/id_rsa-cert
+# url : URL of cassh server-side backend.
+url = https://cassh.net
+# [OPTIONNAL] timeout : requests timeout parameter in second. (timeout=2)
+# timeout = 2
+# [OPTIONNAL] verify : verifies SSL certificates for HTTPS requests. (verify=True)
+# verify = True
+
+[ldap]
+# realname : this is the LDAP/AD login user
+realname = ursula.ser@domain.fr
+```
 
 
 ## Install
@@ -171,7 +195,7 @@ ssh-keygen -k -f /etc/cassh-server/krl/revoked-keys
 ```
 
 
-```bash
+```ini
 # cassh.conf
 [main]
 ca = /etc/cassh-server/ca/id_rsa_ca
