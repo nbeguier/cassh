@@ -11,12 +11,12 @@ from os import remove
 from re import compile as re_compile
 from tempfile import NamedTemporaryFile
 from time import time
+from urllib import unquote_plus
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError
 from ldap import open as ldap_open
 from psycopg2 import connect, OperationalError, ProgrammingError
-from urllib import unquote_plus
 from web import application, data, httpserver
 from web.wsgiserver import CherryPyWSGIServer
 
@@ -43,7 +43,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.5.2'
+VERSION = '1.6.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -155,6 +155,47 @@ def pg_connection(
         return None, 'Error : Server cannot connect to table in database'
     return pg_conn, message
 
+def pretty_ssh_key_hash(pubkey_fingerprint):
+    """
+    Returns a pretty json from raw pubkey
+    KEY_BITS KEY_HASH [JERK] (AUTH_TYPE)
+    """
+    try:
+        key_bits = int(pubkey_fingerprint.split(' ')[0])
+    except ValueError:
+        key_bits = 0
+    except IndexError:
+        key_bits = 0
+
+    try:
+        key_hash = pubkey_fingerprint.split(' ')[1]
+    except IndexError:
+        key_hash = pubkey_fingerprint
+
+    try:
+        auth_type = pubkey_fingerprint.split('(')[-1].split(')')[0]
+    except IndexError:
+        auth_type = 'Unknown'
+
+    rate = 'UNKNOWN'
+    if auth_type == 'DSA':
+        rate = 'VERY LOW'
+    elif auth_type == 'RSA':
+        if key_bits >= 4096:
+            rate = 'HIGH'
+        elif key_bits >= 2048:
+            rate = 'MEDIUM'
+        else:
+            rate = 'LOW'
+    elif auth_type == 'ECDSA':
+        if key_bits >= 256:
+            rate = 'HIGH'
+    elif auth_type == 'ED25519':
+        if key_bits >= 256:
+            rate = 'VERY HIGH'
+
+    return {'bits': key_bits, 'hash': key_hash, 'auth_type': auth_type, 'rate': rate}
+
 def str2date(string):
     """
     change xd => seconds
@@ -221,7 +262,7 @@ def list_keys(username=None, realname=None):
         is_list = True
     cur.close()
     pg_conn.close()
-    return sql_to_json(result, list=is_list)
+    return sql_to_json(result, is_list=is_list)
 
 def sign_key(tmp_pubkey_name, username, expiry, principals, db_cursor=None):
     """
@@ -241,13 +282,13 @@ def sign_key(tmp_pubkey_name, username, expiry, principals, db_cursor=None):
         cert_contents = 'Error : signing key'
     return cert_contents
 
-def sql_to_json(result, list=False):
+def sql_to_json(result, is_list=False):
     """
     This function prettify a sql result into json
     """
     if result is None:
         return None
-    if list:
+    if is_list:
         d_result = {}
         for res in result:
             d_sub_result = {}
@@ -255,21 +296,20 @@ def sql_to_json(result, list=False):
             d_sub_result['realname'] = res[1]
             d_sub_result['status'] = STATES[res[2]]
             d_sub_result['expiration'] = datetime.fromtimestamp(res[3]).strftime('%Y-%m-%d %H:%M:%S')
-            d_sub_result['ssh_key_hash'] = res[4]
+            d_sub_result['ssh_key_hash'] = pretty_ssh_key_hash(res[4])
             d_sub_result['expiry'] = res[6]
             d_sub_result['principals'] = get_principals(res[7], res[0])
             d_result[res[0]] = d_sub_result
         return dumps(d_result, indent=4, sort_keys=True)
-    else:
-        d_result = {}
-        d_result['username'] = result[0]
-        d_result['realname'] = result[1]
-        d_result['status'] = STATES[result[2]]
-        d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime('%Y-%m-%d %H:%M:%S')
-        d_result['ssh_key_hash'] = result[4]
-        d_result['expiry'] = result[6]
-        d_result['principals'] = get_principals(result[7], result[0])
-        return dumps(d_result, indent=4, sort_keys=True)
+    d_result = {}
+    d_result['username'] = result[0]
+    d_result['realname'] = result[1]
+    d_result['status'] = STATES[result[2]]
+    d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime('%Y-%m-%d %H:%M:%S')
+    d_result['ssh_key_hash'] = pretty_ssh_key_hash(result[4])
+    d_result['expiry'] = result[6]
+    d_result['principals'] = get_principals(result[7], result[0])
+    return dumps(d_result, indent=4, sort_keys=True)
 
 class Admin():
     """
@@ -522,6 +562,7 @@ class Client():
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
+
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
         if pubkey_fingerprint == 'Unknown':
             remove(tmp_pubkey.name)
@@ -609,6 +650,7 @@ class Client():
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
+
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
         if pubkey_fingerprint == 'Unknown':
             remove(tmp_pubkey.name)
