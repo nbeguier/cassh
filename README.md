@@ -196,7 +196,7 @@ bash tests/test.sh
 
 ## CHOICE 2
 # Full debug
-bash tests/launch_demo_server.sh --server_file ${PWD}/server/server.py --debug
+bash tests/launch_demo_server.sh --server_code_path ${PWD}/server/ --debug
 $ /opt/cassh/server/server.py --config /opt/cassh/tests/cassh_dummy.conf
 
 ```

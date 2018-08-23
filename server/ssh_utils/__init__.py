@@ -6,13 +6,13 @@ from subprocess import check_output, CalledProcessError
 
 def get_fingerprint(public_key_filename):
     """
-    Return Fingerprint
+    Returns a key fingerprint
     """
     try:
-        fingerprint = check_output([
+        fingerprint = '\n'.join(check_output([
             'ssh-keygen',
             '-l',
-            '-f', public_key_filename]).split('/')[0]
+            '-f', public_key_filename]).split('\n')[:-1])
     except CalledProcessError:
         fingerprint = 'Unknown'
     return fingerprint
