@@ -28,7 +28,7 @@ sudo: required
 services:
   - docker
 
-language: python
+language: bash
 
 cache:
   directories:
@@ -45,13 +45,15 @@ env:
 branches:
   only:
   - master
+  # Allow tags
+  - /^\d+\.\d+(\.\d+)?(-\S*)?$/
 
 
 # == Tests
 #
 install:
   - echo "---> Check Docker version" && docker version
-  - echo "---> Installing CI utils" && pip install docker-compose invoke
+  - echo "---> Installing CI utils" && sudo pip install docker-compose invoke
 
 before_script:
   - invoke release.docker-login
