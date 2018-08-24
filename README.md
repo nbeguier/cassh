@@ -1,6 +1,6 @@
 # CASSH
 
-SSH keys management @scale !
+SSH keys management at scale !
 
 [![Build Status](https://travis-ci.org/leboncoin/cassh.svg?branch=master)](https://travis-ci.org/leboncoin/cassh)
 
