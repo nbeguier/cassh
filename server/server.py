@@ -43,7 +43,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.6.0'
+VERSION = '1.6.1'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -424,6 +424,7 @@ class Admin():
                 pg_conn.close()
                 return 'OK: %s=%s for %s' % (key, value, username)
             elif key == 'principals':
+                value = unquote_plus(value)
                 pattern = re_compile("^([a-zA-Z]+)$")
                 for principal in value.split(','):
                     if pattern.match(principal) is None:
