@@ -1,0 +1,27 @@
+# CASSH SIGN Unit
+#
+# Put this file as: '~/.config/systemd/user/cassh_sign.service'
+# Run: systemctl --user daemon-reload
+# Run: systemctl --user enable cassh_sign.service
+# Run: systemctl --user list-units
+# Run: systemctl --user status cassh_sign.service
+#
+[Unit]
+Description=Run cassh sign
+
+[Service]
+Type=oneshot
+
+# https://hub.docker.com/r/leboncoin/cassh/tags/
+#Environment="CASSH_VERSION="
+
+# https://github.com/leboncoin/cassh/blob/master/src/client/cassh-client.conf
+#Environment="CASSH_CONFIG="
+
+# This file is the 'contrib/cassh_docker.sh' to install
+ExecStart=/usr/local/bin/cassh sign
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
+
