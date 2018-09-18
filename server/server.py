@@ -15,7 +15,7 @@ from urllib import unquote_plus
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError
-from ldap import open as ldap_open
+from ldap import open as ldap_open, SCOPE_SUBTREE
 from psycopg2 import connect, OperationalError, ProgrammingError
 from web import application, data, httpserver
 from web.wsgiserver import CherryPyWSGIServer
@@ -228,11 +228,16 @@ def ldap_authentification(admin=False):
             ldap_conn.bind_s(realname, password)
         except Exception as e:
             return False, 'Error: %s' % e
-        if admin and SERVER_OPTS['ldap_admin_cn'] not in\
-            ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'], 2,
-                               filterstr='(%s=%s)' % (SERVER_OPTS['filterstr'], realname)
-                              )[0][1]['memberOf']:
-            return False, 'Error: user %s is not an admin.' % realname
+        if admin:
+            memberof_admin_list = ldap_conn.search_s(
+                SERVER_OPTS['ldap_bind_dn'],
+                SCOPE_SUBTREE,
+                filterstr='(&(%s=%s)(memberOf=%s))' % (
+                    SERVER_OPTS['filterstr'],
+                    realname,
+                    SERVER_OPTS['ldap_admin_cn']))
+            if not memberof_admin_list:
+                return False, 'Error: user %s is not an admin.' % realname
     return True, 'OK'
 
 def list_keys(username=None, realname=None):
