@@ -228,11 +228,15 @@ def ldap_authentification(admin=False):
             ldap_conn.bind_s(realname, password)
         except Exception as e:
             return False, 'Error: %s' % e
-        if admin and SERVER_OPTS['ldap_admin_cn'] not in\
-            ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'], 2,
-                               filterstr='(%s=%s)' % (SERVER_OPTS['filterstr'], realname)
-                              )[0][1]['memberOf']:
-            return False, 'Error: user %s is not an admin.' % realname
+        if admin:
+            try:
+                memberof_list = ldap_conn.search_s(SERVER_OPTS['ldap_bind_dn'], 2,
+                                                   filterstr='(%s=%s)' % (SERVER_OPTS['filterstr'], realname)
+                                                  )[0][1]['memberOf']
+            except:
+                memberof_list = []
+            if SERVER_OPTS['ldap_admin_cn'] not in memberof_list:
+                return False, 'Error: user %s is not an admin.' % realname
     return True, 'OK'
 
 def list_keys(username=None, realname=None):
