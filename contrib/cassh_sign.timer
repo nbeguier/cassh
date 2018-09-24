@@ -1,0 +1,23 @@
+# CASSH SIGN timer
+#
+# Put this file as: '~/.config/systemd/user/cassh_sign.timer'
+# Run: systemctl --user daemon-reload
+# Run: systemctl --user enable cassh_sign.timer
+# Run: systemctl --user start cassh_sign.timer
+# Run: systemctl --user list-timers
+# Run: systemctl --user status cassh_sign.timer
+#
+# THIS systemd-timer DEPENDS on the 'cassh_sign.service'
+#
+[Unit]
+Description=Run cassh sign daily
+
+[Timer]
+# Everyday at 08H00 AM
+OnCalendar=*-*-* 8:00:00
+# When activated, it triggers the service immediately if it missed the last
+# start time
+Persistent=true
+
+[Install]
+WantedBy=timers.target
