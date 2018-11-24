@@ -3,5 +3,5 @@ markdown==2.3.1
 pyyaml==3.10
 waitress==0.8.5
 Werkzeug==0.12.2
-pyOpenSSL==0.14
+pyopenssl>=17.5.0
 requests
