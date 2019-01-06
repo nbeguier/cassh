@@ -1,6 +1,6 @@
 flask==0.10.1
 markdown==2.3.1
-pyyaml==3.10
+pyyaml>=4.2b1
 waitress==0.8.5
 Werkzeug==0.12.2
 pyOpenSSL==0.14
