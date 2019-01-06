@@ -5,7 +5,7 @@
 Easy SSH for admin ONLY !
 Developped for @leboncoin
 
-https://nicolasbeguier.shost.ca/cassh.html
+https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8e4de7
 
 ## Usage
 
