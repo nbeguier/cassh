@@ -9,10 +9,7 @@ A client / server app to ease management of PKI based SSH keys.
 
 Developped for @leboncoin
 
-https://nicolasbeguier.shost.ca/cassh.html
-
-
-
+https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8e4de7
 
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
