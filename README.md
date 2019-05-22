@@ -187,6 +187,9 @@ filterstr = userPrincipalName
 Install docker : https://docs.docker.com/engine/installation/
 
 
+#### One instance
+
+
 ```bash
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
 pip install -r tests/requirements.txt
@@ -211,6 +214,26 @@ $ /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh.conf
 bash tests/test.sh
 
 ```
+
+#### Multiple instances
+
+The same as previsouly, but launch this to specify a second cassh-server instance
+
+```bash
+
+# Duplicate the cassh.conf
+cp tests/cassh.conf tests/cassh_2.conf
+# Generate another krl
+ssh-keygen -k -f test-keys/revoked-keys-2
+sed -i "s/revoked-keys/revoked-keys-2/g" tests/cassh_2.conf
+
+# Launch this on another terminal
+bash tests/launch_demo_server.sh --server_code_path ${PWD} --debug --port 8081
+# Inside the container
+$ /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh.conf
+
+```
+
 
 ### Client side
 
