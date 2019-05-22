@@ -23,7 +23,7 @@ case $key in
         echo "Server code path /${SERVER_CODE_PATH} doesn't exist."
         exit 1
     fi
-    MOUNT_VOL="-v ${SERVER_CODE_PATH}:/opt/cassh/server"
+    MOUNT_VOL="-v ${SERVER_CODE_PATH}:/opt/cassh/"
     shift # past argument
     shift # past value
     ;;
@@ -50,7 +50,7 @@ docker run --rm -p 5432:5432 --name demo-postgres -e POSTGRES_PASSWORD=mysecretp
 sleep 10
 
 echo "Initialize server database"
-python server/init_pg.py
+python tests/init_pg.py
 
 sleep 5
 

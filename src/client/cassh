@@ -21,7 +21,7 @@ from requests.exceptions import ConnectionError
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.6.0'
+VERSION = '%(prog)s 1.6.1'
 
 def print_result(result):
     """ Display result """

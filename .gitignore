@@ -1,3 +1,4 @@
 test-keys/
 ssl/
 *.pyc
+tests/cassh.conf

@@ -97,7 +97,7 @@ realname = ursula.ser@domain.fr
 # Install cassh python 2 service dependencies
 sudo apt-get install libsasl2-dev python-dev libldap2-dev libssl-dev libpq-dev
 sudo apt-get install python-pip
-pip install -r server/requirements_python2.txt
+pip install -r srx/server/requirements.txt
 # or
 sudo apt-get install python-psycopg2 python-webpy python-ldap python-configparser python-requests python-openssl
 
@@ -138,12 +138,14 @@ public_key = /etc/cassh/ssl/cert.pem
 
 ### Server : Database
 
-You need to create a database.
+* You need a database and a user's credentials 
+* Init the database with this sql statement: [SQL Model](src/server/sql/model.sql)
+* Update the `cassh-server` config with the user's credentials
 
 ### Server : Client web user interface
 ```bash
-pip3 insall -r requirements.txt
-python3 server/web/cassh_web.py
+pip3 insall -r src/server/web/requirements.txt
+python3 src/server/web/cassh_web.py
 ```
 
 ### Client
@@ -151,11 +153,11 @@ python3 server/web/cassh_web.py
 ```bash
 # Python 3
 sudo apt-get install python3-pip
-pip3 install -r requirements.txt
+pip3 install -r src/client/requirements.txt
 
 # Python 2
 sudo apt-get install python-pip
-pip install -r requirements.txt
+pip install -r src/client/requirements.txt
 ```
 
 ## Features on CASSH server
@@ -187,17 +189,26 @@ Install docker : https://docs.docker.com/engine/installation/
 
 ```bash
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
-pip install psycopg2
-bash tests/launch_demo_server.sh
+pip install -r tests/requirements.txt
 
-## CHOICE 1
-# When 'http://0.0.0.0:8080/' appears, start it on another terminal
+# Set the postgres host in the cassh-server configuration
+cp tests/cassh_dummy.conf tests/cassh.conf
+# Generate temporary certificates
+mkdir test-keys
+ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
+ssh-keygen -k -f test-keys/revoked-keys
+
+# Launch this on another terminal
+bash tests/launch_demo_server.sh --server_code_path ${PWD} --debug
+
+# Wait for the container demo-postgres to be started
+sed -i "s/host = localhost/host = $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-postgres)/g" tests/cassh.conf
+
+# Inside the container, in the other terminal
+$ /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh.conf
+
+# When 'http://0.0.0.0:8080/' appears, start this script
 bash tests/test.sh
-
-## CHOICE 2
-# Full debug
-bash tests/launch_demo_server.sh --server_code_path ${PWD}/server/ --debug
-$ /opt/cassh/server/server.py --config /opt/cassh/tests/cassh_dummy.conf
 
 ```
 

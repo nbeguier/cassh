@@ -4,6 +4,17 @@ CHANGELOG
 CASSH Client
 -----
 
+1.6.1
+-----
+
+2019/05/22
+
+### Other
+
+  - Reorder directories
+  - Update tests and README
+
+
 1.6.0
 -----
 

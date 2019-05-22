@@ -43,7 +43,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.6.1'
+VERSION = '1.6.2'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
