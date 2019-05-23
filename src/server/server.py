@@ -7,8 +7,11 @@ from __future__ import print_function
 from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from json import dumps
-from os import remove
+from os import remove, stat
+from random import choice
 from re import compile as re_compile
+from shutil import move
+from string import ascii_lowercase
 from tempfile import NamedTemporaryFile
 from time import time
 from urllib import unquote_plus
@@ -17,7 +20,9 @@ from urllib import unquote_plus
 from configparser import ConfigParser, NoOptionError
 from ldap import open as ldap_open, SCOPE_SUBTREE
 from psycopg2 import connect, OperationalError, ProgrammingError
-from web import application, data, httpserver
+from requests import Session
+from requests.exceptions import ConnectionError
+from web import application, config, ctx, data, httpserver
 from web.wsgiserver import CherryPyWSGIServer
 
 # Own library
@@ -35,15 +40,23 @@ STATES = {
 URLS = (
     '/admin/([a-z]+)', 'Admin',
     '/ca', 'Ca',
-    '/client/status', 'ClientStatus',
     '/client', 'Client',
+    '/client/status', 'ClientStatus',
+    '/cluster/updatekrl', 'ClusterUpdateKRL',
+    '/cluster/status', 'ClusterStatus',
     '/health', 'Health',
     '/krl', 'Krl',
     '/ping', 'Ping',
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.6.1'
+VERSION = '1.7.0'
+
+REQ_HEADERS = {
+    'User-Agent': 'CASSH-SERVER v%s' % VERSION,
+    'SERVER_VERSION': VERSION,
+}
+REQ_TIMEOUT = 2
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -59,6 +72,7 @@ SERVER_OPTS = {}
 SERVER_OPTS['ca'] = CONFIG.get('main', 'ca')
 SERVER_OPTS['krl'] = CONFIG.get('main', 'krl')
 SERVER_OPTS['port'] = CONFIG.get('main', 'port')
+
 try:
     SERVER_OPTS['admin_db_failover'] = CONFIG.get('main', 'admin_db_failover')
 except NoOptionError:
@@ -99,7 +113,118 @@ if CONFIG.has_section('ssl'):
             print('Option reading error (ssl).')
         exit(1)
 
+# Cluster mode is used for revocation
+try:
+    SERVER_OPTS['cluster'] = CONFIG.get('main', 'cluster').split(',')
+except NoOptionError:
+    # Standalone mode
+    PROTO = 'http'
+    if SERVER_OPTS['ssl']:
+        PROTO = 'https'
+    SERVER_OPTS['cluster'] = ['%s://localhost:%s' % (PROTO, SERVER_OPTS['port'])]
+
+try:
+    SERVER_OPTS['clustersecret'] = CONFIG.get('main', 'clustersecret')
+except NoOptionError:
+    # Standalone mode
+    SERVER_OPTS['clustersecret'] = randomString(32)
+
+
 # INDEPENDANT FUNCTIONS
+def get(url):
+    """
+    Rebuilt GET function for CASSH purpose
+    """
+    session = Session()
+    try:
+        req = session.get(url,
+                          headers=REQ_HEADERS,
+                          timeout=REQ_TIMEOUT,
+                          stream=True)
+    except ConnectionError:
+        print('Connection error : %s' % url)
+        req = None
+    return req
+
+def post(url, payload):
+    """
+    Rebuilt POST function for CASSH purpose
+    """
+    session = Session()
+    try:
+        req = session.post(url,
+                           data=payload,
+                           headers=REQ_HEADERS,
+                           timeout=REQ_TIMEOUT)
+    except ConnectionError:
+        print('Connection error : %s' % url)
+        req = None
+    return req
+
+def randomString(stringLength=10):
+    """Generate a random string of fixed length """
+    letters = ascii_lowercase
+    return ''.join(choice(letters) for i in range(stringLength))
+
+def cluster_alived():
+    """
+    This function returns a subset of pingeable node
+    """
+    alive_nodes = list()
+    dead_nodes = list()
+    for node in SERVER_OPTS['cluster']:
+        req = get("%s/ping" % node)
+        if req is not None and req.text == 'pong':
+            alive_nodes.append(node)
+        else:
+            dead_nodes.append(node)
+    return alive_nodes, dead_nodes
+
+def cluster_last_krl():
+    """
+    This functions download the biggest KRL of the cluster.
+    It's not perfect...
+    """
+    subset, _ = cluster_alived()
+    cluster_id = 0
+    for node in subset:
+        req = get("%s/krl" % node)
+        with open('/tmp/%s.krl' % cluster_id, 'wb') as cluster_file:
+            for chunk in req.iter_content(chunk_size=1024):
+                if chunk: # filter out keep-alive new chunks
+                    cluster_file.write(chunk)
+        cluster_id += 1
+
+    top_size = stat(SERVER_OPTS['krl']).st_size
+    top_cluster_id = 'local'
+    for i in range(cluster_id):
+        if stat('/tmp/%s.krl' % i).st_size >= top_size:
+            top_cluster_id = i
+
+    print('%s KRL is the best' % top_cluster_id)
+
+    if top_cluster_id != 'local':
+        move('/tmp/%s.krl' % top_cluster_id, SERVER_OPTS['krl'])
+    else:
+        cluster_updatekrl(None, update_only=True)
+
+    return True
+
+
+def cluster_updatekrl(username, update_only=False):
+    """
+    This function send the revokation of a user to the cluster
+    """
+    subset, _ = cluster_alived()
+    reqs = list()
+    payload = {"clustersecret": SERVER_OPTS['clustersecret']}
+    if not update_only:
+        payload.update({"username": username})
+    for node in subset:
+        req = post("%s/cluster/updatekrl" % node, payload)
+        reqs.append(req)
+    return reqs
+
 def data2map():
     """
     Returns a map from data POST
@@ -246,6 +371,7 @@ def list_keys(username=None, realname=None):
     """
     pg_conn, message = pg_connection()
     if pg_conn is None:
+        ctx.status = '503 Service Unavailable'
         return message
     cur = pg_conn.cursor()
     is_list = False
@@ -332,6 +458,7 @@ class Admin():
         # LDAP authentication
         is_admin_auth, message = ldap_authentification(admin=True)
         if not is_admin_auth:
+            ctx.status = '401 Unauthorized'
             return message
 
         payload = data2map()
@@ -347,6 +474,7 @@ class Admin():
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
+            ctx.status = '503 Service Unavailable'
             return message
         cur = pg_conn.cursor()
 
@@ -365,17 +493,9 @@ class Admin():
             cur.execute('UPDATE USERS SET STATE=1 WHERE NAME=(%s)', (username,))
             pg_conn.commit()
             message = 'Revoke user=%s.' % username
-            # Load SSH CA and revoke key
-            ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
-            cur.execute('SELECT SSH_KEY FROM USERS WHERE NAME=(%s)', (username,))
-            pubkey = cur.fetchone()[0]
-            tmp_pubkey = NamedTemporaryFile(delete=False)
-            tmp_pubkey.write(pubkey)
-            tmp_pubkey.close()
-            ca_ssh.update_krl(tmp_pubkey.name)
+            cluster_updatekrl(username)
             cur.close()
             pg_conn.close()
-            remove(tmp_pubkey.name)
         # Display status
         elif do_status:
             return list_keys(username=username)
@@ -408,10 +528,12 @@ class Admin():
         # LDAP authentication
         is_admin_auth, message = ldap_authentification(admin=True)
         if not is_admin_auth:
+            ctx.status = '401 Unauthorized'
             return message
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
+            ctx.status = '503 Service Unavailable'
             return message
         cur = pg_conn.cursor()
 
@@ -421,6 +543,7 @@ class Admin():
             if key == 'expiry':
                 pattern = re_compile('^\\+([0-9]+)+[dh]$')
                 if pattern.match(value) is None:
+                    ctx.status = '400 Bad Request'
                     return 'ERROR: Value %s is malformed. Should match pattern ^\\+([0-9]+)+[dh]$' \
                         % value
                 cur.execute('UPDATE USERS SET EXPIRY=(%s) WHERE NAME=(%s)', (value, username))
@@ -433,6 +556,7 @@ class Admin():
                 pattern = re_compile("^([a-zA-Z]+)$")
                 for principal in value.split(','):
                     if pattern.match(principal) is None:
+                        ctx.status = '400 Bad Request'
                         return 'ERROR: Value %s is malformed. Should match pattern ^([a-zA-Z]+)$' \
                             % principal
                 cur.execute('UPDATE USERS SET PRINCIPALS=(%s) WHERE NAME=(%s)', (value, username))
@@ -451,10 +575,12 @@ class Admin():
         # LDAP authentication
         is_admin_auth, message = ldap_authentification(admin=True)
         if not is_admin_auth:
+            ctx.status = '401 Unauthorized'
             return message
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
+            ctx.status = '503 Service Unavailable'
             return message
         cur = pg_conn.cursor()
 
@@ -488,6 +614,7 @@ class ClientStatus():
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
+            ctx.status = '401 Unauthorized'
             return message
 
         payload = data2map()
@@ -495,11 +622,10 @@ class ClientStatus():
         if payload.has_key('realname'):
             realname = unquote_plus(payload['realname'])
         else:
+            ctx.status = '400 Bad Request'
             return "Error: No realname option given."
 
         return list_keys(realname=realname)
-
-
 
 class Client():
     """
@@ -510,6 +636,7 @@ class Client():
         DEPRECATED Status
         """
         del username
+        ctx.status = '299 Deprecated'
         return "Error: DEPRECATED option. Update your CASSH >= 1.5.0"
 
     def POST(self):
@@ -525,6 +652,7 @@ class Client():
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
+            ctx.status = '401 Unauthorized'
             return message
 
         # Check if user is an admin and want to force signature when db fail
@@ -543,9 +671,11 @@ class Client():
         if payload.has_key('username'):
             username = payload['username']
         else:
+            ctx.status = '400 Bad Request'
             return "Error: No username option given. Update your CASSH >= 1.3.0"
         username_pattern = re_compile("^([a-z]+)$")
         if username_pattern.match(username) is None or username == 'all':
+            ctx.status = '400 Bad Request'
             return "Error: Username %s doesn't match pattern %s" \
                 % (username, username_pattern.pattern)
 
@@ -553,12 +683,14 @@ class Client():
         if payload.has_key('realname'):
             realname = unquote_plus(payload['realname'])
         else:
+            ctx.status = '400 Bad Request'
             return "Error: No realname option given."
 
         # Get public key
         if payload.has_key('pubkey'):
             pubkey = unquote_custom(payload['pubkey'])
         else:
+            ctx.status = '400 Bad Request'
             return "Error: No pubkey given."
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
@@ -567,6 +699,7 @@ class Client():
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
         if pubkey_fingerprint == 'Unknown':
             remove(tmp_pubkey.name)
+            ctx.status = '422 Unprocessable Entity'
             return 'Error : Public key unprocessable'
 
         pg_conn, message = pg_connection()
@@ -578,6 +711,7 @@ class Client():
         # Else, if db is down it fails.
         elif pg_conn is None:
             remove(tmp_pubkey.name)
+            ctx.status = '503 Service Unavailable'
             return message
         cur = pg_conn.cursor()
 
@@ -594,6 +728,7 @@ class Client():
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
+            ctx.status = '401 Unauthorized'
             return 'Error : (username, realname) couple mismatch.'
 
         status = user[2]
@@ -624,6 +759,7 @@ class Client():
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
+            ctx.status = '401 Unauthorized'
             return message
 
         payload = data2map()
@@ -631,23 +767,27 @@ class Client():
         if payload.has_key('username'):
             username = payload['username']
         else:
+            ctx.status = '400 Bad Request'
             return "Error: No username option given."
 
         username_pattern = re_compile("^([a-z]+)$")
         if username_pattern.match(username) is None or username == 'all':
+            ctx.status = '400 Bad Request'
             return "Error: Username %s doesn't match pattern %s" \
                 % (username, username_pattern.pattern)
 
         if payload.has_key('realname'):
             realname = unquote_plus(payload['realname'])
         else:
+            ctx.status = '400 Bad Request'
             return "Error: No realname option given."
 
         # Get public key
         if payload.has_key('pubkey'):
             pubkey = unquote_custom(payload['pubkey'])
         else:
-            return "Error: No pubkey given."
+            ctx.status = '400 Bad Request'
+            return 'Error: No pubkey given.'
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
@@ -655,11 +795,13 @@ class Client():
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
         if pubkey_fingerprint == 'Unknown':
             remove(tmp_pubkey.name)
+            ctx.status = '422 Unprocessable Entity'
             return 'Error : Public key unprocessable'
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
             remove(tmp_pubkey.name)
+            ctx.status = '503 Service Unavailable'
             return message
         cur = pg_conn.cursor()
 
@@ -676,6 +818,7 @@ class Client():
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
+            ctx.status = '201 Created'
             return 'Create user=%s. Pending request.' % username
         else:
             # Check if realname is the same
@@ -686,6 +829,7 @@ class Client():
                 cur.close()
                 pg_conn.close()
                 remove(tmp_pubkey.name)
+                ctx.status = '401 Unauthorized'
                 return 'Error : (username, realname) couple mismatch.'
             # Update entry into database
             cur.execute('UPDATE USERS SET SSH_KEY=(%s), SSH_KEY_HASH=(%s), STATE=2, EXPIRATION=0 \
@@ -695,6 +839,76 @@ class Client():
             pg_conn.close()
             remove(tmp_pubkey.name)
             return 'Update user=%s. Pending request.' % username
+
+
+class ClusterUpdateKRL():
+    """
+    ClusterUpdateKRL main class.
+    """
+    def POST(self):
+        """
+        /cluster/updatekrl
+        If a username is present => Revoke this user
+        Else                     => Update the KRL
+        """
+        payload = data2map()
+
+        # Check clustersecret
+        if payload.has_key('clustersecret'):
+            if payload['clustersecret'] != SERVER_OPTS['clustersecret']:
+                ctx.status = '401 Unauthorized'
+                return 'Unauthorized'
+        else:
+            ctx.status = '401 Unauthorized'
+            return 'Unauthorized'
+
+        # Get username
+        if payload.has_key('username'):
+            username = payload['username']
+        else:
+            # It means I need to update my krl to the latest version
+            cluster_last_krl()
+            return 'Update Complete'
+
+        pg_conn, message = pg_connection()
+        if pg_conn is None:
+            ctx.status = '503 Service Unavailable'
+            return message
+        cur = pg_conn.cursor()
+
+        message = 'Revoke user=%s.' % username
+        # Load SSH CA and revoke key
+        ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
+        cur.execute('SELECT SSH_KEY FROM USERS WHERE NAME=(%s)', (username,))
+        pubkey = cur.fetchone()[0]
+        tmp_pubkey = NamedTemporaryFile(delete=False)
+        tmp_pubkey.write(pubkey)
+        tmp_pubkey.close()
+        ca_ssh.update_krl(tmp_pubkey.name)
+        cur.close()
+        pg_conn.close()
+        remove(tmp_pubkey.name)
+
+        return 'Revoke Complete'
+
+class ClusterStatus():
+    """
+    ClusterStatus main class.
+    """
+    def GET(self):
+        """
+        /cluster/status
+        """
+        message = dict()
+
+        alive_nodes, dead_nodes = cluster_alived()
+
+        for node in alive_nodes:
+            message.update({node: {'status': 'OK'}})
+        for node in dead_nodes:
+            message.update({node: {'status': 'KO'}})
+
+        return dumps(message)
 
 
 class Health():
@@ -744,6 +958,7 @@ class TestAuth():
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
+            ctx.status = '401 Unauthorized'
             return message
         return 'OK'
 
@@ -765,4 +980,6 @@ if __name__ == "__main__":
         print('LDAP: %s' % SERVER_OPTS['ldap'])
         print('Admin DB Failover: %s' % SERVER_OPTS['admin_db_failover'])
     APP = MyApplication(URLS, globals())
+    config.debug = False
+    cluster_last_krl()
     APP.run()
