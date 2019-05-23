@@ -187,6 +187,8 @@ filterstr = userPrincipalName
 Install docker : https://docs.docker.com/engine/installation/
 
 
+#### Prerequisites
+
 ```bash
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
 pip install -r tests/requirements.txt
@@ -198,19 +200,38 @@ mkdir test-keys
 ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
 ssh-keygen -k -f test-keys/revoked-keys
 
-# Launch this on another terminal
-bash tests/launch_demo_server.sh --server_code_path ${PWD} --debug
-
-# Wait for the container demo-postgres to be started
+# /!\ Wait for the container demo-postgres to be started
 sed -i "s/host = localhost/host = $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-postgres)/g" tests/cassh.conf
 
-# Inside the container, in the other terminal
+# Duplicate the cassh.conf
+cp tests/cassh.conf tests/cassh_2.conf
+# Generate another krl
+ssh-keygen -k -f test-keys/revoked-keys-2
+sed -i "s/revoked-keys/revoked-keys-2/g" tests/cassh_2.conf
+```
+
+#### One instance
+
+
+```bash
+# Launch this on another terminal
+bash tests/launch_demo_server.sh --server_code_path ${PWD} --debug
 $ /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh.conf
 
 # When 'http://0.0.0.0:8080/' appears, start this script
 bash tests/test.sh
-
 ```
+
+#### Multiple instances
+
+The same as previsouly, but launch this to specify a second cassh-server instance
+
+```bash
+# Launch this on another terminal
+bash tests/launch_demo_server.sh --server_code_path ${PWD} --debug --port 8081
+$ /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh_2.conf
+```
+
 
 ### Client side
 
