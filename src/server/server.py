@@ -50,7 +50,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.6.2'
+VERSION = '1.7.0'
 
 REQ_HEADERS = {
     'User-Agent': 'CASSH-SERVER v%s' % VERSION,
