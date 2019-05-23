@@ -4,6 +4,21 @@ CHANGELOG
 CASSH Server
 -----
 
+1.7.1
+-----
+
+2019/05/23
+
+### Changes
+  - always return a Content-Type
+  - Block bad realnames (XSS stored)
+  - Doesn-t return a blocked username (XSS reflected)
+
+### Bug Fixes
+  - Fix some missing http code
+  - Fix according tests
+
+
 1.7.0
 -----
 
