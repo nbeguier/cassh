@@ -4,6 +4,16 @@ CHANGELOG
 CASSH Client
 -----
 
+1.6.2
+-----
+
+2019/05/23
+
+### Bug Fixes
+
+  - fix "Error: No realname option given." : LDAP can be disable/enable
+
+
 1.6.1
 -----
 
