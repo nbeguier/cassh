@@ -16,6 +16,7 @@ PUB_KEY_1_EXAMPLE=$(cat "${KEY_1_EXAMPLE}".pub)
 PUB_KEY_2_EXAMPLE=$(cat "${KEY_2_EXAMPLE}".pub)
 
 # Get the latest krl
+rm -f /tmp/.revoked-keys
 curl -s "${CASSH_SERVER_URL}"/krl -o /tmp/.revoked-keys
 
 # Check if USER1 or USER2 is revoked
@@ -60,6 +61,7 @@ fi
 
 
 # Get the latest krl
+rm -f /tmp/.revoked-keys
 curl -s "${CASSH_SERVER_URL}"/krl -o /tmp/.revoked-keys
 
 # First user should be in the krl
@@ -77,8 +79,8 @@ else
 fi
 
 
-
 # Get the latest krl on the second server
+rm -f /tmp/.revoked-keys
 curl -s "${CASSH_SERVER_2_URL}"/krl -o /tmp/.revoked-keys
 
 # First user should be in the krl
@@ -94,4 +96,3 @@ if [ "${RESP_2}" == 'ok' ]; then
 else
     echo "[FAIL] Test krl for non-revoked key on the server ${CASSH_SERVER_2_URL}: ${RESP_2}"
 fi
-

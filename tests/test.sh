@@ -2,8 +2,16 @@
 
 CASSH_SERVER_URL=${1:-http://localhost:8080}
 
-PUB_KEY_1_EXAMPLE='ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDZA5oaFXhrImv/uKCygPiTgYz3+qZMBLRUdVrI9BAMFkzn+OjcyfG6RCp6QLygXcw6JGHOyoOxcmIcd9ZoefLDK3MUgczTeeb5r2SiTUxziOiVgLnfYb5gUhOWzDJIkfAq7MpAJgweSElSwrpCrt5Xj3axlJDo8Qo/q9SrR+v5Pw3dB4izdcITPU6zarW/k596Va9/KYMg/082QpvG98bQnwOvkBPERUFyNHTduVE5oe6jdlIZZXC5YT9KnWyoTc//koOARRYsdQ8Ny92fLYKiT/2Dm+7p3XKznusRp6arbr84bbRnu9BpReVGj8RWOTZFDaTKvinV62G50Zm+m60hqG5RZUUwbaJwYwbAwoNpHTLh6v4SOUKIa1uqXB6f/6nrstFu7PCziH16eO0VQpI5I7ZsdioKA3JYwvanlC0h+8aNrUANFYGlC8cujWVWzc33laoulSu/uhFPxFofcwAA1lxjgPcSW2sAT/ZlgCAyh5ZIyq6ReHa1R9ZMors3TJiI4U/cMBtbft+GotEUJCEQE/p1Gy6JnQg37Tsz5m90KF/SVpJnHxIYfpbYleQj39sDIar7/YG8YSoi0zSjK5I8JS29JEJtboOv2Px7+A7dnizWTZyArqeTgG74umbv2oy74MpbDkEEk5n3naTyDrU4L3JE3QiVh/N+cGH3zJEn1w== example'
-PUB_KEY_2_EXAMPLE='ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBACf61W//oAY/pDJh7t4Nx2/GKfq42S3FGacxVoWGs4hBCtCzTnPKS3pFIvorehSccE7RN5fxjGqg8FAz/ktJlmhdQC6Nzx6UD+k3iKZgrcoI/RXIm9Hw7HB7UNb6W+EmDGbOtj+DH0bBu73XG0KZmFNqaZPAJzcgbq7U09+01dKlBbWRA== example2'
+KEY_1_EXAMPLE=/tmp/.id_rsa
+KEY_2_EXAMPLE=/tmp/.id_ecdsa
+
+# Generate random keys
+echo -e 'y\n' | ssh-keygen -t rsa -b 4096 -o -a 100 -f "${KEY_1_EXAMPLE}" -q -N "" >/dev/null 2>&1
+echo -e 'y\n' | ssh-keygen -t ecdsa -b 521 -f "${KEY_2_EXAMPLE}" -q -N "" >/dev/null 2>&1
+
+PUB_KEY_1_EXAMPLE=$(cat "${KEY_1_EXAMPLE}".pub)
+PUB_KEY_2_EXAMPLE=$(cat "${KEY_2_EXAMPLE}".pub)
+
 
 RESP=$(curl -s "${CASSH_SERVER_URL}"/ping)
 if [ "${RESP}" == 'pong' ]; then
@@ -230,7 +238,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "username=testuser&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
-echo $RESP > /tmp/test-cert
+echo "${RESP}" > /tmp/test-cert
 if ssh-keygen -L -f /tmp/test-cert >/dev/null 2>&1; then
     echo "[OK] Test signing key"
 else
@@ -243,4 +251,25 @@ if [ "${RESP}" == 'OK' ]; then
     echo "[OK] Test delete 'testuser'"
 else
     echo "[FAIL] Test delete 'testuser': ${RESP}"
+fi
+
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/cluster/updatekrl)
+if [ "${RESP}" == "Unauthorized" ]; then
+    echo "[OK] Test updatekrl without parameters"
+else
+    echo "[FAIL] Test updatekrl without parameters : ${RESP}"
+fi
+RESP=$(curl -s -X POST -d "clustersecret=bad" "${CASSH_SERVER_URL}"/cluster/updatekrl)
+if [ "${RESP}" == "Unauthorized" ]; then
+    echo "[OK] Test updatekrl with a bad clustersecret"
+else
+    echo "[FAIL] Test updatekrl with a bad clustersecret : ${RESP}"
+fi
+
+RESP=$(curl -s -X GET "${CASSH_SERVER_URL}"/cluster/status)
+if [[ "${RESP}" == *"OK"* ]]; then
+    echo "[OK] Test cluster status"
+else
+    echo "[FAIL] Test cluster status : ${RESP}"
 fi
