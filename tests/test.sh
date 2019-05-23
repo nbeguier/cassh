@@ -70,7 +70,7 @@ else
 fi
 
 RESP=$(curl -s -X PUT -d 'username=test_user' "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == "Error: Username test_user doesn't match pattern ^([a-z]+)$" ]; then
+if [ "${RESP}" == "Error: Username doesn't match pattern ^([a-z]+)$" ]; then
     echo "[OK] Test add user with bad username"
 else
     echo "[FAIL] Test add user with bad username : ${RESP}"
@@ -97,6 +97,13 @@ else
     echo "[FAIL] Test add user with bad pubkey : ${RESP}"
 fi
 
+RESP=$(curl -s -X PUT -d "username=testuser&realname=(select%20extractvalue(g%3b]%3e')%2c'%2fl')%20from%20dual)&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+if [ "${RESP}" == "Error: Realname doesn't match pattern" ]; then
+    echo "[OK] Test add user with bad realname"
+else
+    echo "[FAIL] Test add user with bad realname : ${RESP}"
+fi
+
 RESP=$(curl -s -X PUT -d "username=testuser&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Create user=testuser. Pending request.' ]; then
     echo "[OK] Test add user"
@@ -105,7 +112,7 @@ else
 fi
 
 RESP=$(curl -s -X PUT -d "username=all&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == "Error: Username all doesn't match pattern ^([a-z]+)$" ]; then
+if [ "${RESP}" == "Error: Username doesn't match pattern ^([a-z]+)$" ]; then
     echo "[OK] Test add user named 'all' (should fail)"
 else
     echo "[FAIL] Test add user named 'all' (should fail): ${RESP}"
@@ -210,7 +217,7 @@ else
 fi
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/toto)
-if [ "${RESP}" == "User 'toto' does not exists." ]; then
+if [ "${RESP}" == "User does not exists." ]; then
     echo "[OK] Test admin active unknown user"
 else
     echo "[FAIL] Test admin active unknown user : ${RESP}"

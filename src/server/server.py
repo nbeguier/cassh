@@ -22,7 +22,7 @@ from ldap import open as ldap_open, SCOPE_SUBTREE
 from psycopg2 import connect, OperationalError, ProgrammingError
 from requests import Session
 from requests.exceptions import ConnectionError
-from web import application, config, ctx, data, httpserver
+from web import application, config, ctx, data, header, httpserver
 from web.wsgiserver import CherryPyWSGIServer
 
 # Own library
@@ -50,7 +50,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.7.0'
+VERSION = '1.7.1'
 
 REQ_HEADERS = {
     'User-Agent': 'CASSH-SERVER v%s' % VERSION,
@@ -131,6 +131,14 @@ except NoOptionError:
 
 
 # INDEPENDANT FUNCTIONS
+def response_render(message, http_code='200 OK', content_type='text/plain'):
+    """
+    This function returns a well-formed HTTP response
+    """
+    header('Content-Type', content_type)
+    ctx.status = http_code
+    return message
+
 def get(url):
     """
     Rebuilt GET function for CASSH purpose
@@ -371,8 +379,7 @@ def list_keys(username=None, realname=None):
     """
     pg_conn, message = pg_connection()
     if pg_conn is None:
-        ctx.status = '503 Service Unavailable'
-        return message
+        return response_render(message, http_code='503 Service Unavailable')
     cur = pg_conn.cursor()
     is_list = False
 
@@ -446,7 +453,9 @@ class Admin():
         DEPRECATED Status
         """
         del username
-        return "Error: DEPRECATED option. Update your CASSH >= 1.5.0"
+        return response_render(
+            'Error: DEPRECATED option. Update your CASSH >= 1.5.0',
+            http_code='299 Deprecated')
 
     def POST(self, username):
         """
@@ -458,8 +467,7 @@ class Admin():
         # LDAP authentication
         is_admin_auth, message = ldap_authentification(admin=True)
         if not is_admin_auth:
-            ctx.status = '401 Unauthorized'
-            return message
+            return response_render(message, http_code='401 Unauthorized')
 
         payload = data2map()
 
@@ -474,12 +482,13 @@ class Admin():
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
-            ctx.status = '503 Service Unavailable'
-            return message
+            return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
 
         if username == 'all' and do_status:
-            return list_keys()
+            return response_render(
+                list_keys(),
+                content_type='application/json')
 
         # Search if key already exists
         cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
@@ -488,7 +497,7 @@ class Admin():
         if user is None:
             cur.close()
             pg_conn.close()
-            message = "User '%s' does not exists." % username
+            message = 'User does not exists.'
         elif do_revoke:
             cur.execute('UPDATE USERS SET STATE=1 WHERE NAME=(%s)', (username,))
             pg_conn.commit()
@@ -498,7 +507,9 @@ class Admin():
             pg_conn.close()
         # Display status
         elif do_status:
-            return list_keys(username=username)
+            return response_render(
+                list_keys(username=username),
+                content_type='application/json')
         # If user is in PENDING state
         elif user[2] == 2:
             cur.execute('UPDATE USERS SET STATE=0 WHERE NAME=(%s)', (username,))
@@ -517,7 +528,7 @@ class Admin():
             cur.close()
             pg_conn.close()
             message = 'user=%s already active. Nothing done.' % username
-        return message
+        return response_render(message)
 
     def PATCH(self, username):
         """
@@ -528,13 +539,11 @@ class Admin():
         # LDAP authentication
         is_admin_auth, message = ldap_authentification(admin=True)
         if not is_admin_auth:
-            ctx.status = '401 Unauthorized'
-            return message
+            return response_render(message, http_code='401 Unauthorized')
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
-            ctx.status = '503 Service Unavailable'
-            return message
+            return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
 
         payload = data2map()
@@ -543,29 +552,33 @@ class Admin():
             if key == 'expiry':
                 pattern = re_compile('^\\+([0-9]+)+[dh]$')
                 if pattern.match(value) is None:
-                    ctx.status = '400 Bad Request'
-                    return 'ERROR: Value %s is malformed. Should match pattern ^\\+([0-9]+)+[dh]$' \
-                        % value
+                    return response_render(
+                        'ERROR: Value %s is malformed. Should match pattern ^\\+([0-9]+)+[dh]$' \
+                        % value,
+                        http_code='400 Bad Request')
                 cur.execute('UPDATE USERS SET EXPIRY=(%s) WHERE NAME=(%s)', (value, username))
                 pg_conn.commit()
                 cur.close()
                 pg_conn.close()
-                return 'OK: %s=%s for %s' % (key, value, username)
+                header('Content-Type', 'text/plain')
+                return response_render('OK: %s=%s for %s' % (key, value, username))
             elif key == 'principals':
                 value = unquote_plus(value)
                 pattern = re_compile("^([a-zA-Z]+)$")
                 for principal in value.split(','):
                     if pattern.match(principal) is None:
-                        ctx.status = '400 Bad Request'
-                        return 'ERROR: Value %s is malformed. Should match pattern ^([a-zA-Z]+)$' \
-                            % principal
+                        return response_render(
+                            'ERROR: Value %s is malformed. Should match pattern ^([a-zA-Z]+)$' \
+                            % principal,
+                            http_code='400 Bad Request')
                 cur.execute('UPDATE USERS SET PRINCIPALS=(%s) WHERE NAME=(%s)', (value, username))
                 pg_conn.commit()
                 cur.close()
                 pg_conn.close()
-                return 'OK: %s=%s for %s' % (key, value, username)
+                header('Content-Type', 'text/plain')
+                return response_render('OK: %s=%s for %s' % (key, value, username))
 
-        return 'WARNING: No key found...'
+        return response_render('WARNING: No key found...')
 
     def DELETE(self, username):
         """
@@ -575,13 +588,11 @@ class Admin():
         # LDAP authentication
         is_admin_auth, message = ldap_authentification(admin=True)
         if not is_admin_auth:
-            ctx.status = '401 Unauthorized'
-            return message
+            return response_render(message, http_code='401 Unauthorized')
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
-            ctx.status = '503 Service Unavailable'
-            return message
+            return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
 
         # Search if key already exists
@@ -589,7 +600,7 @@ class Admin():
         pg_conn.commit()
         cur.close()
         pg_conn.close()
-        return 'OK'
+        return response_render('OK')
 
 
 class Ca():
@@ -600,7 +611,9 @@ class Ca():
         """
         Return ca.
         """
-        return open(SERVER_OPTS['ca'] + '.pub', 'rb')
+        return response_render(
+            open(SERVER_OPTS['ca'] + '.pub', 'rb'),
+            content_type='application/octet-stream')
 
 class ClientStatus():
     """
@@ -614,18 +627,20 @@ class ClientStatus():
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
-            ctx.status = '401 Unauthorized'
-            return message
+            return response_render(message, http_code='401 Unauthorized')
 
         payload = data2map()
 
         if payload.has_key('realname'):
             realname = unquote_plus(payload['realname'])
         else:
-            ctx.status = '400 Bad Request'
-            return "Error: No realname option given."
+            return response_render(
+                'Error: No realname option given.',
+                http_code='400 Bad Request')
 
-        return list_keys(realname=realname)
+        return response_render(
+            list_keys(realname=realname),
+            content_type='application/json')
 
 class Client():
     """
@@ -636,8 +651,9 @@ class Client():
         DEPRECATED Status
         """
         del username
-        ctx.status = '299 Deprecated'
-        return "Error: DEPRECATED option. Update your CASSH >= 1.5.0"
+        return response_render(
+            'Error: DEPRECATED option. Update your CASSH >= 1.5.0',
+            http_code='299 Deprecated')
 
     def POST(self):
         """
@@ -652,8 +668,7 @@ class Client():
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
-            ctx.status = '401 Unauthorized'
-            return message
+            return response_render(message, http_code='401 Unauthorized')
 
         # Check if user is an admin and want to force signature when db fail
         force_sign = False
@@ -671,27 +686,31 @@ class Client():
         if payload.has_key('username'):
             username = payload['username']
         else:
-            ctx.status = '400 Bad Request'
-            return "Error: No username option given. Update your CASSH >= 1.3.0"
+            return response_render(
+                'Error: No username option given. Update your CASSH >= 1.3.0',
+                http_code='400 Bad Request')
         username_pattern = re_compile("^([a-z]+)$")
         if username_pattern.match(username) is None or username == 'all':
-            ctx.status = '400 Bad Request'
-            return "Error: Username %s doesn't match pattern %s" \
-                % (username, username_pattern.pattern)
+            return response_render(
+                "Error: Username doesn't match pattern %s" \
+                % username_pattern.pattern,
+                http_code='400 Bad Request')
 
         # Get realname
         if payload.has_key('realname'):
             realname = unquote_plus(payload['realname'])
         else:
-            ctx.status = '400 Bad Request'
-            return "Error: No realname option given."
+            return response_render(
+                'Error: No realname option given.',
+                http_code='400 Bad Request')
 
         # Get public key
         if payload.has_key('pubkey'):
             pubkey = unquote_custom(payload['pubkey'])
         else:
-            ctx.status = '400 Bad Request'
-            return "Error: No pubkey given."
+            return response_render(
+                'Error: No pubkey given.',
+                http_code='400 Bad Request')
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
@@ -699,20 +718,20 @@ class Client():
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
         if pubkey_fingerprint == 'Unknown':
             remove(tmp_pubkey.name)
-            ctx.status = '422 Unprocessable Entity'
-            return 'Error : Public key unprocessable'
+            return response_render(
+                'Error : Public key unprocessable',
+                http_code='422 Unprocessable Entity')
 
         pg_conn, message = pg_connection()
         # Admin force signature case
         if pg_conn is None and force_sign:
             cert_contents = sign_key(tmp_pubkey.name, username, '+12h', username)
             remove(tmp_pubkey.name)
-            return cert_contents
+            return response_render(cert_contents, content_type='application/octet-stream')
         # Else, if db is down it fails.
         elif pg_conn is None:
             remove(tmp_pubkey.name)
-            ctx.status = '503 Service Unavailable'
-            return message
+            return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
 
         # Search if key already exists
@@ -722,14 +741,17 @@ class Client():
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
-            return 'Error : User or Key absent, add your key again.'
+            return response_render(
+                'Error : User or Key absent, add your key again.',
+                http_code='400 Bad Request')
 
         if username != user[0] or realname != user[1]:
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
-            ctx.status = '401 Unauthorized'
-            return 'Error : (username, realname) couple mismatch.'
+            return response_render(
+                'Error : (username, realname) couple mismatch.',
+                http_code='401 Unauthorized')
 
         status = user[2]
         expiry = user[6]
@@ -739,7 +761,7 @@ class Client():
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
-            return "Status: %s" % STATES[user[2]]
+            return response_render("Status: %s" % STATES[user[2]])
 
         cert_contents = sign_key(tmp_pubkey.name, username, expiry, principals, db_cursor=cur)
 
@@ -747,7 +769,9 @@ class Client():
         pg_conn.commit()
         cur.close()
         pg_conn.close()
-        return cert_contents
+        return response_render(
+            cert_contents,
+            content_type='application/octet-stream')
 
     def PUT(self):
         """
@@ -759,35 +783,45 @@ class Client():
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
-            ctx.status = '401 Unauthorized'
-            return message
+            return response_render(message, http_code='401 Unauthorized')
 
         payload = data2map()
 
         if payload.has_key('username'):
             username = payload['username']
         else:
-            ctx.status = '400 Bad Request'
-            return "Error: No username option given."
+            return response_render(
+                'Error: No username option given.',
+                http_code='400 Bad Request')
 
         username_pattern = re_compile("^([a-z]+)$")
         if username_pattern.match(username) is None or username == 'all':
-            ctx.status = '400 Bad Request'
-            return "Error: Username %s doesn't match pattern %s" \
-                % (username, username_pattern.pattern)
+            return response_render(
+                "Error: Username doesn't match pattern %s" \
+                % username_pattern.pattern,
+                http_code='400 Bad Request')
+
 
         if payload.has_key('realname'):
             realname = unquote_plus(payload['realname'])
         else:
-            ctx.status = '400 Bad Request'
-            return "Error: No realname option given."
+            return response_render(
+                'Error: No realname option given.',
+                http_code='400 Bad Request')
+
+        realname_pattern = re_compile("^([a-zA-Z0-9\.]+@[a-zA-Z0-9\.]+)$")
+        if realname_pattern.match(realname) is None:
+            return response_render(
+                "Error: Realname doesn't match pattern",
+                http_code='400 Bad Request')
 
         # Get public key
         if payload.has_key('pubkey'):
             pubkey = unquote_custom(payload['pubkey'])
         else:
-            ctx.status = '400 Bad Request'
-            return 'Error: No pubkey given.'
+            return response_render(
+                'Error: No pubkey given.',
+                http_code='400 Bad Request')
         tmp_pubkey = NamedTemporaryFile(delete=False)
         tmp_pubkey.write(pubkey)
         tmp_pubkey.close()
@@ -795,14 +829,14 @@ class Client():
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
         if pubkey_fingerprint == 'Unknown':
             remove(tmp_pubkey.name)
-            ctx.status = '422 Unprocessable Entity'
-            return 'Error : Public key unprocessable'
+            return response_render(
+                'Error : Public key unprocessable',
+                http_code='422 Unprocessable Entity')
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
             remove(tmp_pubkey.name)
-            ctx.status = '503 Service Unavailable'
-            return message
+            return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
 
         # Search if key already exists
@@ -818,8 +852,9 @@ class Client():
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
-            ctx.status = '201 Created'
-            return 'Create user=%s. Pending request.' % username
+            return response_render(
+                'Create user=%s. Pending request.' % username,
+                http_code='201 Created')
         else:
             # Check if realname is the same
             cur.execute('SELECT * FROM USERS WHERE NAME=(%s) AND REALNAME=lower((%s))', \
@@ -829,8 +864,9 @@ class Client():
                 cur.close()
                 pg_conn.close()
                 remove(tmp_pubkey.name)
-                ctx.status = '401 Unauthorized'
-                return 'Error : (username, realname) couple mismatch.'
+                return response_render(
+                    'Error : (username, realname) couple mismatch.',
+                    http_code='401 Unauthorized')
             # Update entry into database
             cur.execute('UPDATE USERS SET SSH_KEY=(%s), SSH_KEY_HASH=(%s), STATE=2, EXPIRATION=0 \
                 WHERE NAME=(%s)', (pubkey, pubkey_fingerprint, username))
@@ -838,7 +874,7 @@ class Client():
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
-            return 'Update user=%s. Pending request.' % username
+            return response_render('Update user=%s. Pending request.' % username)
 
 
 class ClusterUpdateKRL():
@@ -851,16 +887,19 @@ class ClusterUpdateKRL():
         If a username is present => Revoke this user
         Else                     => Update the KRL
         """
+        header('Content-Type', 'text/plain')
         payload = data2map()
 
         # Check clustersecret
         if payload.has_key('clustersecret'):
             if payload['clustersecret'] != SERVER_OPTS['clustersecret']:
-                ctx.status = '401 Unauthorized'
-                return 'Unauthorized'
+                return response_render(
+                    'Unauthorized',
+                    http_code='401 Unauthorized')
         else:
-            ctx.status = '401 Unauthorized'
-            return 'Unauthorized'
+            return response_render(
+                'Unauthorized',
+                http_code='401 Unauthorized')
 
         # Get username
         if payload.has_key('username'):
@@ -868,12 +907,11 @@ class ClusterUpdateKRL():
         else:
             # It means I need to update my krl to the latest version
             cluster_last_krl()
-            return 'Update Complete'
+            return response_render('Update Complete')
 
         pg_conn, message = pg_connection()
         if pg_conn is None:
-            ctx.status = '503 Service Unavailable'
-            return message
+            return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
 
         message = 'Revoke user=%s.' % username
@@ -889,7 +927,7 @@ class ClusterUpdateKRL():
         pg_conn.close()
         remove(tmp_pubkey.name)
 
-        return 'Revoke Complete'
+        return response_render('Revoke Complete')
 
 class ClusterStatus():
     """
@@ -900,15 +938,14 @@ class ClusterStatus():
         /cluster/status
         """
         message = dict()
-
         alive_nodes, dead_nodes = cluster_alived()
-
         for node in alive_nodes:
             message.update({node: {'status': 'OK'}})
         for node in dead_nodes:
             message.update({node: {'status': 'KO'}})
-
-        return dumps(message)
+        return response_render(
+            dumps(message),
+            content_type='application/json')
 
 
 class Health():
@@ -922,7 +959,9 @@ class Health():
         health = {}
         health['name'] = 'cassh'
         health['version'] = VERSION
-        return dumps(health, indent=4, sort_keys=True)
+        return response_render(
+            dumps(health, indent=4, sort_keys=True),
+            content_type='application/json')
 
 
 class Krl():
@@ -933,7 +972,9 @@ class Krl():
         """
         Return krl.
         """
-        return open(SERVER_OPTS['krl'], 'rb')
+        return response_render(
+            open(SERVER_OPTS['krl'], 'rb'),
+            content_type='application/octet-stream')
 
 
 class Ping():
@@ -944,7 +985,7 @@ class Ping():
         """
         Return a pong
         """
-        return 'pong'
+        return response_render('pong')
 
 
 class TestAuth():
@@ -958,9 +999,8 @@ class TestAuth():
         # LDAP authentication
         is_auth, message = ldap_authentification()
         if not is_auth:
-            ctx.status = '401 Unauthorized'
-            return message
-        return 'OK'
+            return response_render(message, http_code='401 Unauthorized')
+        return response_render('OK')
 
 
 class MyApplication(application):
