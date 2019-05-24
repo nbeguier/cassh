@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Server
 -----
 
+1.7.2
+-----
+
+2019/05/24
+
+### Changes
+  - split tools functions in another library
+
+
 1.7.1
 -----
 

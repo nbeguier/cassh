@@ -5,28 +5,21 @@ Sign a user's SSH public key.
 """
 from __future__ import print_function
 from argparse import ArgumentParser
-from datetime import datetime, timedelta
 from json import dumps
-from os import remove, stat
-from random import choice
+from os import remove
 from re import compile as re_compile
-from shutil import move
-from string import ascii_lowercase
 from tempfile import NamedTemporaryFile
-from time import time
 from urllib import unquote_plus
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError
 from ldap import open as ldap_open, SCOPE_SUBTREE
-from psycopg2 import connect, OperationalError, ProgrammingError
-from requests import Session
-from requests.exceptions import ConnectionError
-from web import application, config, ctx, data, header, httpserver
+from web import application, config, data, httpserver
 from web.wsgiserver import CherryPyWSGIServer
 
 # Own library
 from ssh_utils import Authority, get_fingerprint
+from tools import get_principals, random_string, response_render, unquote_custom, Tools
 
 # DEBUG
 # from pdb import set_trace as st
@@ -50,13 +43,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.7.1'
-
-REQ_HEADERS = {
-    'User-Agent': 'CASSH-SERVER v%s' % VERSION,
-    'SERVER_VERSION': VERSION,
-}
-REQ_TIMEOUT = 2
+VERSION = '1.7.2'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -127,111 +114,9 @@ try:
     SERVER_OPTS['clustersecret'] = CONFIG.get('main', 'clustersecret')
 except NoOptionError:
     # Standalone mode
-    SERVER_OPTS['clustersecret'] = randomString(32)
+    SERVER_OPTS['clustersecret'] = random_string(32)
 
-
-# INDEPENDANT FUNCTIONS
-def response_render(message, http_code='200 OK', content_type='text/plain'):
-    """
-    This function returns a well-formed HTTP response
-    """
-    header('Content-Type', content_type)
-    ctx.status = http_code
-    return message
-
-def get(url):
-    """
-    Rebuilt GET function for CASSH purpose
-    """
-    session = Session()
-    try:
-        req = session.get(url,
-                          headers=REQ_HEADERS,
-                          timeout=REQ_TIMEOUT,
-                          stream=True)
-    except ConnectionError:
-        print('Connection error : %s' % url)
-        req = None
-    return req
-
-def post(url, payload):
-    """
-    Rebuilt POST function for CASSH purpose
-    """
-    session = Session()
-    try:
-        req = session.post(url,
-                           data=payload,
-                           headers=REQ_HEADERS,
-                           timeout=REQ_TIMEOUT)
-    except ConnectionError:
-        print('Connection error : %s' % url)
-        req = None
-    return req
-
-def randomString(stringLength=10):
-    """Generate a random string of fixed length """
-    letters = ascii_lowercase
-    return ''.join(choice(letters) for i in range(stringLength))
-
-def cluster_alived():
-    """
-    This function returns a subset of pingeable node
-    """
-    alive_nodes = list()
-    dead_nodes = list()
-    for node in SERVER_OPTS['cluster']:
-        req = get("%s/ping" % node)
-        if req is not None and req.text == 'pong':
-            alive_nodes.append(node)
-        else:
-            dead_nodes.append(node)
-    return alive_nodes, dead_nodes
-
-def cluster_last_krl():
-    """
-    This functions download the biggest KRL of the cluster.
-    It's not perfect...
-    """
-    subset, _ = cluster_alived()
-    cluster_id = 0
-    for node in subset:
-        req = get("%s/krl" % node)
-        with open('/tmp/%s.krl' % cluster_id, 'wb') as cluster_file:
-            for chunk in req.iter_content(chunk_size=1024):
-                if chunk: # filter out keep-alive new chunks
-                    cluster_file.write(chunk)
-        cluster_id += 1
-
-    top_size = stat(SERVER_OPTS['krl']).st_size
-    top_cluster_id = 'local'
-    for i in range(cluster_id):
-        if stat('/tmp/%s.krl' % i).st_size >= top_size:
-            top_cluster_id = i
-
-    print('%s KRL is the best' % top_cluster_id)
-
-    if top_cluster_id != 'local':
-        move('/tmp/%s.krl' % top_cluster_id, SERVER_OPTS['krl'])
-    else:
-        cluster_updatekrl(None, update_only=True)
-
-    return True
-
-
-def cluster_updatekrl(username, update_only=False):
-    """
-    This function send the revokation of a user to the cluster
-    """
-    subset, _ = cluster_alived()
-    reqs = list()
-    payload = {"clustersecret": SERVER_OPTS['clustersecret']}
-    if not update_only:
-        payload.update({"username": username})
-    for node in subset:
-        req = post("%s/cluster/updatekrl" % node, payload)
-        reqs.append(req)
-    return reqs
+TOOLS = Tools(SERVER_OPTS, STATES, VERSION)
 
 def data2map():
     """
@@ -244,100 +129,6 @@ def data2map():
         data_map[key.split('=')[0]] = '='.join(key.split('=')[1:])
     return data_map
 
-def get_principals(sql_result, username, shell=False):
-    """
-    Transform sql principals into readable one
-    """
-    if sql_result is None or sql_result == '':
-        if shell:
-            return username
-        return [username]
-    else:
-        if shell:
-            return sql_result
-        return sql_result.split(',')
-
-def unquote_custom(string):
-    """
-    Returns True is the string is quoted
-    """
-    if ' ' not in string:
-        string = unquote_plus(string)
-        if '+' in string and '%20' in string:
-            # Old custom quote
-            string = string.replace('%20', ' ')
-    return string
-
-def pg_connection(
-        dbname=SERVER_OPTS['db_name'],
-        user=SERVER_OPTS['db_user'],
-        host=SERVER_OPTS['db_host'],
-        password=SERVER_OPTS['db_password']):
-    """
-    Return a connection to the db.
-    """
-    message = ''
-    try:
-        pg_conn = connect("dbname='%s' user='%s' host='%s' password='%s'"\
-            % (dbname, user, host, password))
-    except OperationalError:
-        return None, 'Error : Server cannot connect to database'
-    try:
-        pg_conn.cursor().execute("""SELECT * FROM USERS""")
-    except ProgrammingError:
-        return None, 'Error : Server cannot connect to table in database'
-    return pg_conn, message
-
-def pretty_ssh_key_hash(pubkey_fingerprint):
-    """
-    Returns a pretty json from raw pubkey
-    KEY_BITS KEY_HASH [JERK] (AUTH_TYPE)
-    """
-    try:
-        key_bits = int(pubkey_fingerprint.split(' ')[0])
-    except ValueError:
-        key_bits = 0
-    except IndexError:
-        key_bits = 0
-
-    try:
-        key_hash = pubkey_fingerprint.split(' ')[1]
-    except IndexError:
-        key_hash = pubkey_fingerprint
-
-    try:
-        auth_type = pubkey_fingerprint.split('(')[-1].split(')')[0]
-    except IndexError:
-        auth_type = 'Unknown'
-
-    rate = 'UNKNOWN'
-    if auth_type == 'DSA':
-        rate = 'VERY LOW'
-    elif (auth_type == 'RSA' and key_bits >= 4096) or (auth_type == 'ECDSA' and key_bits >= 256):
-        rate = 'HIGH'
-    elif auth_type == 'RSA' and key_bits >= 2048:
-        rate = 'MEDIUM'
-    elif auth_type == 'RSA' and key_bits < 2048:
-        rate = 'LOW'
-    elif auth_type == 'ED25519' and key_bits >= 256:
-        rate = 'VERY HIGH'
-
-    return {'bits': key_bits, 'hash': key_hash, 'auth_type': auth_type, 'rate': rate}
-
-def str2date(string):
-    """
-    change xd => seconds
-    change xh => seconds
-    """
-    delta = 0
-    if 'd' in string:
-        delta = timedelta(days=int(string.split('d')[0])).total_seconds()
-    elif 'h' in string:
-        delta = timedelta(hours=int(string.split('h')[0])).total_seconds()
-    return delta
-
-
-# OTHER FUNCTION
 def ldap_authentification(admin=False):
     """
     Return True if user is well authentified
@@ -372,77 +163,6 @@ def ldap_authentification(admin=False):
             if not memberof_admin_list:
                 return False, 'Error: user %s is not an admin.' % realname
     return True, 'OK'
-
-def list_keys(username=None, realname=None):
-    """
-    Return all keys.
-    """
-    pg_conn, message = pg_connection()
-    if pg_conn is None:
-        return response_render(message, http_code='503 Service Unavailable')
-    cur = pg_conn.cursor()
-    is_list = False
-
-    if realname is not None:
-        cur.execute('SELECT * FROM USERS WHERE REALNAME=lower((%s))', (realname,))
-        result = cur.fetchone()
-    elif username is not None:
-        cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
-        result = cur.fetchone()
-    else:
-        cur.execute('SELECT * FROM USERS')
-        result = cur.fetchall()
-        is_list = True
-    cur.close()
-    pg_conn.close()
-    return sql_to_json(result, is_list=is_list)
-
-def sign_key(tmp_pubkey_name, username, expiry, principals, db_cursor=None):
-    """
-    Sign a key and return cert_contents
-    """
-    # Load SSH CA
-    ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
-
-    # Sign the key
-    try:
-        cert_contents = ca_ssh.sign_public_user_key(\
-            tmp_pubkey_name, username, expiry, principals)
-        if db_cursor is not None:
-            db_cursor.execute('UPDATE USERS SET STATE=0, EXPIRATION=(%s) WHERE NAME=(%s)', \
-                (time() + str2date(expiry), username))
-    except:
-        cert_contents = 'Error : signing key'
-    return cert_contents
-
-def sql_to_json(result, is_list=False):
-    """
-    This function prettify a sql result into json
-    """
-    if result is None:
-        return None
-    if is_list:
-        d_result = {}
-        for res in result:
-            d_sub_result = {}
-            d_sub_result['username'] = res[0]
-            d_sub_result['realname'] = res[1]
-            d_sub_result['status'] = STATES[res[2]]
-            d_sub_result['expiration'] = datetime.fromtimestamp(res[3]).strftime('%Y-%m-%d %H:%M:%S')
-            d_sub_result['ssh_key_hash'] = pretty_ssh_key_hash(res[4])
-            d_sub_result['expiry'] = res[6]
-            d_sub_result['principals'] = get_principals(res[7], res[0])
-            d_result[res[0]] = d_sub_result
-        return dumps(d_result, indent=4, sort_keys=True)
-    d_result = {}
-    d_result['username'] = result[0]
-    d_result['realname'] = result[1]
-    d_result['status'] = STATES[result[2]]
-    d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime('%Y-%m-%d %H:%M:%S')
-    d_result['ssh_key_hash'] = pretty_ssh_key_hash(result[4])
-    d_result['expiry'] = result[6]
-    d_result['principals'] = get_principals(result[7], result[0])
-    return dumps(d_result, indent=4, sort_keys=True)
 
 class Admin():
     """
@@ -480,14 +200,14 @@ class Admin():
         else:
             do_status = False
 
-        pg_conn, message = pg_connection()
+        pg_conn, message = TOOLS.pg_connection()
         if pg_conn is None:
             return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
 
         if username == 'all' and do_status:
             return response_render(
-                list_keys(),
+                TOOLS.list_keys(),
                 content_type='application/json')
 
         # Search if key already exists
@@ -502,13 +222,13 @@ class Admin():
             cur.execute('UPDATE USERS SET STATE=1 WHERE NAME=(%s)', (username,))
             pg_conn.commit()
             message = 'Revoke user=%s.' % username
-            cluster_updatekrl(username)
+            TOOLS.cluster_updatekrl(username)
             cur.close()
             pg_conn.close()
         # Display status
         elif do_status:
             return response_render(
-                list_keys(username=username),
+                TOOLS.list_keys(username=username),
                 content_type='application/json')
         # If user is in PENDING state
         elif user[2] == 2:
@@ -541,7 +261,7 @@ class Admin():
         if not is_admin_auth:
             return response_render(message, http_code='401 Unauthorized')
 
-        pg_conn, message = pg_connection()
+        pg_conn, message = TOOLS.pg_connection()
         if pg_conn is None:
             return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
@@ -560,7 +280,6 @@ class Admin():
                 pg_conn.commit()
                 cur.close()
                 pg_conn.close()
-                header('Content-Type', 'text/plain')
                 return response_render('OK: %s=%s for %s' % (key, value, username))
             elif key == 'principals':
                 value = unquote_plus(value)
@@ -575,7 +294,6 @@ class Admin():
                 pg_conn.commit()
                 cur.close()
                 pg_conn.close()
-                header('Content-Type', 'text/plain')
                 return response_render('OK: %s=%s for %s' % (key, value, username))
 
         return response_render('WARNING: No key found...')
@@ -590,7 +308,7 @@ class Admin():
         if not is_admin_auth:
             return response_render(message, http_code='401 Unauthorized')
 
-        pg_conn, message = pg_connection()
+        pg_conn, message = TOOLS.pg_connection()
         if pg_conn is None:
             return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
@@ -639,7 +357,7 @@ class ClientStatus():
                 http_code='400 Bad Request')
 
         return response_render(
-            list_keys(realname=realname),
+            TOOLS.list_keys(realname=realname),
             content_type='application/json')
 
 class Client():
@@ -722,10 +440,10 @@ class Client():
                 'Error : Public key unprocessable',
                 http_code='422 Unprocessable Entity')
 
-        pg_conn, message = pg_connection()
+        pg_conn, message = TOOLS.pg_connection()
         # Admin force signature case
         if pg_conn is None and force_sign:
-            cert_contents = sign_key(tmp_pubkey.name, username, '+12h', username)
+            cert_contents = TOOLS.sign_key(tmp_pubkey.name, username, '+12h', username)
             remove(tmp_pubkey.name)
             return response_render(cert_contents, content_type='application/octet-stream')
         # Else, if db is down it fails.
@@ -763,7 +481,7 @@ class Client():
             remove(tmp_pubkey.name)
             return response_render("Status: %s" % STATES[user[2]])
 
-        cert_contents = sign_key(tmp_pubkey.name, username, expiry, principals, db_cursor=cur)
+        cert_contents = TOOLS.sign_key(tmp_pubkey.name, username, expiry, principals, db_cursor=cur)
 
         remove(tmp_pubkey.name)
         pg_conn.commit()
@@ -833,7 +551,7 @@ class Client():
                 'Error : Public key unprocessable',
                 http_code='422 Unprocessable Entity')
 
-        pg_conn, message = pg_connection()
+        pg_conn, message = TOOLS.pg_connection()
         if pg_conn is None:
             remove(tmp_pubkey.name)
             return response_render(message, http_code='503 Service Unavailable')
@@ -887,7 +605,6 @@ class ClusterUpdateKRL():
         If a username is present => Revoke this user
         Else                     => Update the KRL
         """
-        header('Content-Type', 'text/plain')
         payload = data2map()
 
         # Check clustersecret
@@ -906,10 +623,10 @@ class ClusterUpdateKRL():
             username = payload['username']
         else:
             # It means I need to update my krl to the latest version
-            cluster_last_krl()
+            TOOLS.cluster_last_krl()
             return response_render('Update Complete')
 
-        pg_conn, message = pg_connection()
+        pg_conn, message = TOOLS.pg_connection()
         if pg_conn is None:
             return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
@@ -938,7 +655,7 @@ class ClusterStatus():
         /cluster/status
         """
         message = dict()
-        alive_nodes, dead_nodes = cluster_alived()
+        alive_nodes, dead_nodes = TOOLS.cluster_alived()
         for node in alive_nodes:
             message.update({node: {'status': 'OK'}})
         for node in dead_nodes:
@@ -1021,5 +738,5 @@ if __name__ == "__main__":
         print('Admin DB Failover: %s' % SERVER_OPTS['admin_db_failover'])
     APP = MyApplication(URLS, globals())
     config.debug = False
-    cluster_last_krl()
+    TOOLS.cluster_last_krl()
     APP.run()
