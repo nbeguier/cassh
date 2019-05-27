@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #-*- coding: utf-8 -*-
-""" cassh_html """
+""" Cassh WEB Client """
 
 # Standard library imports
 from __future__ import print_function
@@ -28,28 +28,41 @@ APP = Flask(__name__)
 APP.config.from_pyfile('settings.txt')
 # These are the extension that we are accepting to be uploaded
 APP.config['ALLOWED_EXTENSIONS'] = set(['pub'])
+APP.config['HEADERS'] = {
+    'User-Agent': 'CASSH-WEB-CLIENT v%s' % APP.config['VERSION'],
+    'CLIENT_VERSION': APP.config['VERSION'],
+}
 
 def allowed_file(filename):
     """ For a given file, return whether it's an allowed type or not """
     return '.' in filename and \
            filename.rsplit('.', 1)[1] in APP.config['ALLOWED_EXTENSIONS']
 
-def decode(key, enc):
+def self_decode(key, enc):
     dec = []
-    enc = urlsafe_b64decode(enc).decode()
-    for i in range(len(enc)):
+    # Try to use urlsafe_b64decode before encoding
+    try:
+        encoded = urlsafe_b64decode(enc).decode()
+    except TypeError:
+        encoded = urlsafe_b64decode(enc.encode())
+    for i in range(len(encoded)):
         key_c = key[i % len(key)]
-        dec_c = chr((256 + ord(enc[i]) - ord(key_c)) % 256)
+        dec_c = chr((256 + ord(encoded[i]) - ord(key_c)) % 256)
         dec.append(dec_c)
     return "".join(dec)
 
-def encode(key, clear):
+def self_encode(key, clear):
     enc = []
     for i in range(len(clear)):
         key_c = key[i % len(key)]
         enc_c = chr((ord(clear[i]) + ord(key_c)) % 256)
         enc.append(enc_c)
-    return urlsafe_b64encode("".join(enc).encode()).decode()
+    # Try to encode in unicode before urlsafe_b64encode
+    try:
+        encoded = urlsafe_b64encode("".join(enc).encode()).decode()
+    except UnicodeDecodeError:
+        encoded = urlsafe_b64encode("".join(enc))
+    return encoded
 
 def requires_auth(func):
     """ Wrapper which force authentication """
@@ -59,7 +72,7 @@ def requires_auth(func):
         current_user = {}
         current_user['name'] = request.cookies.get('username')
         try:
-            current_user['password'] = decode(APP.config['ENCRYPTION_KEY'], request.cookies.get('password'))
+            current_user['password'] = self_decode(APP.config['ENCRYPTION_KEY'], request.cookies.get('password'))
         except:
             current_user['password'] = 'Unknown'
         current_user['is_authenticated'] = request.cookies.get('last_attempt_error') == 'False'
@@ -94,12 +107,13 @@ def login(current_user=None):
         payload.update({'realname': username, 'password': password})
         req = post(APP.config['CASSH_URL'] + '/test_auth', \
                 data=payload, \
+                headers=APP.config['HEADERS'], \
                 verify=False)
     except:
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
     if 'OK' in req.text:
         response.set_cookie('username', value=username)
-        response.set_cookie('password', value=encode(APP.config['ENCRYPTION_KEY'], password))
+        response.set_cookie('password', value=self_encode(APP.config['ENCRYPTION_KEY'], password))
     else:
         last_attempt_error = True
     response.set_cookie('last_attempt_error', value=str(last_attempt_error))
@@ -140,6 +154,7 @@ def cassh_status(current_user=None):
         payload.update({'realname': current_user['name'], 'password': current_user['password']})
         req = post(APP.config['CASSH_URL'] + '/client/status', \
                 data=payload, \
+                headers=APP.config['HEADERS'], \
                 verify=False)
     except ConnectionError:
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
@@ -173,6 +188,7 @@ def upload(current_user=None):
     try:
         req = post(APP.config['CASSH_URL'] + '/client', \
                 data=payload, \
+                headers=APP.config['HEADERS'], \
                 verify=False)
     except ConnectionError:
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
@@ -201,6 +217,7 @@ def send(current_user=None):
     try:
         req = put(APP.config['CASSH_URL'] + '/client', \
                 data=payload, \
+                headers=APP.config['HEADERS'], \
                 verify=False)
     except ConnectionError:
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
@@ -216,5 +233,5 @@ def page_not_found(_):
 if __name__ == '__main__':
     CONTEXT = SSLContext(PROTOCOL_TLSv1_2)
     CONTEXT.load_cert_chain(APP.config['SSL_PUB_KEY'], APP.config['SSL_PRIV_KEY'])
-    PORT = int(getenv('PORT', 443))
-    APP.run(debug=True, host='0.0.0.0', port=PORT, ssl_context=CONTEXT)
+    PORT = int(getenv('PORT', APP.config['PORT']))
+    APP.run(debug=APP.config['DEBUG'], host='0.0.0.0', port=PORT, ssl_context=CONTEXT)
