@@ -4,6 +4,17 @@ CHANGELOG
 CASSH Server
 -----
 
+1.8.1
+-----
+
+2019/05/28
+
+### Bug Fixes
+  - Add wheel into requirements
+  - Add build-essential python3-dev dependencies
+  - Fix cassh.service
+
+
 1.8.0
 -----
 
