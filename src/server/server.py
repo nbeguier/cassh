@@ -13,7 +13,7 @@ from urllib import unquote_plus
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError
-from ldap import open as ldap_open, SCOPE_SUBTREE
+from ldap import initialize, SCOPE_SUBTREE
 from web import application, config, data, httpserver
 from web.wsgiserver import CherryPyWSGIServer
 
@@ -43,7 +43,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.7.2'
+VERSION = '1.7.3'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -116,6 +116,11 @@ except NoOptionError:
     # Standalone mode
     SERVER_OPTS['clustersecret'] = random_string(32)
 
+try:
+    SERVER_OPTS['debug'] = bool(CONFIG.get('main', 'debug') != 'False')
+except NoOptionError:
+    SERVER_OPTS['debug'] = False
+
 TOOLS = Tools(SERVER_OPTS, STATES, VERSION)
 
 def data2map():
@@ -147,7 +152,7 @@ def ldap_authentification(admin=False):
             return False, 'Error: No password option given.'
         if password == '':
             return False, 'Error: password is empty.'
-        ldap_conn = ldap_open(SERVER_OPTS['ldap_host'])
+        ldap_conn = initialize("ldap://"+SERVER_OPTS['ldap_host'])
         try:
             ldap_conn.bind_s(realname, password)
         except Exception as e:
@@ -222,7 +227,7 @@ class Admin():
             cur.execute('UPDATE USERS SET STATE=1 WHERE NAME=(%s)', (username,))
             pg_conn.commit()
             message = 'Revoke user=%s.' % username
-            TOOLS.cluster_updatekrl(username)
+            TOOLS.cluster_update_krl(username)
             cur.close()
             pg_conn.close()
         # Display status
@@ -737,6 +742,8 @@ if __name__ == "__main__":
         print('LDAP: %s' % SERVER_OPTS['ldap'])
         print('Admin DB Failover: %s' % SERVER_OPTS['admin_db_failover'])
     APP = MyApplication(URLS, globals())
-    config.debug = False
+    config.debug = SERVER_OPTS['debug']
+    if SERVER_OPTS['debug']:
+        print('Debug mode on')
     TOOLS.cluster_last_krl()
     APP.run()

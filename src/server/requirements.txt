@@ -1,4 +1,5 @@
-python-ldap
-psycopg2
-urllib
-web.py
+configparser==3.7.4
+psycopg2-binary==2.8.2
+python-ldap==3.2.0
+requests==2.22.0
+web.py==0.39

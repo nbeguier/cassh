@@ -4,6 +4,20 @@ CHANGELOG
 CASSH Server
 -----
 
+1.7.3
+-----
+
+2019/05/27
+
+### New Features
+  - Add debug parameters in configuration
+
+### Changes
+  - Use ldap version 3.2.0 instead of 2.5.2 (open => initialize)
+  - Edit Dockerfile and requirements.txt
+  - Tools: Rename cluster_updatekrl into cluster_update_krl
+
+
 1.7.2
 -----
 
