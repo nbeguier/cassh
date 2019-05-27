@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """ tools lib """
 
-from __future__ import print_function
 from datetime import datetime, timedelta
 from json import dumps
 from os import stat
@@ -9,7 +8,7 @@ from random import choice
 from shutil import move
 from string import ascii_lowercase
 from time import time
-from urllib import unquote_plus
+from urllib.parse import unquote_plus
 
 # Third party library imports
 from psycopg2 import connect, OperationalError, ProgrammingError

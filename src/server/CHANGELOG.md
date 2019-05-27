@@ -4,6 +4,25 @@ CHANGELOG
 CASSH Server
 -----
 
+1.8.0
+-----
+
+2019/05/27
+
+### New Features
+  - Python 3.6 support :
+    - remove  __future__
+    - use urllib.parse instead of urllib for unquote_plus
+    - web.data output in encoded in UTF-8
+    - Used .keys() for dict
+    - write temporary files in unicode
+    - check_output in returning an unicode output
+
+### Changes
+  - Python 2.x deprecated
+  - Used web.py version 0.40-dev1 instead of 0.39
+
+
 1.7.3
 -----
 
