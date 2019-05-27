@@ -9,7 +9,7 @@ https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8
 
   - [CLI version : **1.6.2** *(23/05/2019)*](src/client/CHANGELOG.md)
   - [WebUI version : **1.0.1** *(22/05/2019)*](src/server/web/CHANGELOG.md)
-  - [Server version : **1.7.3** *(27/05/2019)*](src/server/CHANGELOG.md)
+  - [Server version : **1.8.0** *(27/05/2019)*](src/server/CHANGELOG.md)
 
 ## Usage
 
@@ -98,12 +98,10 @@ realname = ursula.ser@domain.fr
 ### Server
 
 ```bash
-# Install cassh python 2 service dependencies
-sudo apt-get install libsasl2-dev python-dev libldap2-dev libssl-dev libpq-dev
-sudo apt-get install python-pip
-pip install -r srx/server/requirements.txt
-# or
-sudo apt-get install python-psycopg2 python-webpy python-ldap python-configparser python-requests python-openssl
+# Install cassh python 3 service dependencies
+sudo apt-get install openssh-client openssl libldap2-dev libsasl2-dev
+sudo apt-get install python3-pip
+pip3 install -r src/server/requirements.txt
 
 # Generate CA ssh key and revocation key file
 mkdir test-keys
@@ -119,6 +117,12 @@ krl = /etc/cassh/krl/revoked-keys
 port = 8080
 # Optionnal : admin_db_failover is used to bypass db when it fails.
 # admin_db_failover = False
+# Optionnal : cluster is used to list the cluster member
+# cluster = http://192.168.0.1:8080,http://192.168.0.2:8080
+# Optionnal : clustersecret is the shared secret used by cluster member
+# clustersecret = clustersecretpassword
+# Optionnal : debug is used to enable the debug. Should not be used into production
+# debug = True
 
 [postgres]
 host = cassh.domain.fr

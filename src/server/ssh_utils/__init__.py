@@ -12,7 +12,7 @@ def get_fingerprint(public_key_filename):
         fingerprint = '\n'.join(check_output([
             'ssh-keygen',
             '-l',
-            '-f', public_key_filename]).split('\n')[:-1])
+            '-f', public_key_filename]).decode('utf-8').split('\n')[:-1])
     except CalledProcessError:
         fingerprint = 'Unknown'
     return fingerprint

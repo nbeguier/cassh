@@ -3,13 +3,12 @@
 """
 Sign a user's SSH public key.
 """
-from __future__ import print_function
 from argparse import ArgumentParser
 from json import dumps
 from os import remove
 from re import compile as re_compile
 from tempfile import NamedTemporaryFile
-from urllib import unquote_plus
+from urllib.parse import unquote_plus
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError
@@ -43,7 +42,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.7.3'
+VERSION = '1.8.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -128,9 +127,10 @@ def data2map():
     Returns a map from data POST
     """
     data_map = {}
-    if data() == '':
+    data_str = data().decode('utf-8')
+    if data_str == '':
         return data_map
-    for key in data().split('&'):
+    for key in data_str.split('&'):
         data_map[key.split('=')[0]] = '='.join(key.split('=')[1:])
     return data_map
 
@@ -142,11 +142,11 @@ def ldap_authentification(admin=False):
     """
     if SERVER_OPTS['ldap']:
         credentials = data2map()
-        if credentials.has_key('realname'):
+        if 'realname' in credentials:
             realname = unquote_plus(credentials['realname'])
         else:
             return False, 'Error: No realname option given.'
-        if credentials.has_key('password'):
+        if 'password' in credentials:
             password = unquote_plus(credentials['password'])
         else:
             return False, 'Error: No password option given.'
@@ -196,11 +196,11 @@ class Admin():
 
         payload = data2map()
 
-        if payload.has_key('revoke'):
+        if 'revoke' in payload:
             do_revoke = payload['revoke'].lower() == 'true'
         else:
             do_revoke = False
-        if payload.has_key('status'):
+        if 'status' in payload:
             do_status = payload['status'].lower() == 'true'
         else:
             do_status = False
@@ -354,7 +354,7 @@ class ClientStatus():
 
         payload = data2map()
 
-        if payload.has_key('realname'):
+        if 'realname' in payload:
             realname = unquote_plus(payload['realname'])
         else:
             return response_render(
@@ -402,11 +402,11 @@ class Client():
         payload = data2map()
 
         if is_admin_auth and SERVER_OPTS['admin_db_failover'] \
-            and payload.has_key('admin_force') and payload['admin_force'].lower() == 'true':
+            and 'admin_force' in payload and payload['admin_force'].lower() == 'true':
             force_sign = True
 
         # Get username
-        if payload.has_key('username'):
+        if 'username' in payload:
             username = payload['username']
         else:
             return response_render(
@@ -420,7 +420,7 @@ class Client():
                 http_code='400 Bad Request')
 
         # Get realname
-        if payload.has_key('realname'):
+        if 'realname' in payload:
             realname = unquote_plus(payload['realname'])
         else:
             return response_render(
@@ -428,14 +428,14 @@ class Client():
                 http_code='400 Bad Request')
 
         # Get public key
-        if payload.has_key('pubkey'):
+        if 'pubkey' in payload:
             pubkey = unquote_custom(payload['pubkey'])
         else:
             return response_render(
                 'Error: No pubkey given.',
                 http_code='400 Bad Request')
         tmp_pubkey = NamedTemporaryFile(delete=False)
-        tmp_pubkey.write(pubkey)
+        tmp_pubkey.write(bytes(pubkey, 'utf-8'))
         tmp_pubkey.close()
 
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
@@ -510,7 +510,7 @@ class Client():
 
         payload = data2map()
 
-        if payload.has_key('username'):
+        if 'username' in payload:
             username = payload['username']
         else:
             return response_render(
@@ -525,7 +525,7 @@ class Client():
                 http_code='400 Bad Request')
 
 
-        if payload.has_key('realname'):
+        if 'realname' in payload:
             realname = unquote_plus(payload['realname'])
         else:
             return response_render(
@@ -539,14 +539,14 @@ class Client():
                 http_code='400 Bad Request')
 
         # Get public key
-        if payload.has_key('pubkey'):
+        if 'pubkey' in payload:
             pubkey = unquote_custom(payload['pubkey'])
         else:
             return response_render(
                 'Error: No pubkey given.',
                 http_code='400 Bad Request')
         tmp_pubkey = NamedTemporaryFile(delete=False)
-        tmp_pubkey.write(pubkey)
+        tmp_pubkey.write(bytes(pubkey, 'utf-8'))
         tmp_pubkey.close()
 
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
@@ -613,7 +613,7 @@ class ClusterUpdateKRL():
         payload = data2map()
 
         # Check clustersecret
-        if payload.has_key('clustersecret'):
+        if 'clustersecret' in payload:
             if payload['clustersecret'] != SERVER_OPTS['clustersecret']:
                 return response_render(
                     'Unauthorized',
@@ -624,7 +624,7 @@ class ClusterUpdateKRL():
                 http_code='401 Unauthorized')
 
         # Get username
-        if payload.has_key('username'):
+        if 'username' in payload:
             username = payload['username']
         else:
             # It means I need to update my krl to the latest version
@@ -642,7 +642,7 @@ class ClusterUpdateKRL():
         cur.execute('SELECT SSH_KEY FROM USERS WHERE NAME=(%s)', (username,))
         pubkey = cur.fetchone()[0]
         tmp_pubkey = NamedTemporaryFile(delete=False)
-        tmp_pubkey.write(pubkey)
+        tmp_pubkey.write(bytes(pubkey, 'utf-8'))
         tmp_pubkey.close()
         ca_ssh.update_krl(tmp_pubkey.name)
         cur.close()

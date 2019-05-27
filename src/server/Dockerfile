@@ -1,8 +1,6 @@
-FROM debian:latest
+FROM python:3.6
 
-# Container options (For layer optim)
 WORKDIR /opt/cassh
-ENTRYPOINT ["/opt/cassh/server/docker-entrypoint"]
 
 RUN apt-get update \
     && apt-get install -yqq \
@@ -10,9 +8,13 @@ RUN apt-get update \
         openssl \
         libldap2-dev \
         libsasl2-dev \
-        python-pip \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . server/
 
-RUN pip install -r server/requirements.txt
+COPY requirements.txt ./
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD [ "python", "./server.py" ]
