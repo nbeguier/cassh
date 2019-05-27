@@ -225,7 +225,7 @@ public_key = /etc/cassh-server/ssl/cert.pem
 #### Init the Database
 
 * You need a database and a user's credentials 
-* Init the database with this sql statement: [SQL Model](src/server/sql/model.sql)
+* Init the database with this sql statement: [SQL Model](src/server/sql/users.sql)
 * Update the `cassh-server` config with the user's credentials
 
 
