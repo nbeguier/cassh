@@ -161,12 +161,12 @@ class Tools(object):
         if top_cluster_id != 'local':
             move('/tmp/%s.krl' % top_cluster_id, self.server_opts['krl'])
         else:
-            self.cluster_updatekrl(None, update_only=True)
+            self.cluster_update_krl(None, update_only=True)
 
         return True
 
 
-    def cluster_updatekrl(self, username, update_only=False):
+    def cluster_update_krl(self, username, update_only=False):
         """
         This function send the revokation of a user to the cluster
         """

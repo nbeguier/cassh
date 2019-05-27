@@ -8,12 +8,11 @@ RUN apt-get update \
     && apt-get install -yqq \
         openssh-client \
         openssl \
-        python-psycopg2 \
-        python-webpy \
-        python-ldap \
-        python-configparser \
-        python-requests \
-        python-openssl \
+        libldap2-dev \
+        libsasl2-dev \
+        python-pip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . server/
+
+RUN pip install -r server/requirements.txt
