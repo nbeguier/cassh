@@ -5,10 +5,14 @@ Init pg database
 """
 
 from __future__ import print_function
+from os import listdir
+from os.path import isfile, join
 from psycopg2 import connect, OperationalError
 
 # DEBUG
 # from pdb import set_trace as st
+
+SQL_SERVER_PATH = 'src/server/sql'
 
 def pg_connection(dbname='postgres', user='postgres', host='localhost',\
     password='mysecretpassword'):
@@ -32,18 +36,14 @@ def init_pg(pg_conn):
         print('I am unable to connect to the database')
         exit(1)
     cur = pg_conn.cursor()
-    cur.execute("""CREATE TABLE USERS(
-       NAME           TEXT  PRIMARY KEY  NOT NULL,
-       REALNAME       TEXT               NOT NULL,
-       STATE          INT                NOT NULL,
-       EXPIRATION     INT                NOT NULL,
-       SSH_KEY_HASH   TEXT,
-       SSH_KEY        TEXT,
-       EXPIRY         TEXT,
-       PRINCIPALS     TEXT
-    )""")
 
-    pg_conn.commit()
+    sql_files = [f for f in listdir(SQL_SERVER_PATH) if isfile(join(SQL_SERVER_PATH, f))]
+
+    for sql_file in sql_files:
+        with open('%s/%s' % (SQL_SERVER_PATH, sql_file), 'r') as sql_model_file:
+            cur.execute(sql_model_file.read())
+            pg_conn.commit()
+
     cur.close()
     pg_conn.close()
 
