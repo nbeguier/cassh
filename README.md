@@ -2,10 +2,14 @@
 
 [![Build Status](https://travis-ci.org/nbeguier/cassh.svg?branch=master)](https://travis-ci.org/nbeguier/cassh)
 
-Easy SSH for admin ONLY !
+OpenSSH features reach their limit when it comes to industrialization. We don’t want an administrator to sign every user’s public key by hand every day, so we need a service for that. That is exactly the purpose of CASSH: **signing keys**!
 Developped for @leboncoin
 
 https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8e4de7
+
+  - [CLI version : **1.6.2** *(23/05/2019)*](src/client)
+  - [WebUI version : **1.0.1** *(22/05/2019)*](src/server/web)
+  - [Server version : **1.7.2** *(24/05/2019)*](src/server)
 
 ## Usage
 
