@@ -20,28 +20,6 @@ load helpers
 }
 
 
-# == Deprecated
-#
-@test "DEPRECATED status URL without username" {
-    RESP=$(curl -s -X GET ${CASSH_URL}/client)
-    [ "${RESP}" == 'Error: DEPRECATED option. Update your CASSH >= 1.5.0' ]
-}
-
-@test "DEPRECATED admin status URL without username" {
-    RESP=$(curl -s -X GET ${CASSH_URL}/admin/testuser)
-    [ "${RESP}" == "Error: DEPRECATED option. Update your CASSH >= 1.5.0" ]
-}
-
-@test "DEPRECATED status URL with username" {
-    RESP=$(curl -s -X GET -d 'username=test_user' ${CASSH_URL}/client)
-    [ "${RESP}" == 'Error: DEPRECATED option. Update your CASSH >= 1.5.0' ]
-}
-
-@test "DEPRECATED status URL with username" {
-    RESP=$(curl -s -X GET -d 'username=test_user' ${CASSH_URL}/admin/testuser)
-    [ "${RESP}" == "Error: DEPRECATED option. Update your CASSH >= 1.5.0" ]
-}
-
 
 # == Client actions
 #
