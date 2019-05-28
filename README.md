@@ -9,7 +9,7 @@ https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8
 
   - [CLI version : **1.6.2** *(23/05/2019)*](src/client/CHANGELOG.md)
   - [WebUI version : **1.0.1** *(22/05/2019)*](src/server/web/CHANGELOG.md)
-  - [Server version : **1.8.0** *(27/05/2019)*](src/server/CHANGELOG.md)
+  - [Server version : **1.8.1** *(28/05/2019)*](src/server/CHANGELOG.md)
 
 ## Usage
 
@@ -99,7 +99,7 @@ realname = ursula.ser@domain.fr
 
 ```bash
 # Install cassh python 3 service dependencies
-sudo apt-get install openssh-client openssl libldap2-dev libsasl2-dev
+sudo apt-get install openssh-client openssl libldap2-dev libsasl2-dev build-essential python3-dev
 sudo apt-get install python3-pip
 pip3 install -r src/server/requirements.txt
 
