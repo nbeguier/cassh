@@ -5,7 +5,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python /opt/cassh/server/server.py -c /etc/cassh/cassh.conf
+ExecStart=/usr/bin/python3 /opt/cassh/server/server.py -c /etc/cassh/cassh.conf
 Restart=on-failure
 User=root
 Group=root
