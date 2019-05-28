@@ -2,11 +2,13 @@
 """ tools lib """
 
 from datetime import datetime, timedelta
+from glob import glob
 from json import dumps
-from os import stat
+from os import remove, stat
 from random import choice
-from shutil import move
+from shutil import copyfile, move
 from string import ascii_lowercase
+from tempfile import NamedTemporaryFile
 from time import time
 from urllib.parse import unquote_plus
 
@@ -18,6 +20,9 @@ from web import ctx, header
 
 # Own library
 from ssh_utils import Authority
+
+# DEBUG
+# from pdb import set_trace as st
 
 def get_principals(sql_result, username, shell=False):
     """
@@ -31,6 +36,24 @@ def get_principals(sql_result, username, shell=False):
         if shell:
             return sql_result
         return sql_result.split(',')
+
+def get_pubkey(username, pg_conn, key_n=0):
+    """
+    Returns the public key stored in the USERS database
+    For now, there is only one key per user, but it could change in the future
+    """
+    cur = pg_conn.cursor()
+    cur.execute('SELECT SSH_KEY FROM USERS WHERE NAME=(%s)', (username,))
+    pubkeys = cur.fetchall()
+    cur.close()
+
+    if len(pubkeys) <= key_n:
+        return None
+    if not pubkeys[key_n]:
+        return None
+    pubkey = pubkeys[key_n][0]
+
+    return pubkey
 
 def pretty_ssh_key_hash(pubkey_fingerprint):
     """
@@ -93,6 +116,12 @@ def str2date(string):
         delta = timedelta(hours=int(string.split('h')[0])).total_seconds()
     return delta
 
+def timestamp():
+    """
+    Returns the epoch time of now
+    """
+    return time()
+
 def unquote_custom(string):
     """
     Returns True is the string is quoted
@@ -133,52 +162,6 @@ class Tools(object):
                 dead_nodes.append(node)
         return alive_nodes, dead_nodes
 
-
-    def cluster_last_krl(self):
-        """
-        This functions download the biggest KRL of the cluster.
-        It's not perfect...
-        """
-        subset, _ = self.cluster_alived()
-        cluster_id = 0
-        for node in subset:
-            req = self.get("%s/krl" % node)
-            with open('/tmp/%s.krl' % cluster_id, 'wb') as cluster_file:
-                for chunk in req.iter_content(chunk_size=1024):
-                    if chunk: # filter out keep-alive new chunks
-                        cluster_file.write(chunk)
-            cluster_id += 1
-
-        top_size = stat(self.server_opts['krl']).st_size
-        top_cluster_id = 'local'
-        for i in range(cluster_id):
-            if stat('/tmp/%s.krl' % i).st_size >= top_size:
-                top_cluster_id = i
-
-        print('%s KRL is the best' % top_cluster_id)
-
-        if top_cluster_id != 'local':
-            move('/tmp/%s.krl' % top_cluster_id, self.server_opts['krl'])
-        else:
-            self.cluster_update_krl(None, update_only=True)
-
-        return True
-
-
-    def cluster_update_krl(self, username, update_only=False):
-        """
-        This function send the revokation of a user to the cluster
-        """
-        subset, _ = self.cluster_alived()
-        reqs = list()
-        payload = {"clustersecret": self.server_opts['clustersecret']}
-        if not update_only:
-            payload.update({"username": username})
-        for node in subset:
-            req = self.post("%s/cluster/updatekrl" % node, payload)
-            reqs.append(req)
-        return reqs
-
     def get(self, url):
         """
         Rebuilt GET function for CASSH purpose
@@ -193,6 +176,63 @@ class Tools(object):
             print('Connection error : %s' % url)
             req = None
         return req
+
+    def get_last_krl(self):
+        """
+        Generates or returns a KRL file
+        """
+        from os.path import isfile
+
+        pg_conn, message = self.pg_connection()
+        if pg_conn is None:
+            return response_render(message, http_code='503 Service Unavailable')
+        cur = pg_conn.cursor()
+        cur.execute('SELECT MAX(REVOCATION_DATE) FROM REVOCATION')
+        last_timestamp = cur.fetchone()
+        if not last_timestamp[0]:
+            return response_render(
+                open(self.server_opts['krl'], 'rb'),
+                content_type='application/octet-stream')
+
+        last_krl = '%s.%s' % (self.server_opts['krl'], last_timestamp[0])
+
+        # Check if the KRL is up-to-date
+        if not isfile(last_krl):
+            ca_ssh = Authority(self.server_opts['ca'], last_krl)
+            ca_ssh.generate_empty_krl()
+
+            cur.execute('SELECT SSH_KEY FROM REVOCATION')
+            pubkeys = cur.fetchall()
+
+            if not pubkeys or not pubkeys[0]:
+                cur.close()
+                pg_conn.close()
+                return response_render(
+                    open(self.server_opts['krl'], 'rb'),
+                    content_type='application/octet-stream')
+
+            for pubkey in pubkeys:
+                tmp_pubkey = NamedTemporaryFile(delete=False)
+                tmp_pubkey.write(bytes(pubkey[0], 'utf-8'))
+                tmp_pubkey.close()
+                ca_ssh.update_krl(tmp_pubkey.name)
+            remove(tmp_pubkey.name)
+
+            copyfile(last_krl, self.server_opts['krl'])
+
+        # Clean old files
+        old_files = glob('%s*' % self.server_opts['krl'])
+        old_files.remove(self.server_opts['krl'])
+        old_files.remove(last_krl)
+        for old_file in old_files:
+            remove(old_file)
+
+        cur.close()
+        pg_conn.close()
+
+        return response_render(
+            open(self.server_opts['krl'], 'rb'),
+            content_type='application/octet-stream')
 
     def list_keys(self, username=None, realname=None):
         """

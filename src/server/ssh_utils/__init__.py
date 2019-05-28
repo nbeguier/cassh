@@ -50,6 +50,15 @@ class Authority(object):
             public_key_filename])
         return get_cert_contents(public_key_filename)
 
+    def generate_empty_krl(self):
+        """
+        Generates an empty KRL file.
+        """
+        check_output([
+            'ssh-keygen',
+            '-k',
+            '-f', self.krl])
+
     def update_krl(self, public_key_filename):
         """
         Update KRL by revoking key.

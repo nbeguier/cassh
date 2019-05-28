@@ -12,6 +12,8 @@ echo -e 'y\n' | ssh-keygen -t ecdsa -b 521 -f "${KEY_2_EXAMPLE}" -q -N "" >/dev/
 PUB_KEY_1_EXAMPLE=$(cat "${KEY_1_EXAMPLE}".pub)
 PUB_KEY_2_EXAMPLE=$(cat "${KEY_2_EXAMPLE}".pub)
 
+USER1=$(pwgen -A -0 10)
+USER2=$(pwgen -A -0 10)
 
 RESP=$(curl -s "${CASSH_SERVER_URL}"/ping)
 if [ "${RESP}" == 'pong' ]; then
@@ -34,34 +36,6 @@ else
     echo "[FAIL] Test status unknown user : ${RESP}"
 fi
 
-RESP=$(curl -s -X GET "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == 'Error: DEPRECATED option. Update your CASSH >= 1.5.0' ]; then
-    echo "[OK] Test deprecated status URL without username"
-else
-    echo "[FAIL] Test deprecated status URL without username: ${RESP}"
-fi
-
-RESP=$(curl -s -X GET "${CASSH_SERVER_URL}"/admin/testuser)
-if [ "${RESP}" == "Error: DEPRECATED option. Update your CASSH >= 1.5.0" ]; then
-    echo "[OK] Test deprecated admin status URL without username"
-else
-    echo "[FAIL] Test deprecated status URL without username: ${RESP}"
-fi
-
-RESP=$(curl -s -X GET -d 'username=test_user' "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == 'Error: DEPRECATED option. Update your CASSH >= 1.5.0' ]; then
-    echo "[OK] Test deprecated status URL with username"
-else
-    echo "[FAIL] Test deprecated status URL with username: ${RESP}"
-fi
-
-RESP=$(curl -s -X GET -d 'username=test_user' "${CASSH_SERVER_URL}"/admin/testuser)
-if [ "${RESP}" == "Error: DEPRECATED option. Update your CASSH >= 1.5.0" ]; then
-    echo "[OK] Test deprecated status URL with username"
-else
-    echo "[FAIL] Test deprecated status URL with username: ${RESP}"
-fi
-
 RESP=$(curl -s -X PUT "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Error: No username option given.' ]; then
     echo "[OK] Test add user without username"
@@ -76,36 +50,36 @@ else
     echo "[FAIL] Test add user with bad username : ${RESP}"
 fi
 
-RESP=$(curl -s -X PUT -d 'username=testuser' "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X PUT -d "username=${USER2}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Error: No realname option given.' ]; then
     echo "[OK] Test add user without realname"
 else
     echo "[FAIL] Test add user without realname : ${RESP}"
 fi
 
-RESP=$(curl -s -X PUT -d 'username=testuser&realname=test.user@domain.fr' "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X PUT -d "username=${USER2}&realname=test.user@domain.fr" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Error: No pubkey given.' ]; then
     echo "[OK] Test add user with no pubkey"
 else
     echo "[FAIL] Test add user with no pubkey : ${RESP}"
 fi
 
-RESP=$(curl -s -X PUT -d "username=testuser&realname=test.user@domain.fr&pubkey=toto" "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X PUT -d "username=${USER2}&realname=test.user@domain.fr&pubkey=bad_pubkey" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Error : Public key unprocessable' ]; then
     echo "[OK] Test add user with bad pubkey"
 else
     echo "[FAIL] Test add user with bad pubkey : ${RESP}"
 fi
 
-RESP=$(curl -s -X PUT -d "username=testuser&realname=(select%20extractvalue(g%3b]%3e')%2c'%2fl')%20from%20dual)&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X PUT -d "username=${USER2}&realname=(select%20extractvalue(g%3b]%3e')%2c'%2fl')%20from%20dual)&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == "Error: Realname doesn't match pattern" ]; then
     echo "[OK] Test add user with bad realname"
 else
     echo "[FAIL] Test add user with bad realname : ${RESP}"
 fi
 
-RESP=$(curl -s -X PUT -d "username=testuser&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == 'Create user=testuser. Pending request.' ]; then
+RESP=$(curl -s -X PUT -d "username=${USER2}&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+if [ "${RESP}" == "Create user=${USER2}. Pending request." ]; then
     echo "[OK] Test add user"
 else
     echo "[FAIL] Test add user : ${RESP}"
@@ -125,21 +99,21 @@ else
     echo "[FAIL] Test status pending user : ${RESP}"
 fi
 
-RESP=$(curl -s -X PUT -d "username=toto&realname=test.user@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == 'Create user=toto. Pending request.' ]; then
+RESP=$(curl -s -X PUT -d "username=${USER1}&realname=test.user@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+if [ "${RESP}" == "Create user=${USER1}. Pending request." ]; then
     echo "[OK] Test add user with same realname (which is possible)"
 else
     echo "[FAIL] Test add user with same realname (which is possible): ${RESP}"
 fi
 
-RESP=$(curl -s -X PUT -d "username=toto&realname=test.user@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == 'Update user=toto. Pending request.' ]; then
+RESP=$(curl -s -X PUT -d "username=${USER1}&realname=test.user@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+if [ "${RESP}" == "Update user=${USER1}. Pending request." ]; then
     echo "[OK] Test updating user"
 else
     echo "[FAIL] Test updating user: ${RESP}"
 fi
 
-RESP=$(curl -s -X PUT -d "username=testuser&realname=toto123@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X PUT -d "username=${USER2}&realname=${USER2}@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Error : (username, realname) couple mismatch.' ]; then
     echo "[OK] Test add user with same username (should fail)"
 else
@@ -153,98 +127,98 @@ else
     echo "[FAIL] Test signing key without username: ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d 'username=testuser' "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X POST -d "username=${USER2}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Error: No realname option given.' ]; then
     echo "[OK] Test signing key without realname"
 else
     echo "[FAIL] Test signing key without realname: ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d 'username=testuser&realname=test.user@domain.fr' "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X POST -d "username=${USER2}&realname=test.user@domain.fr" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Error: No pubkey given.' ]; then
     echo "[OK] Test signing key with no pubkey"
 else
     echo "[FAIL] Test signing key with no pubkey : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d 'username=testuser&realname=test.user@domain.fr&pubkey=toto' "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X POST -d "username=${USER2}&realname=test.user@domain.fr&pubkey=bad_pubkey" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Error : Public key unprocessable' ]; then
     echo "[OK] Test signing key with bad pubkey"
 else
     echo "[FAIL] Test signing key with bad pubkey : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d "username=testuser&realname=test.user@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X POST -d "username=${USER2}&realname=test.user@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Error : User or Key absent, add your key again.' ]; then
     echo "[OK] Test signing key when wrong public key"
 else
     echo "[FAIL] Test signing key when wrong public key : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d "username=testuser&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X POST -d "username=${USER2}&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Status: PENDING' ]; then
     echo "[OK] Test signing key when PENDING status"
 else
     echo "[FAIL] Test signing key when PENDING status : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d 'revoke=true' "${CASSH_SERVER_URL}"/admin/toto)
-if [ "${RESP}" == 'Revoke user=toto.' ]; then
-    echo "[OK] Test admin revoke 'toto'"
+RESP=$(curl -s -X POST -d 'revoke=true' "${CASSH_SERVER_URL}"/admin/"${USER1}")
+if [ "${RESP}" == "Revoke user=${USER1}." ]; then
+    echo "[OK] Test admin revoke '${USER1}'"
 else
-    echo "[FAIL] Test admin revoke 'toto' : ${RESP}"
+    echo "[FAIL] Test admin revoke '${USER1}' : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_URL}"/admin/toto | jq .status)
+RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_URL}"/admin/"${USER1}" | jq .status)
 if [ "${RESP}" == '"REVOKED"' ]; then
-    echo "[OK] Test admin verify 'toto' status"
+    echo "[OK] Test admin verify '${USER1}' status"
 else
-    echo "[FAIL] Test admin verify 'toto' status : ${RESP}"
+    echo "[FAIL] Test admin verify '${USER1}' status : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d "username=toto&realname=test.user@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X POST -d "username=${USER1}&realname=test.user@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Status: REVOKED' ]; then
     echo "[OK] Test signing key when revoked"
 else
     echo "[FAIL] Test signing key when revoked: ${RESP}"
 fi
 
-RESP=$(curl -s -X DELETE "${CASSH_SERVER_URL}"/admin/toto)
+RESP=$(curl -s -X DELETE "${CASSH_SERVER_URL}"/admin/"${USER1}")
 if [ "${RESP}" == 'OK' ]; then
-    echo "[OK] Test delete 'toto'"
+    echo "[OK] Test delete '${USER1}'"
 else
-    echo "[FAIL] Test delete 'toto': ${RESP}"
+    echo "[FAIL] Test delete '${USER1}': ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/toto)
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER1}")
 if [ "${RESP}" == "User does not exists." ]; then
     echo "[OK] Test admin active unknown user"
 else
     echo "[FAIL] Test admin active unknown user : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_URL}"/admin/testuser | jq .status)
+RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_URL}"/admin/"${USER2}" | jq .status)
 if [ "${RESP}" == '"PENDING"' ]; then
-    echo "[OK] Test admin verify 'testuser' status"
+    echo "[OK] Test admin verify '${USER2}' status"
 else
-    echo "[FAIL] Test admin verify 'testuser' status : ${RESP}"
+    echo "[FAIL] Test admin verify '${USER2}' status : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/testuser)
-if [ "${RESP}" == "Active user=testuser. SSH Key active but need to be signed." ]; then
-    echo "[OK] Test admin active testuser"
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}")
+if [ "${RESP}" == "Active user=${USER2}. SSH Key active but need to be signed." ]; then
+    echo "[OK] Test admin active ${USER2}"
 else
-    echo "[FAIL] Test admin active testuser : ${RESP}"
+    echo "[FAIL] Test admin active ${USER2} : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/testuser)
-if [ "${RESP}" == "user=testuser already active. Nothing done." ]; then
-    echo "[OK] Test admin re-active testuser"
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}")
+if [ "${RESP}" == "user=${USER2} already active. Nothing done." ]; then
+    echo "[OK] Test admin re-active ${USER2}"
 else
-    echo "[FAIL] Test admin re-active testuser : ${RESP}"
+    echo "[FAIL] Test admin re-active ${USER2} : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d "username=testuser&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X POST -d "username=${USER2}&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
 echo "${RESP}" > /tmp/test-cert
 if ssh-keygen -L -f /tmp/test-cert >/dev/null 2>&1; then
     echo "[OK] Test signing key"
@@ -253,25 +227,11 @@ else
 fi
 rm -f /tmp/test-cert
 
-RESP=$(curl -s -X DELETE "${CASSH_SERVER_URL}"/admin/testuser)
+RESP=$(curl -s -X DELETE "${CASSH_SERVER_URL}"/admin/"${USER2}")
 if [ "${RESP}" == 'OK' ]; then
-    echo "[OK] Test delete 'testuser'"
+    echo "[OK] Test delete '${USER2}'"
 else
-    echo "[FAIL] Test delete 'testuser': ${RESP}"
-fi
-
-
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/cluster/updatekrl)
-if [ "${RESP}" == "Unauthorized" ]; then
-    echo "[OK] Test updatekrl without parameters"
-else
-    echo "[FAIL] Test updatekrl without parameters : ${RESP}"
-fi
-RESP=$(curl -s -X POST -d "clustersecret=bad" "${CASSH_SERVER_URL}"/cluster/updatekrl)
-if [ "${RESP}" == "Unauthorized" ]; then
-    echo "[OK] Test updatekrl with a bad clustersecret"
-else
-    echo "[FAIL] Test updatekrl with a bad clustersecret : ${RESP}"
+    echo "[FAIL] Test delete '${USER2}': ${RESP}"
 fi
 
 RESP=$(curl -s -X GET "${CASSH_SERVER_URL}"/cluster/status)
