@@ -60,7 +60,7 @@ load helpers
 
 @test "CLIENT: Add user with bad username" {
     RESP=$(curl -s -X PUT -d 'username=test_user' ${CASSH_URL}/client)
-    [ "${RESP}" == "Error: Username test_user doesn't match pattern ^([a-z]+)$" ]
+    [ "${RESP}" == "Error: Username doesn't match pattern ^([a-z]+)$" ]
 }
 
 @test "CLIENT: Add user without realname" {
@@ -85,7 +85,7 @@ load helpers
 
 @test "CLIENT: Add user named 'all' (should fail)" {
     RESP=$(curl -s -X PUT -d "username=all&realname=test.user@domain.fr&pubkey=${PUB_KEY_EXAMPLE}" ${CASSH_URL}/client)
-    [ "${RESP}" == "Error: Username all doesn't match pattern ^([a-z]+)$" ]
+    [ "${RESP}" == "Error: Username doesn't match pattern ^([a-z]+)$" ]
 }
 
 @test "CLIENT: Add user with same username (should fail)" {
@@ -172,7 +172,7 @@ load helpers
 
 @test "ADMIN: Active unknown user" {
     RESP=$(curl -s -X POST ${CASSH_URL}/admin/toto)
-    [ "${RESP}" == "User 'toto' does not exists." ]
+    [ "${RESP}" == "User does not exists." ]
 }
 
 
