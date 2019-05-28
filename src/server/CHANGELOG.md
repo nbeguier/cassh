@@ -4,6 +4,25 @@ CHANGELOG
 CASSH Server
 -----
 
+1.9.0
+-----
+
+2019/05/28
+
+### New Features
+  - Generates KRL files by using a database
+
+### Changes
+  - /cluster/updatekrl is removed
+  - Admin/GET and are removed (it was deprecated)
+  - Tests are using random usernames
+
+### Bug Fixes
+
+### Other
+  - Add function 'get_pubkey' from database, 'timestamp' and 'get_last_krl'
+  - Remove function 'cluster_last_krl', 'cluster_update_krl'
+
 1.8.1
 -----
 

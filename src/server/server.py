@@ -17,8 +17,8 @@ from web import application, config, data, httpserver
 from web.wsgiserver import CherryPyWSGIServer
 
 # Own library
-from ssh_utils import Authority, get_fingerprint
-from tools import get_principals, random_string, response_render, unquote_custom, Tools
+from ssh_utils import get_fingerprint
+from tools import get_principals, get_pubkey, random_string, response_render, timestamp, unquote_custom, Tools
 
 # DEBUG
 # from pdb import set_trace as st
@@ -34,7 +34,6 @@ URLS = (
     '/ca', 'Ca',
     '/client', 'Client',
     '/client/status', 'ClientStatus',
-    '/cluster/updatekrl', 'ClusterUpdateKRL',
     '/cluster/status', 'ClusterStatus',
     '/health', 'Health',
     '/krl', 'Krl',
@@ -42,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.8.1'
+VERSION = '1.9.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -173,15 +172,6 @@ class Admin():
     """
     Class admin to action or revoke keys.
     """
-    def GET(self, username='DEPRECATED'):
-        """
-        DEPRECATED Status
-        """
-        del username
-        return response_render(
-            'Error: DEPRECATED option. Update your CASSH >= 1.5.0',
-            http_code='299 Deprecated')
-
     def POST(self, username):
         """
         Revoke or Active keys.
@@ -226,8 +216,12 @@ class Admin():
         elif do_revoke:
             cur.execute('UPDATE USERS SET STATE=1 WHERE NAME=(%s)', (username,))
             pg_conn.commit()
+            pubkey = get_pubkey(username, pg_conn)
+            cur.execute('INSERT INTO REVOCATION VALUES \
+                ((%s), (%s), (%s))', \
+                (pubkey, timestamp(), username))
+            pg_conn.commit()
             message = 'Revoke user=%s.' % username
-            TOOLS.cluster_update_krl(username)
             cur.close()
             pg_conn.close()
         # Display status
@@ -369,15 +363,6 @@ class Client():
     """
     Client main class.
     """
-    def GET(self, username='DEPRECATED'):
-        """
-        DEPRECATED Status
-        """
-        del username
-        return response_render(
-            'Error: DEPRECATED option. Update your CASSH >= 1.5.0',
-            http_code='299 Deprecated')
-
     def POST(self):
         """
         Ask to sign pub key.
@@ -600,57 +585,6 @@ class Client():
             return response_render('Update user=%s. Pending request.' % username)
 
 
-class ClusterUpdateKRL():
-    """
-    ClusterUpdateKRL main class.
-    """
-    def POST(self):
-        """
-        /cluster/updatekrl
-        If a username is present => Revoke this user
-        Else                     => Update the KRL
-        """
-        payload = data2map()
-
-        # Check clustersecret
-        if 'clustersecret' in payload:
-            if payload['clustersecret'] != SERVER_OPTS['clustersecret']:
-                return response_render(
-                    'Unauthorized',
-                    http_code='401 Unauthorized')
-        else:
-            return response_render(
-                'Unauthorized',
-                http_code='401 Unauthorized')
-
-        # Get username
-        if 'username' in payload:
-            username = payload['username']
-        else:
-            # It means I need to update my krl to the latest version
-            TOOLS.cluster_last_krl()
-            return response_render('Update Complete')
-
-        pg_conn, message = TOOLS.pg_connection()
-        if pg_conn is None:
-            return response_render(message, http_code='503 Service Unavailable')
-        cur = pg_conn.cursor()
-
-        message = 'Revoke user=%s.' % username
-        # Load SSH CA and revoke key
-        ca_ssh = Authority(SERVER_OPTS['ca'], SERVER_OPTS['krl'])
-        cur.execute('SELECT SSH_KEY FROM USERS WHERE NAME=(%s)', (username,))
-        pubkey = cur.fetchone()[0]
-        tmp_pubkey = NamedTemporaryFile(delete=False)
-        tmp_pubkey.write(bytes(pubkey, 'utf-8'))
-        tmp_pubkey.close()
-        ca_ssh.update_krl(tmp_pubkey.name)
-        cur.close()
-        pg_conn.close()
-        remove(tmp_pubkey.name)
-
-        return response_render('Revoke Complete')
-
 class ClusterStatus():
     """
     ClusterStatus main class.
@@ -694,9 +628,7 @@ class Krl():
         """
         Return krl.
         """
-        return response_render(
-            open(SERVER_OPTS['krl'], 'rb'),
-            content_type='application/octet-stream')
+        return TOOLS.get_last_krl()
 
 
 class Ping():
@@ -745,5 +677,4 @@ if __name__ == "__main__":
     config.debug = SERVER_OPTS['debug']
     if SERVER_OPTS['debug']:
         print('Debug mode on')
-    TOOLS.cluster_last_krl()
     APP.run()
