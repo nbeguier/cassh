@@ -6,7 +6,7 @@ Sign a user's SSH public key.
 from argparse import ArgumentParser
 from json import dumps
 from os import remove
-from re import compile as re_compile
+from re import compile as re_compile, IGNORECASE
 from tempfile import NamedTemporaryFile
 from urllib.parse import unquote_plus
 
@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.9.0'
+VERSION = '1.9.1'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -520,7 +520,7 @@ class Client():
         realname_pattern = re_compile(
             r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"
             r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*"'
-            r')@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?$', re.IGNORECASE)
+            r')@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?$', IGNORECASE)
         if realname_pattern.match(realname) is None:
             return response_render(
                 "Error: Realname doesn't match pattern",

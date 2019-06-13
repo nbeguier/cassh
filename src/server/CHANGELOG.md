@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Server
 -----
 
+1.9.1
+-----
+
+2019/06/13
+
+### Bug Fixes
+  - Fix realname regexp
+
+
 1.9.0
 -----
 
