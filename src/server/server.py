@@ -41,7 +41,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.9.1'
+VERSION = '1.9.2'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -282,11 +282,11 @@ class Admin():
                 return response_render('OK: %s=%s for %s' % (key, value, username))
             elif key == 'principals':
                 value = unquote_plus(value)
-                pattern = re_compile("^([a-zA-Z]+)$")
+                pattern = re_compile("^([a-zA-Z-]+)$")
                 for principal in value.split(','):
                     if pattern.match(principal) is None:
                         return response_render(
-                            'ERROR: Value %s is malformed. Should match pattern ^([a-zA-Z]+)$' \
+                            'ERROR: Value %s is malformed. Should match pattern ^([a-zA-Z-]+)$' \
                             % principal,
                             http_code='400 Bad Request')
                 cur.execute('UPDATE USERS SET PRINCIPALS=(%s) WHERE NAME=(%s)', (value, username))

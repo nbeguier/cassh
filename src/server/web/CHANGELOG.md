@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Web Client
 -----
 
+1.1.0
+-----
+
+2019/07/29
+
+### New Features
+  - Upgrade python libraries
+
+
 1.0.1
 -----
 
