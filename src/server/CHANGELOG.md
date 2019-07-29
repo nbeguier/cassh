@@ -4,6 +4,16 @@ CHANGELOG
 CASSH Server
 -----
 
+1.9.2
+-----
+
+2019/07/29
+
+### Minor feature
+  - Allow dash in principals
+  - Add tests for PATCH command (principals & expiry)
+
+
 1.9.1
 -----
 
