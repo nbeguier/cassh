@@ -1,6 +1,6 @@
 # CASSH
 
-[![Build Status](https://travis-ci.org/nbeguier/cassh.svg?branch=master)](https://travis-ci.org/nbeguier/cassh) [![Python 3.2|3.6](https://img.shields.io/badge/python-3.2|3.6-green.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](https://github.com/nbeguier/cassh/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/nbeguier/cassh.svg?branch=master)](https://travis-ci.org/nbeguier/cassh) [![Python 3.2|3.6](https://img.shields.io/badge/python-3.2|3.6-green.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](https://github.com/nbeguier/cassh/blob/master/LICENSE) [![Known Vulnerabilities](https://snyk.io//test/github/nbeguier/cassh/badge.svg?targetFile=src/server/web/requirements.txt)](https://snyk.io//test/github/nbeguier/cassh?targetFile=src/server/web/requirements.txt)
 
 OpenSSH features reach their limit when it comes to industrialization. We don’t want an administrator to sign every user’s public key by hand every day, so we need a service for that. That is exactly the purpose of CASSH: **signing keys**!
 Developped for @leboncoin
