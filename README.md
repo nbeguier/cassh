@@ -1,15 +1,15 @@
 # CASSH
 
-[![Build Status](https://travis-ci.org/nbeguier/cassh.svg?branch=master)](https://travis-ci.org/nbeguier/cassh) [![Python 3.2|3.6](https://img.shields.io/badge/python-3.2|3.6-green.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](https://github.com/nbeguier/cassh/blob/master/LICENSE) [![Known Vulnerabilities](https://snyk.io//test/github/nbeguier/cassh/badge.svg?targetFile=src/server/web/requirements.txt)](https://snyk.io//test/github/nbeguier/cassh?targetFile=src/server/web/requirements.txt)
+[![Build Status](https://travis-ci.org/nbeguier/cassh.svg?branch=master)](https://travis-ci.org/nbeguier/cassh) [![Python 3.2|3.6](https://img.shields.io/badge/python-3.2|3.6-green.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/Licence-Apache%202.0-blue.svg)](https://github.com/nbeguier/cassh/blob/master/LICENSE)
 
 OpenSSH features reach their limit when it comes to industrialization. We don’t want an administrator to sign every user’s public key by hand every day, so we need a service for that. That is exactly the purpose of CASSH: **signing keys**!
 Developped for @leboncoin
 
 https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8e4de7
 
-  - [CLI version : **1.6.2** *(23/05/2019)*](src/client/CHANGELOG.md)
-  - [WebUI version : **1.1.0** *(29/07/2019)*](src/server/web/CHANGELOG.md)
-  - [Server version : **1.9.2** *(29/07/2019)*](src/server/CHANGELOG.md)
+  - [CLI version : **1.6.2** *(23/05/2019)*](src/client/CHANGELOG.md) [![Known Vulnerabilities](https://snyk.io//test/github/nbeguier/cassh/badge.svg?targetFile=src/client/requirements.txt)](https://snyk.io//test/github/nbeguier/cassh?targetFile=src/client/requirements.txt)
+  - [WebUI version : **1.1.0** *(29/07/2019)*](src/server/web/CHANGELOG.md) [![Known Vulnerabilities](https://snyk.io//test/github/nbeguier/cassh/badge.svg?targetFile=src/server/web/requirements.txt)](https://snyk.io//test/github/nbeguier/cassh?targetFile=src/server/web/requirements.txt)
+  - [Server version : **1.9.2** *(29/07/2019)*](src/server/CHANGELOG.md) [![Known Vulnerabilities](https://snyk.io//test/github/nbeguier/cassh/badge.svg?targetFile=src/server/requirements.txt)](https://snyk.io//test/github/nbeguier/cassh?targetFile=src/server/requirements.txt)
 
 ## Usage
 
