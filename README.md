@@ -109,6 +109,11 @@ ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without
 ssh-keygen -k -f test-keys/revoked-keys
 ```
 
+### Test script
+```bash
+# install utilities needed by tests/test.sh
+sudo apt-get install pwgen jq
+```
 Configuration file example :
 ```ini
 [main]
