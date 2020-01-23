@@ -1,5 +1,12 @@
 #!/usr/bin/env python
-""" ssh_utils lib """
+"""
+ssh_utils lib
+
+Copyright 2017 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
+
+"""
 
 from os import remove
 from subprocess import check_output, CalledProcessError
