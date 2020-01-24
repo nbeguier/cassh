@@ -7,5 +7,5 @@ SSL_PUB_KEY = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
 SSL_PRIV_KEY = '/etc/ssl/private/ssl-cert-snakeoil.key'
 ENCRYPTION_KEY = 'bSFEf9YNd1mXg5S5ko9NebHapQANJqFo'
 LOGIN_BANNER = 'Login LDAP/AD'
-VERSION = '1.1.0'
+VERSION = '1.1.1'
 DEBUG = False

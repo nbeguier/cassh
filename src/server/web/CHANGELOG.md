@@ -4,6 +4,16 @@ CHANGELOG
 CASSH Web Client
 -----
 
+1.1.1
+-----
+
+2020/01/24
+
+### Fix
+  - Untrack settings.txt
+  - Remove unused werkzeug
+
+
 1.1.0
 -----
 

@@ -23,7 +23,6 @@ from flask import Flask, render_template, request, Response, redirect, send_from
 from requests import post, put
 from requests.exceptions import ConnectionError
 from urllib3 import disable_warnings
-from werkzeug import secure_filename
 
 # Disable HTTPs warnings
 disable_warnings()

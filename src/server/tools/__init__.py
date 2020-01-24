@@ -1,5 +1,12 @@
 #!/usr/bin/env python
-""" tools lib """
+"""
+tools lib
+
+Copyright 2017 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
+
+"""
 
 from datetime import datetime, timedelta
 from glob import glob
