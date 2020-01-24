@@ -18,7 +18,7 @@ from json import dumps, loads
 from os import chmod, getenv
 from os.path import isfile
 from shutil import copyfile
-from sys import argv
+from sys import argv, exit
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError, NoSectionError
@@ -28,7 +28,7 @@ from requests.exceptions import ConnectionError
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.6.2'
+VERSION = '%(prog)s 1.6.3'
 
 def print_result(result):
     """ Display result """
