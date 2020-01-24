@@ -158,6 +158,9 @@ public_key = /etc/cassh/ssl/cert.pem
 ### Server : Client web user interface
 ```bash
 pip3 insall -r src/server/web/requirements.txt
+
+cp src/server/web/settings.txt.sample src/server/web/settings.txt
+
 python3 src/server/web/cassh_web.py
 ```
 

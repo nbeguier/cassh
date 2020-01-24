@@ -4,6 +4,16 @@ CHANGELOG
 CASSH Client
 -----
 
+1.6.3
+-----
+
+2020/01/24
+
+### Clean
+
+  - Use sys.exit instead of builtin exit
+
+
 1.6.2
 -----
 
