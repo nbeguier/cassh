@@ -1,6 +1,13 @@
 #!/usr/bin/python3
 #-*- coding: utf-8 -*-
-""" Cassh WEB Client """
+"""
+Cassh WEB Client
+
+Copyright 2017 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
+
+"""
 
 # Standard library imports
 from __future__ import print_function
