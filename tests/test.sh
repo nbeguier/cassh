@@ -29,7 +29,7 @@ else
     echo "[FAIL] Test health"
 fi
 
-RESP=$(curl -s -X POST -d 'realname=test.user@domain.fr' "${CASSH_SERVER_URL}"/client/status)
+RESP=$(curl -s -X POST -d "realname=test.${USER1}@domain.fr" "${CASSH_SERVER_URL}"/client/status)
 if [ "${RESP}" == 'None' ]; then
     echo "[OK] Test status unknown user"
 else
@@ -44,7 +44,7 @@ else
 fi
 
 RESP=$(curl -s -X PUT -d 'username=test_user' "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == "Error: Username doesn't match pattern ^([a-z]+)$" ]; then
+if [ "${RESP}" == "Error: username doesn't match pattern ^([a-z]+)$" ]; then
     echo "[OK] Test add user with bad username"
 else
     echo "[FAIL] Test add user with bad username : ${RESP}"
@@ -72,7 +72,7 @@ else
 fi
 
 RESP=$(curl -s -X PUT -d "username=${USER2}&realname=(select%20extractvalue(g%3b]%3e')%2c'%2fl')%20from%20dual)&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == "Error: Realname doesn't match pattern" ]; then
+if [ "${RESP}" == "Error: realname doesn't match pattern" ]; then
     echo "[OK] Test add user with bad realname"
 else
     echo "[FAIL] Test add user with bad realname : ${RESP}"
@@ -86,7 +86,7 @@ else
 fi
 
 RESP=$(curl -s -X PUT -d "username=all&realname=test.user@domain.fr&pubkey=${PUB_KEY_1_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == "Error: Username doesn't match pattern ^([a-z]+)$" ]; then
+if [ "${RESP}" == "Error: username doesn't match pattern ^([a-z]+)$" ]; then
     echo "[OK] Test add user named 'all' (should fail)"
 else
     echo "[FAIL] Test add user named 'all' (should fail): ${RESP}"
@@ -218,25 +218,118 @@ else
     echo "[FAIL] Test admin re-active ${USER2} : ${RESP}"
 fi
 
+# DEPREACTED WAY TO ADD PRINCIPALS
 RESP=$(curl -s -X PATCH "${CASSH_SERVER_URL}"/admin/"${USER2}" -d "principals=${USER2},test")
-if [ "${RESP}" == "OK: principals=${USER2},test for ${USER2}" ]; then
-    echo "[OK] Test add principal 'test' to ${USER2}"
+if [[ "${RESP}" == *"OK: principals=${USER2},test for ${USER2}"* ]]; then
+    echo "[OK][DEPRECATED] Test add principal 'test' to ${USER2}"
 else
-    echo "[FAIL] Test add principal 'test' to ${USER2} : ${RESP}"
+    echo "[FAIL][DEPRECATED] Test add principal 'test' to ${USER2} : ${RESP}"
 fi
 
 RESP=$(curl -s -X PATCH "${CASSH_SERVER_URL}"/admin/"${USER2}" -d "principals=${USER2},test-with-dash")
-if [ "${RESP}" == "OK: principals=${USER2},test-with-dash for ${USER2}" ]; then
-    echo "[OK] Test add principal 'test-with-dash' to ${USER2}"
+if [[ "${RESP}" == *"OK: principals=${USER2},test-with-dash for ${USER2}"* ]]; then
+    echo "[OK][DEPRECATED] Test add principal 'test-with-dash' to ${USER2}"
 else
-    echo "[FAIL] Test add principal 'test-with-dash' to ${USER2} : ${RESP}"
+    echo "[FAIL][DEPRECATED] Test add principal 'test-with-dash' to ${USER2} : ${RESP}"
 fi
 
 RESP=$(curl -s -X PATCH "${CASSH_SERVER_URL}"/admin/"${USER2}" -d "principals=${USER2},b@dt€xt")
-if [ "${RESP}" == 'ERROR: Value b@dt€xt is malformed. Should match pattern ^([a-zA-Z-]+)$' ]; then
-    echo "[OK] Test add wrong principal 'b@dt€xt' to ${USER2}"
+if [[ "${RESP}" == *"Error: principal doesn't match pattern ^([a-zA-Z-]+)$"* ]]; then
+    echo "[OK][DEPRECATED] Test add wrong principal 'b@dt€xt' to ${USER2}"
 else
-    echo "[FAIL] Test add wrong principal 'b@dt€xt' to ${USER2} : ${RESP}"
+    echo "[FAIL][DEPRECATED] Test add wrong principal 'b@dt€xt' to ${USER2} : ${RESP}"
+fi
+
+# NEW WAY TO ADD PRINCIPALS
+RESP=$(curl -s -X GET "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals)
+if [ "${RESP}" == "OK: ${USER2} principals are ('${USER2},test-with-dash',)" ]; then
+    echo "[OK] Test get ${USER2} principals"
+else
+    echo "[FAIL] Test get ${USER2} principals : ${RESP}"
+fi
+
+RESP=$(curl -s -X GET "${CASSH_SERVER_URL}"/admin/b@dt€xt/principals)
+if [ "${RESP}" == "Malformed Request-URI" ]; then
+    echo "[OK] Test bad pattern 'username' user principals"
+else
+    echo "[FAIL] Test bad pattern 'username' user principals : ${RESP}"
+fi
+
+RESP=$(curl -s -X GET "${CASSH_SERVER_URL}"/admin/unknown/principals)
+if [ "${RESP}" == "ERROR: unknown doesn't exist or doesn't have principals..." ]; then
+    echo "[OK] Test get unknown user principals"
+else
+    echo "[FAIL] Test get unknown user principals : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/unknown/principals -d "add=test-single")
+if [ "${RESP}" == "ERROR: unknown doesn't exist" ]; then
+    echo "[OK] Test add principal 'test-single' to unknown user"
+else
+    echo "[FAIL] Test add principal 'test-single' to unknown user : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "add=test-single")
+if [ "${RESP}" == "OK: ${USER2} principals are '${USER2},test-with-dash,test-single'" ]; then
+    echo "[OK] Test add principal 'test-single' to ${USER2}"
+else
+    echo "[FAIL] Test add principal 'test-single' to ${USER2} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "remove=test-single")
+if [ "${RESP}" == "OK: ${USER2} principals are '${USER2},test-with-dash'" ]; then
+    echo "[OK] Test remove principal 'test,string' to ${USER2}"
+else
+    echo "[FAIL] Test remove principal 'test,string' to ${USER2} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "purge=true")
+if [ "${RESP}" == "OK: ${USER2} principals are ''" ]; then
+    echo "[OK] Test purge principals to ${USER2}"
+else
+    echo "[FAIL] Test purge principals to ${USER2} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "add=${USER2}")
+if [ "${RESP}" == "OK: ${USER2} principals are '${USER2}'" ]; then
+    echo "[OK] Test add principal '${USER2}' to ${USER2}"
+else
+    echo "[FAIL] Test add principal '${USER2}' to ${USER2} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "add=test-multiple-a,test-multiple-b")
+if [ "${RESP}" == "OK: ${USER2} principals are '${USER2},test-multiple-a,test-multiple-b'" ]; then
+    echo "[OK] Test add principals 'test-multiple-a,test-multiple-b' to ${USER2}"
+else
+    echo "[FAIL] Test add principals 'test-multiple-a,test-multiple-b' to ${USER2} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "remove=test-multiple-a,b@dt€xt")
+if [ "${RESP}" == "Error: principal doesn't match pattern ^([a-zA-Z-]+)$" ]; then
+    echo "[OK] Test remove principals 'test-multiple-a,b@dt€xt' to ${USER2}"
+else
+    echo "[FAIL] Test remove principals 'test-multiple-a,test-multiple-b' to ${USER2} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "remove=test-multiple-a,test-multiple-b")
+if [ "${RESP}" == "OK: ${USER2} principals are '${USER2}'" ]; then
+    echo "[OK] Test remove principals 'test-multiple-a,test-multiple-b' to ${USER2}"
+else
+    echo "[FAIL] Test remove principals 'test-multiple-a,test-multiple-b' to ${USER2} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "update=test-multiple-c,test-multiple-d")
+if [ "${RESP}" == "OK: ${USER2} principals are 'test-multiple-c,test-multiple-d'" ]; then
+    echo "[OK] Test update principals 'test-multiple-c,test-multiple-d' to ${USER2}"
+else
+    echo "[FAIL] Test update principals 'test-multiple-c,test-multiple-d' to ${USER2} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "unknown=action")
+if [ "${RESP}" == "[ERROR] Unknown action" ]; then
+    echo "[OK] Test unknown action"
+else
+    echo "[FAIL] Test unknown action : ${RESP}"
 fi
 
 RESP=$(curl -s -X PATCH "${CASSH_SERVER_URL}"/admin/"${USER2}" -d "expiry=+3d")
@@ -247,7 +340,7 @@ else
 fi
 
 RESP=$(curl -s -X PATCH "${CASSH_SERVER_URL}"/admin/"${USER2}" -d "expiry=3d")
-if [ "${RESP}" == 'ERROR: Value 3d is malformed. Should match pattern ^\+([0-9]+)+[dh]$' ]; then
+if [ "${RESP}" == "Error: expiry doesn't match pattern ^\+([0-9]+)+[dh]$" ]; then
     echo "[OK] Test set wrong expiry for ${USER2}"
 else
     echo "[FAIL] Test set wrong expiry for ${USER2} : ${RESP}"

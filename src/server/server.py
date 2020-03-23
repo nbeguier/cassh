@@ -35,8 +35,17 @@ STATES = {
     2: 'PENDING',
 }
 
+PATTERN_EXPIRY = re_compile('^\\+([0-9]+)+[dh]$')
+PATTERN_PRINCIPALS = re_compile("^([a-zA-Z-]+)$")
+PATTERN_REALNAME = re_compile(
+    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"
+    r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*"'
+    r')@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?$', IGNORECASE)
+PATTERN_USERNAME = re_compile("^([a-z]+)$")
+
 URLS = (
     '/admin/([a-z]+)', 'Admin',
+    '/admin/([a-z]+)/principals', 'Principals',
     '/ca', 'Ca',
     '/client', 'Client',
     '/client/status', 'ClientStatus',
@@ -47,7 +56,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.10.0'
+VERSION = '1.11.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -275,31 +284,32 @@ class Admin():
 
         for key, value in payload.items():
             if key == 'expiry':
-                pattern = re_compile('^\\+([0-9]+)+[dh]$')
-                if pattern.match(value) is None:
+                if PATTERN_EXPIRY.match(value) is None:
                     return response_render(
-                        'ERROR: Value %s is malformed. Should match pattern ^\\+([0-9]+)+[dh]$' \
-                        % value,
+                        "Error: expiry doesn't match pattern {}".format(PATTERN_EXPIRY.pattern),
                         http_code='400 Bad Request')
                 cur.execute('UPDATE USERS SET EXPIRY=(%s) WHERE NAME=(%s)', (value, username))
                 pg_conn.commit()
                 cur.close()
                 pg_conn.close()
-                return response_render('OK: %s=%s for %s' % (key, value, username))
+                return response_render(
+                    'OK: %s=%s for %s' % (key, value, username))
+            # Deprecated endpoint for principals
             elif key == 'principals':
                 value = unquote_plus(value)
-                pattern = re_compile("^([a-zA-Z-]+)$")
                 for principal in value.split(','):
-                    if pattern.match(principal) is None:
+                    if PATTERN_PRINCIPALS.match(principal) is None:
                         return response_render(
-                            'ERROR: Value %s is malformed. Should match pattern ^([a-zA-Z-]+)$' \
-                            % principal,
+                            'WARNING: This endpoint is deprecated, upgrade your client cassh to 1.7.0\n'+
+                            "Error: principal doesn't match pattern {}".format(PATTERN_PRINCIPALS.pattern),
                             http_code='400 Bad Request')
                 cur.execute('UPDATE USERS SET PRINCIPALS=(%s) WHERE NAME=(%s)', (value, username))
                 pg_conn.commit()
                 cur.close()
                 pg_conn.close()
-                return response_render('OK: %s=%s for %s' % (key, value, username))
+                return response_render(
+                    'WARNING: This endpoint is deprecated, upgrade your client cassh to 1.7.0\n'+
+                    'OK: %s=%s for %s' % (key, value, username))
 
         return response_render('WARNING: No key found...')
 
@@ -403,11 +413,9 @@ class Client():
             return response_render(
                 'Error: No username option given. Update your CASSH >= 1.3.0',
                 http_code='400 Bad Request')
-        username_pattern = re_compile("^([a-z]+)$")
-        if username_pattern.match(username) is None or username == 'all':
+        if PATTERN_USERNAME.match(username) is None or username == 'all':
             return response_render(
-                "Error: Username doesn't match pattern %s" \
-                % username_pattern.pattern,
+                "Error: username doesn't match pattern {}".format(PATTERN_USERNAME.pattern),
                 http_code='400 Bad Request')
 
         # Get realname
@@ -508,11 +516,9 @@ class Client():
                 'Error: No username option given.',
                 http_code='400 Bad Request')
 
-        username_pattern = re_compile("^([a-z]+)$")
-        if username_pattern.match(username) is None or username == 'all':
+        if PATTERN_USERNAME.match(username) is None or username == 'all':
             return response_render(
-                "Error: Username doesn't match pattern %s" \
-                % username_pattern.pattern,
+                "Error: username doesn't match pattern {}".format(PATTERN_USERNAME.pattern),
                 http_code='400 Bad Request')
 
 
@@ -523,13 +529,9 @@ class Client():
                 'Error: No realname option given.',
                 http_code='400 Bad Request')
 
-        realname_pattern = re_compile(
-            r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"
-            r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*"'
-            r')@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?$', IGNORECASE)
-        if realname_pattern.match(realname) is None:
+        if PATTERN_REALNAME.match(realname) is None:
             return response_render(
-                "Error: Realname doesn't match pattern",
+                "Error: realname doesn't match pattern",
                 http_code='400 Bad Request')
 
         # Get public key
@@ -649,6 +651,129 @@ class Ping():
         Return a pong
         """
         return response_render('pong')
+
+
+class Principals():
+    """
+    Class Principals
+    """
+    def GET(self, username):
+        """
+        Get a user principals
+        """
+        # LDAP authentication
+        is_admin_auth, message = ldap_authentification(admin=True)
+        if not is_admin_auth:
+            return response_render(message, http_code='401 Unauthorized')
+
+        if PATTERN_USERNAME.match(username) is None:
+            return response_render(
+                "Error: username doesn't match pattern {}".format(PATTERN_USERNAME.pattern),
+                http_code='400 Bad Request')
+        pg_conn, message = TOOLS.pg_connection()
+        if pg_conn is None:
+            return response_render(message, http_code='503 Service Unavailable')
+        cur = pg_conn.cursor()
+        values = {'username': username}
+        cur.execute("""SELECT PRINCIPALS FROM USERS WHERE NAME=(%(username)s)""", values)
+        principals = cur.fetchone()
+        pg_conn.commit()
+        cur.close()
+        pg_conn.close()
+        if not principals:
+            return response_render("ERROR: {} doesn't exist or doesn't have principals...".format(
+                username), http_code='400 Bad Request')
+        return response_render('OK: {} principals are {}'.format(username, principals))
+
+    def POST(self, username):
+        """
+        Manage user principals
+        """
+        # LDAP authentication
+        is_admin_auth, message = ldap_authentification(admin=True)
+        if not is_admin_auth:
+            return response_render(message, http_code='401 Unauthorized')
+
+        pg_conn, message = TOOLS.pg_connection()
+        if pg_conn is None:
+            return response_render(message, http_code='503 Service Unavailable')
+        cur = pg_conn.cursor()
+
+        payload = data2map()
+
+        if PATTERN_USERNAME.match(username) is None:
+            return response_render(
+                "Error: username doesn't match pattern {}".format(PATTERN_USERNAME.pattern),
+                http_code='400 Bad Request')
+
+        # Search if username exists
+        values = {'username': username}
+        cur.execute(
+            """
+            SELECT NAME,PRINCIPALS FROM USERS WHERE NAME=(%(username)s)
+            """, values)
+        user = cur.fetchone()
+        # If user dont exist
+        if user is None:
+            cur.close()
+            pg_conn.close()
+            return response_render(
+                "ERROR: {} doesn't exist".format(username),
+                http_code='400 Bad Request')
+        values['principals'] = user[1]
+
+        for key, value in payload.items():
+            if key == 'add':
+                for principal in value.split(','):
+                    if PATTERN_PRINCIPALS.match(principal) is None:
+                        return response_render(
+                            "Error: principal doesn't match pattern {}".format(
+                                PATTERN_PRINCIPALS.pattern),
+                            http_code='400 Bad Request')
+                if values['principals']:
+                    values['principals'] += ',' + value
+                else:
+                    values['principals'] = value
+            elif key == 'remove':
+                principals = values['principals'].split(',')
+                for principal in value.split(','):
+                    if PATTERN_PRINCIPALS.match(principal) is None:
+                        return response_render(
+                            "Error: principal doesn't match pattern {}".format(
+                                PATTERN_PRINCIPALS.pattern),
+                            http_code='400 Bad Request')
+                    if principal in principals:
+                        principals.remove(principal)
+                values['principals'] = ','.join(principals)
+            elif key == 'update':
+                for principal in value.split(','):
+                    if PATTERN_PRINCIPALS.match(principal) is None:
+                        return response_render(
+                            "Error: principal doesn't match pattern {}".format(
+                                PATTERN_PRINCIPALS.pattern),
+                            http_code='400 Bad Request')
+                values['principals'] = value
+            elif key == 'purge':
+                for principal in value.split(','):
+                    if PATTERN_PRINCIPALS.match(principal) is None:
+                        return response_render(
+                            "Error: principal doesn't match pattern {}".format(
+                                PATTERN_PRINCIPALS.pattern),
+                            http_code='400 Bad Request')
+                values['principals'] = ''
+            else:
+                return response_render(
+                    '[ERROR] Unknown action',
+                    http_code='400 Bad Request')
+
+            cur.execute(
+                """
+                UPDATE USERS SET PRINCIPALS=(%(principals)s) WHERE NAME=(%(username)s)
+                """, values)
+            pg_conn.commit()
+            cur.close()
+            pg_conn.close()
+            return response_render("OK: {} principals are '{}'".format(username, values['principals']))
 
 
 class TestAuth():
