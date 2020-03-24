@@ -161,6 +161,9 @@ class Tools(object):
         """
         alive_nodes = list()
         dead_nodes = list()
+        if not self.server_opts['cluster'] or \
+            self.server_opts['cluster'] == ['']:
+            return alive_nodes, dead_nodes
         for node in self.server_opts['cluster']:
             req = self.get("%s/ping" % node)
             if req is not None and req.text == 'pong':

@@ -4,6 +4,23 @@ CHANGELOG
 CASSH Server
 -----
 
+1.11.0
+-----
+
+2020/03/24
+
+### New Features
+  - Principals CRUD-like endpoint '/admin/<username>/principals'
+  - Principals Search endpoint '/admin/all/principals/search'
+
+### Changes
+  - Uniformize PATTERN and reponse
+  - Warning message when using `PATCH /admin/<username>` to update principals
+  - Split tests
+
+### Bug Fixes
+  - Empty response when no member in cluster, instead of crash
+
 1.9.2
 -----
 
