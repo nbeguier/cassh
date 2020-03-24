@@ -4,6 +4,20 @@ CHANGELOG
 CASSH Server
 -----
 
+1.12.0
+-----
+
+2020/03/24
+
+
+### Changes
+  - New user starts with its username as principal
+  - Purge set the username as principals, instead of nothing
+
+### Bug Fixes
+  - Unquote action values for Principals and PrincipalsSearch
+  - Allow multiple actions for Principals
+
 1.11.0
 -----
 

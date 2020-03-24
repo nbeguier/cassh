@@ -4,6 +4,20 @@ CHANGELOG
 CASSH Client
 -----
 
+1.7.0
+-----
+
+2020/01/24
+
+### New Features
+
+  - Add --add-principals, --remove-principals, --purge-principals and --update-principals for the admin 'set' action. It's replacing the deprecate 'set' action: `--set='principals=foo,bar`.
+  - Add --principals-filter for the admin 'search' action.
+
+### Changes
+  - Validate username in the admin command
+
+
 1.6.3
 -----
 

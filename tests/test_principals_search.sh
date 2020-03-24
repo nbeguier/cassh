@@ -21,7 +21,7 @@ else
     echo "[FAIL] Test search single principal : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER3}"/principals -d "add=${USER3},test-multiple-${USER2}")
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER3}"/principals -d "add=test-multiple-${USER2}")
 if [ "${RESP}" == "OK: ${USER3} principals are '${USER3},test-multiple-${USER2}'" ]; then
     echo "[OK] Test add principal 'test-multiple-${USER2}' to ${USER3}"
 else
