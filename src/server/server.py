@@ -57,7 +57,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.12.0'
+VERSION = '1.12.1'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -766,6 +766,8 @@ class Principals():
             elif key == 'purge':
                 values['principals'] = username
 
+        # Remove duplicates
+        values['principals'] = ','.join(list(dict.fromkeys(values['principals'].split(','))))
         cur.execute(
             """
             UPDATE USERS SET PRINCIPALS=(%(principals)s) WHERE NAME=(%(username)s)
