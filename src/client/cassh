@@ -17,8 +17,9 @@ from getpass import getpass
 from json import dumps, loads
 from os import chmod, getenv
 from os.path import isfile
+from re import compile as re_compile
 from shutil import copyfile
-from sys import argv, exit
+import sys
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError, NoSectionError
@@ -28,7 +29,9 @@ from requests.exceptions import ConnectionError
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.6.3'
+VERSION = '%(prog)s 1.7.0'
+
+PATTERN_USERNAME = re_compile("^([a-z]+)$")
 
 def print_result(result):
     """ Display result """
@@ -60,7 +63,7 @@ def read_conf(conf_path):
     except NoOptionError as error_msg:
         print('Can\'t read configuration file...')
         print(error_msg)
-        exit(1)
+        sys.exit(1)
 
     if not config.has_option('user', 'timeout'):
         user_metadata['timeout'] = 2
@@ -74,7 +77,7 @@ def read_conf(conf_path):
 
     if user_metadata['key_path'] == user_metadata['key_signed_path']:
         print('You should put a different path for key_path and key_signed_path.')
-        exit(1)
+        sys.exit(1)
 
     try:
         user_metadata['auth'] = 'ldap'
@@ -82,7 +85,7 @@ def read_conf(conf_path):
     except NoOptionError as error_msg:
         print('Can\'t read configuration file...')
         print(error_msg)
-        exit(1)
+        sys.exit(1)
     except NoSectionError:
         user_metadata['auth'] = None
         user_metadata['realname'] = None
@@ -96,9 +99,23 @@ def read_conf(conf_path):
 
     if not isfile(user_metadata['key_path']):
         print('File %s doesn\'t exists' % user_metadata['key_path'])
-        exit(1)
+        sys.exit(1)
 
     return user_metadata
+
+def get_set_value(arguments):
+    """
+    Returns the chosen value of 'set' action
+    """
+    if arguments.add_principals:
+        return 'add', arguments.add_principals
+    if arguments.remove_principals:
+        return 'remove', arguments.remove_principals
+    if arguments.update_principals:
+        return 'update', arguments.update_principals
+    if arguments.purge_principals:
+        return 'purge', arguments.purge_principals
+    return 'deprecated', arguments.set
 
 class CASSH(object):
     """
@@ -135,7 +152,7 @@ class CASSH(object):
                                       verify=self.user_metadata['verify'])
         except ConnectionError:
             print('Connection error : %s' % self.user_metadata['url'])
-            exit(1)
+            sys.exit(1)
         return req
 
     def get(self, uri):
@@ -149,7 +166,7 @@ class CASSH(object):
                                    verify=self.user_metadata['verify'])
         except ConnectionError:
             print('Connection error : %s' % self.user_metadata['url'])
-            exit(1)
+            sys.exit(1)
         return req
 
     def patch(self, uri, data):
@@ -164,7 +181,7 @@ class CASSH(object):
                                      verify=self.user_metadata['verify'])
         except ConnectionError:
             print('Connection error : %s' % self.user_metadata['url'])
-            exit(1)
+            sys.exit(1)
         return req
 
     def post(self, uri, data):
@@ -179,7 +196,7 @@ class CASSH(object):
                                     verify=self.user_metadata['verify'])
         except ConnectionError:
             print('Connection error : %s' % self.user_metadata['url'])
-            exit(1)
+            sys.exit(1)
         return req
 
     def put(self, uri, data):
@@ -194,7 +211,7 @@ class CASSH(object):
                                    verify=self.user_metadata['verify'])
         except ConnectionError:
             print('Connection error : %s' % self.user_metadata['url'])
-            exit(1)
+            sys.exit(1)
         return req
 
     ########################
@@ -215,10 +232,13 @@ class CASSH(object):
             data.update(prefix)
         return data
 
-    def admin(self, username, action, set_value=None):
+    def admin(self, username, action, set_value, search_value):
         """
         Admin CLI
         """
+        if PATTERN_USERNAME.match(username) is None:
+            print('Username not valid')
+            sys.exit(1)
         payload = self.get_data()
         if action == 'revoke':
             payload.update({'revoke': True})
@@ -228,10 +248,17 @@ class CASSH(object):
         elif action == 'delete':
             req = self.delete('/admin/' + username, payload)
         elif action == 'set':
-            set_value_dict = {}
-            set_value_dict[set_value.split('=')[0]] = set_value.split('=')[1]
-            payload.update(set_value_dict)
-            req = self.patch('/admin/' + username, payload)
+            if set_value[0] == 'deprecated':
+                set_value_dict = {}
+                set_value_dict[set_value.split('=')[0]] = set_value.split('=')[1]
+                payload.update(set_value_dict)
+                req = self.patch('/admin/' + username, payload)
+            else:
+                payload.update({set_value[0]: set_value[1]})
+                req = self.post('/admin/' + username + '/principals', payload)
+        elif action == 'search':
+            payload.update({'filter': search_value})
+            req = self.post('/admin/all/principals/search', payload)
         elif action == 'status':
             payload.update({'status': True})
             req = self.post('/admin/' + username, payload)
@@ -250,8 +277,8 @@ class CASSH(object):
             print_result(result)
             return
         else:
-            print('Action should be : revoke, active, delete or status')
-            exit(1)
+            print('Action should be : active, delete, revoke, set, search, status')
+            sys.exit(1)
         print(req.text)
 
     def add(self):
@@ -280,7 +307,7 @@ class CASSH(object):
         req = self.post('/client', payload)
         if not 'ssh-' in req.text and not 'ecdsa-' in req.text:
             print(req.text)
-            exit(1)
+            sys.exit(1)
         if do_write_on_disk:
             key_signed_path = self.user_metadata['key_signed_path']
             copyfile(self.key_path, key_signed_path)
@@ -333,13 +360,25 @@ if __name__ == '__main__':
 
     # ADMIN Arguments
     ADMIN_PARSER = SUBPARSERS.add_parser('admin',\
-        help='Administrator command : active - revoke - delete - status - set keys')
+        help='Administrator command : active, delete, revoke, set, search, status keys')
     ADMIN_PARSER.add_argument('username', action='store',\
         help='Username of client\'s key, if username is \'all\' status return all users')
     ADMIN_PARSER.add_argument('action', action='store',\
-        help='Choice between : active - revoke - delete - status - set')
+        help='Choice between : active, delete, revoke, set, search, status keys')
     ADMIN_PARSER.add_argument('-s', '--set', action='store',\
         help='CAUTION: Set value of a user.')
+    ADMIN_PARSER.add_argument('--add-principals', action='store',\
+        help='Add a list of principals to a user, should be separated by comma without spaces.')
+    ADMIN_PARSER.add_argument('--remove-principals', action='store',\
+        help='Remove a list of principals to a user, should be separated by comma without spaces.')
+    ADMIN_PARSER.add_argument('--purge-principals', action='store_true',\
+        help='Purge all principals to a user.')
+    ADMIN_PARSER.add_argument('--update-principals', action='store',\
+        help='Update all principals to a user by the given principals, \
+        should be separated by comma without spaces.')
+    ADMIN_PARSER.add_argument('--principals-filter', action='store',\
+        help='Look for users by the given principals filter, \
+        should be separated by comma without spaces.')
 
     # ADD Arguments
     ADD_PARSER = SUBPARSERS.add_parser('add', help='Add a key to remote ssh ca server.')
@@ -391,25 +430,32 @@ if __name__ == '__main__':
         print('# realname : this is the LDAP/AD login user')
         print('realname = ursula.ser@domain.fr')
         print('enable = True')
-        exit(1)
+        sys.exit(1)
 
     CLIENT = CASSH(read_conf(CONF_FILE))
 
-    if len(argv) == 1:
+    if len(sys.argv) == 1:
         PARSER.print_help()
-        exit(1)
+        sys.exit(1)
 
-    if argv[1] == 'add':
+    if sys.argv[1] == 'add':
         CLIENT.add()
-    elif argv[1] == 'sign':
+    elif sys.argv[1] == 'sign':
         CLIENT.sign(not ARGS.display_only, force=ARGS.force)
-    elif argv[1] == 'status':
+    elif sys.argv[1] == 'status':
         CLIENT.status()
-    elif argv[1] == 'ca':
+    elif sys.argv[1] == 'ca':
         CLIENT.get_ca()
-    elif argv[1] == 'krl':
+    elif sys.argv[1] == 'krl':
         CLIENT.get_krl()
-    elif argv[1] == 'admin':
-        CLIENT.admin(ARGS.username, ARGS.action, set_value=ARGS.set)
+    elif sys.argv[1] == 'admin':
+        CLIENT.admin(
+            ARGS.username,
+            ARGS.action,
+            get_set_value(ARGS),
+            ARGS.principals_filter)
+    else:
+        PARSER.print_help()
+        sys.exit(1)
 
-    exit(0)
+    sys.exit(0)

@@ -7,9 +7,9 @@ Developped for @leboncoin
 
 https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8e4de7
 
-  - [CLI version : **1.6.3** *(24/01/2020)*](src/client/CHANGELOG.md)
+  - [CLI version : **1.7.0** *(24/03/2020)*](src/client/CHANGELOG.md)
   - [WebUI version : **1.1.1** *(24/01/2020)*](src/server/web/CHANGELOG.md)
-  - [Server version : **1.11.0** *(23/03/2020)*](src/server/CHANGELOG.md)
+  - [Server version : **1.12.0** *(24/03/2020)*](src/server/CHANGELOG.md)
 
 ## Usage
 
@@ -42,6 +42,39 @@ cassh krl
 
 ### Admin CLI
 
+```
+usage: cassh admin [-h] [-s SET] [--add-principals ADD_PRINCIPALS]
+                   [--remove-principals REMOVE_PRINCIPALS]
+                   [--purge-principals]
+                   [--update-principals UPDATE_PRINCIPALS]
+                   [--principals-filter PRINCIPALS_FILTER]
+                   username action
+
+positional arguments:
+  username              Username of client's key, if username is 'all' status
+                        return all users
+  action                Choice between : active, delete, revoke, set, search,
+                        status keys
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s SET, --set SET     CAUTION: Set value of a user.
+  --add-principals ADD_PRINCIPALS
+                        Add a list of principals to a user, should be
+                        separated by comma without spaces.
+  --remove-principals REMOVE_PRINCIPALS
+                        Remove a list of principals to a user, should be
+                        separated by comma without spaces.
+  --purge-principals    Purge all principals to a user.
+  --update-principals UPDATE_PRINCIPALS
+                        Update all principals to a user by the given
+                        principals, should be separated by comma without
+                        spaces.
+  --principals-filter PRINCIPALS_FILTER
+                        Look for users by the given principals filter, should
+                        be separated by comma without spaces.
+```
+
 Active Client **username** key :
 ```
 cassh admin <username> active
@@ -64,8 +97,25 @@ cassh admin <username> status
 
 Set Client **username** key :
 ```
+# Set exipry to 7 days
 cassh admin <username> set --set='expiry=+7d'
-cassh admin <username> set --set='principals=username,root'
+
+# Add principals to existing ones
+cassh admin <username> set --add-principals foo,bar
+
+# Remove principals from existing ones
+cassh admin <username> set --remove-principals foo,bar
+
+# Update principals and erease existsing ones
+cassh admin <username> set --update-principals foo,bar
+
+# Purge principals
+cassh admin <username> set --purge-principals
+```
+
+Search **Principals** among clients :
+```
+cassh admin all search --principals-filter foo,bar
 ```
 
 ### Configuration file

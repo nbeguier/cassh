@@ -57,7 +57,7 @@ URLS = (
     '/test_auth', 'TestAuth',
 )
 
-VERSION = '1.11.0'
+VERSION = '1.12.0'
 
 PARSER = ArgumentParser()
 PARSER.add_argument('-c', '--config', action='store', help='Configuration file')
@@ -567,7 +567,7 @@ class Client():
         if user is None:
             cur.execute('INSERT INTO USERS VALUES \
                 ((%s), (%s), (%s), (%s), (%s), (%s), (%s), (%s))', \
-                (username, realname, 2, 0, pubkey_fingerprint, pubkey, '+12h', ''))
+                (username, realname, 2, 0, pubkey_fingerprint, pubkey, '+12h', username))
             pg_conn.commit()
             cur.close()
             pg_conn.close()
@@ -702,6 +702,14 @@ class Principals():
 
         payload = data2map()
 
+        if 'add' not in payload and \
+            'remove' not in payload and \
+            'update' not in payload and \
+            'purge' not in payload:
+            return response_render(
+                '[ERROR] Unknown action',
+                http_code='400 Bad Request')
+
         if PATTERN_USERNAME.match(username) is None:
             return response_render(
                 "Error: username doesn't match pattern {}".format(PATTERN_USERNAME.pattern),
@@ -724,6 +732,7 @@ class Principals():
         values['principals'] = user[1]
 
         for key, value in payload.items():
+            value = unquote_plus(value)
             if key == 'add':
                 for principal in value.split(','):
                     if PATTERN_PRINCIPALS.match(principal) is None:
@@ -755,20 +764,16 @@ class Principals():
                             http_code='400 Bad Request')
                 values['principals'] = value
             elif key == 'purge':
-                values['principals'] = ''
-            else:
-                return response_render(
-                    '[ERROR] Unknown action',
-                    http_code='400 Bad Request')
+                values['principals'] = username
 
-            cur.execute(
-                """
-                UPDATE USERS SET PRINCIPALS=(%(principals)s) WHERE NAME=(%(username)s)
-                """, values)
-            pg_conn.commit()
-            cur.close()
-            pg_conn.close()
-            return response_render("OK: {} principals are '{}'".format(username, values['principals']))
+        cur.execute(
+            """
+            UPDATE USERS SET PRINCIPALS=(%(principals)s) WHERE NAME=(%(username)s)
+            """, values)
+        pg_conn.commit()
+        cur.close()
+        pg_conn.close()
+        return response_render("OK: {} principals are '{}'".format(username, values['principals']))
 
 
 class PrincipalsSearch():
@@ -791,6 +796,11 @@ class PrincipalsSearch():
 
         payload = data2map()
 
+        if 'filter' not in payload:
+            return response_render(
+                '[ERROR] Unknown action',
+                http_code='400 Bad Request')
+
         cur.execute(
             """
             SELECT NAME,PRINCIPALS FROM USERS
@@ -803,10 +813,12 @@ class PrincipalsSearch():
         result = dict()
 
         for key, value in payload.items():
+            value = unquote_plus(value)
             if key == 'filter':
                 if value == '':
                     for name, principals in all_principals:
-                        result[name] = principals.split(',')
+                        if isinstance(principals, str):
+                            result[name] = principals.split(',')
                     continue
                 for principal in value.split(','):
                     if PATTERN_PRINCIPALS.match(principal) is None:
@@ -815,16 +827,12 @@ class PrincipalsSearch():
                                 PATTERN_PRINCIPALS.pattern),
                             http_code='400 Bad Request')
                     for name, principals in all_principals:
-                        if principal in principals.split(','):
+                        if isinstance(principals, str) and principal in principals.split(','):
                             if name not in result:
                                 result[name] = list()
                             result[name].append(principal)
-            else:
-                return response_render(
-                    '[ERROR] Unknown action',
-                    http_code='400 Bad Request')
 
-        return response_render("OK: {}".format(result))
+        return response_render(dumps(result))
 
 
 class TestAuth():

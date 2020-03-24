@@ -81,17 +81,10 @@ fi
 
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "purge=true")
-if [ "${RESP}" == "OK: ${USER2} principals are ''" ]; then
+if [ "${RESP}" == "OK: ${USER2} principals are '${USER2}'" ]; then
     echo "[OK] Test purge principals to ${USER2}"
 else
     echo "[FAIL] Test purge principals to ${USER2} : ${RESP}"
-fi
-
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "add=${USER2}")
-if [ "${RESP}" == "OK: ${USER2} principals are '${USER2}'" ]; then
-    echo "[OK] Test add principal '${USER2}' to ${USER2}"
-else
-    echo "[FAIL] Test add principal '${USER2}' to ${USER2} : ${RESP}"
 fi
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "add=test-multiple-a,test-multiple-b")
