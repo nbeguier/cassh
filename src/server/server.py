@@ -46,6 +46,7 @@ PATTERN_USERNAME = re_compile("^([a-z]+)$")
 URLS = (
     '/admin/([a-z]+)', 'Admin',
     '/admin/([a-z]+)/principals', 'Principals',
+    '/admin/all/principals/search', 'PrincipalsSearch',
     '/ca', 'Ca',
     '/client', 'Client',
     '/client/status', 'ClientStatus',
@@ -754,12 +755,6 @@ class Principals():
                             http_code='400 Bad Request')
                 values['principals'] = value
             elif key == 'purge':
-                for principal in value.split(','):
-                    if PATTERN_PRINCIPALS.match(principal) is None:
-                        return response_render(
-                            "Error: principal doesn't match pattern {}".format(
-                                PATTERN_PRINCIPALS.pattern),
-                            http_code='400 Bad Request')
                 values['principals'] = ''
             else:
                 return response_render(
@@ -774,6 +769,62 @@ class Principals():
             cur.close()
             pg_conn.close()
             return response_render("OK: {} principals are '{}'".format(username, values['principals']))
+
+
+class PrincipalsSearch():
+    """
+    Class Principals Search
+    """
+    def POST(self):
+        """
+        Search user's principals by filter
+        """
+        # LDAP authentication
+        is_admin_auth, message = ldap_authentification(admin=True)
+        if not is_admin_auth:
+            return response_render(message, http_code='401 Unauthorized')
+
+        pg_conn, message = TOOLS.pg_connection()
+        if pg_conn is None:
+            return response_render(message, http_code='503 Service Unavailable')
+        cur = pg_conn.cursor()
+
+        payload = data2map()
+
+        cur.execute(
+            """
+            SELECT NAME,PRINCIPALS FROM USERS
+            """)
+        all_principals = cur.fetchall()
+        pg_conn.commit()
+        cur.close()
+        pg_conn.close()
+
+        result = dict()
+
+        for key, value in payload.items():
+            if key == 'filter':
+                if value == '':
+                    for name, principals in all_principals:
+                        result[name] = principals.split(',')
+                    continue
+                for principal in value.split(','):
+                    if PATTERN_PRINCIPALS.match(principal) is None:
+                        return response_render(
+                            "Error: principal doesn't match pattern {}".format(
+                                PATTERN_PRINCIPALS.pattern),
+                            http_code='400 Bad Request')
+                    for name, principals in all_principals:
+                        if principal in principals.split(','):
+                            if name not in result:
+                                result[name] = list()
+                            result[name].append(principal)
+            else:
+                return response_render(
+                    '[ERROR] Unknown action',
+                    http_code='400 Bad Request')
+
+        return response_render("OK: {}".format(result))
 
 
 class TestAuth():
