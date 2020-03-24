@@ -817,7 +817,8 @@ class PrincipalsSearch():
             if key == 'filter':
                 if value == '':
                     for name, principals in all_principals:
-                        result[name] = principals.split(',')
+                        if isinstance(principals, str):
+                            result[name] = principals.split(',')
                     continue
                 for principal in value.split(','):
                     if PATTERN_PRINCIPALS.match(principal) is None:
@@ -826,12 +827,12 @@ class PrincipalsSearch():
                                 PATTERN_PRINCIPALS.pattern),
                             http_code='400 Bad Request')
                     for name, principals in all_principals:
-                        if principal in principals.split(','):
+                        if isinstance(principals, str) and principal in principals.split(','):
                             if name not in result:
                                 result[name] = list()
                             result[name].append(principal)
 
-        return response_render("OK: {}".format(result))
+        return response_render(dumps(result))
 
 
 class TestAuth():

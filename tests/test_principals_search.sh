@@ -1,21 +1,21 @@
 #!/bin/bash
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=")
-if [[ "${RESP}" == *"OK: {'"* ]]; then
+if [[ "${RESP}" == *"{\""* ]]; then
     echo "[OK] Test search all users' principals"
 else
     echo "[FAIL] Test search all users' principals : ${RESP}"
 fi
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=dontexists")
-if [ "${RESP}" == "OK: {}" ]; then
+if [ "${RESP}" == "{}" ]; then
     echo "[OK] Test search unknown principals"
 else
     echo "[FAIL] Test search unknown principals : ${RESP}"
 fi
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=test-multiple-${USER2}")
-if [ "${RESP}" == "OK: {'${USER2}': ['test-multiple-${USER2}']}" ]; then
+if [ "${RESP}" == "{\"${USER2}\": [\"test-multiple-${USER2}\"]}" ]; then
     echo "[OK] Test search single principal"
 else
     echo "[FAIL] Test search single principal : ${RESP}"
@@ -29,14 +29,14 @@ else
 fi
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=test-multiple-${USER2}")
-if [[ "${RESP}" == *"'${USER3}': ['test-multiple-${USER2}'"* ]] && [[ "${RESP}" == *"'${USER2}': ['test-multiple-${USER2}'"* ]]; then
+if [[ "${RESP}" == *"\"${USER3}\": [\"test-multiple-${USER2}\""* ]] && [[ "${RESP}" == *"\"${USER2}\": [\"test-multiple-${USER2}\""* ]]; then
     echo "[OK] Test search single principals with multiple users"
 else
     echo "[FAIL] Test search single principals with multiple users : ${RESP}"
 fi
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=test-multiple-${USER2},unknown")
-if [[ "${RESP}" == *"'${USER3}': ['test-multiple-${USER2}'"* ]] && [[ "${RESP}" == *"'${USER2}': ['test-multiple-${USER2}'"* ]]; then
+if [[ "${RESP}" == *"\"${USER3}\": [\"test-multiple-${USER2}\""* ]] && [[ "${RESP}" == *"\"${USER2}\": [\"test-multiple-${USER2}\""* ]]; then
     echo "[OK] Test search multiple principals with one unknown"
 else
     echo "[FAIL] Test search multiple principals with one unknown : ${RESP}"
@@ -57,7 +57,7 @@ else
 fi
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=test-multiple-${USER2},${USER3}")
-if [[ "${RESP}" == *"'${USER3}': ['${USER3}'"* ]] && [[ "${RESP}" == *"'${USER2}': ['test-multiple-${USER2}'"* ]]; then
+if [[ "${RESP}" == *"\"${USER3}\": [\"${USER3}\""* ]] && [[ "${RESP}" == *"\"${USER2}\": [\"test-multiple-${USER2}\""* ]]; then
     echo "[OK] Test search multiple principals with multiple users"
 else
     echo "[FAIL] Test search multiple principals with multiple users : ${RESP}"
