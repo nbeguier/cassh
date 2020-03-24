@@ -62,6 +62,12 @@ else
     echo "[FAIL] Test add principal 'test-single' to ${USER2} : ${RESP}"
 fi
 
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "add=test-single")
+if [ "${RESP}" == "OK: ${USER2} principals are '${USER2},test-with-dash,test-single'" ]; then
+    echo "[OK] Test add duplicate principal 'test-single' to ${USER2}"
+else
+    echo "[FAIL] Test add duplicate principal 'test-single' to ${USER2} : ${RESP}"
+fi
 
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "remove=test-single")
@@ -113,6 +119,13 @@ if [ "${RESP}" == "OK: ${USER2} principals are 'test-multiple-c,test-multiple-${
     echo "[OK] Test update principals 'test-multiple-c,test-multiple-${USER2}' to ${USER2}"
 else
     echo "[FAIL] Test update principals 'test-multiple-c,test-multiple-${USER2}' to ${USER2} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "update=test-multiple-c,test-multiple-c,test-multiple-${USER2}")
+if [ "${RESP}" == "OK: ${USER2} principals are 'test-multiple-c,test-multiple-${USER2}'" ]; then
+    echo "[OK] Test update with duplicate principals 'test-multiple-c,test-multiple-${USER2}' to ${USER2}"
+else
+    echo "[FAIL] Test update with duplicate principals 'test-multiple-c,test-multiple-${USER2}' to ${USER2} : ${RESP}"
 fi
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "unknown=action")

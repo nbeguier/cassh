@@ -9,7 +9,7 @@ https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8
 
   - [CLI version : **1.7.0** *(24/03/2020)*](src/client/CHANGELOG.md)
   - [WebUI version : **1.1.1** *(24/01/2020)*](src/server/web/CHANGELOG.md)
-  - [Server version : **1.12.0** *(24/03/2020)*](src/server/CHANGELOG.md)
+  - [Server version : **1.12.1** *(24/03/2020)*](src/server/CHANGELOG.md)
 
 ## Usage
 

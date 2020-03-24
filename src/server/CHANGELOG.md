@@ -4,6 +4,14 @@ CHANGELOG
 CASSH Server
 -----
 
+1.12.1
+-----
+
+2020/03/24
+
+### Bug Fixes
+  - Remove duplicate principales
+
 1.12.0
 -----
 
