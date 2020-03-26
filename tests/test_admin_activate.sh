@@ -7,6 +7,13 @@ else
     echo "[FAIL] Test admin revoke '${USER1}' : ${RESP}"
 fi
 
+RESP=$(curl -s -X POST -d 'revoke=true' "${CASSH_SERVER_URL}"/admin/"${USER1}")
+if [ "${RESP}" == "user ${USER1} already revoked." ]; then
+    echo "[OK] Test admin revoke '${USER1}' again (should fail)"
+else
+    echo "[FAIL] Test admin revoke '${USER1}' again (should fail) : ${RESP}"
+fi
+
 RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_URL}"/admin/"${USER1}" | jq .status)
 if [ "${RESP}" == '"REVOKED"' ]; then
     echo "[OK] Test admin verify '${USER1}' status"

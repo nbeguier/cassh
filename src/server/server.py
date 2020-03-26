@@ -92,10 +92,17 @@ class Admin():
             pubkey = tools.get_pubkey(username, pg_conn)
             cur.execute(
                 """
-                INSERT INTO REVOCATION VALUES ((%s), (%s), (%s))
-                """, (pubkey, tools.timestamp(), username))
-            pg_conn.commit()
-            message = 'Revoke user=%s.' % username
+                SELECT 1 FROM REVOCATION WHERE SSH_KEY=(%s)
+                """, (pubkey,))
+            if cur.fetchone() is None:
+                cur.execute(
+                    """
+                    INSERT INTO REVOCATION VALUES ((%s), (%s), (%s))
+                    """, (pubkey, tools.timestamp(), username))
+                pg_conn.commit()
+                message = 'Revoke user={}.'.format(username)
+            else:
+                message = 'user {} already revoked.'.format(username)
             cur.close()
             pg_conn.close()
         # Display status

@@ -18,7 +18,8 @@ CASSH Server
 
 ### Bug Fixes
   - remove/add wrong imports
-  - Fix autoreload bug
+  - autoreload bug
+  - duplicates revoke
 
 1.12.1
 -----
