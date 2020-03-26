@@ -15,11 +15,11 @@ else
     echo "[FAIL][DEPRECATED] Test add principal 'test-with-dash' to ${USER2} : ${RESP}"
 fi
 
-RESP=$(curl -s -X PATCH "${CASSH_SERVER_URL}"/admin/"${USER2}" -d "principals=${USER2},b@dt€xt")
-if [[ "${RESP}" == *"Error: principal doesn't match pattern ^([a-zA-Z-]+)$"* ]]; then
-    echo "[OK][DEPRECATED] Test add wrong principal 'b@dt€xt' to ${USER2}"
+RESP=$(curl -s -X PATCH "${CASSH_SERVER_URL}"/admin/"${USER2}" -d "principals=${USER2},${BADTEXT}")
+if [[ "${RESP}" == *"Error: invalid principals."* ]]; then
+    echo "[OK][DEPRECATED] Test add wrong principal '${BADTEXT}' to ${USER2}"
 else
-    echo "[FAIL][DEPRECATED] Test add wrong principal 'b@dt€xt' to ${USER2} : ${RESP}"
+    echo "[FAIL][DEPRECATED] Test add wrong principal '${BADTEXT}' to ${USER2} : ${RESP}"
 fi
 
 
@@ -100,9 +100,9 @@ else
     echo "[FAIL] Test add principals 'test-multiple-a,test-multiple-b' to ${USER2} : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "remove=test-multiple-a,b@dt€xt")
-if [ "${RESP}" == "Error: principal doesn't match pattern ^([a-zA-Z-]+)$" ]; then
-    echo "[OK] Test remove principals 'test-multiple-a,b@dt€xt' to ${USER2}"
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}"/principals -d "remove=test-multiple-a,${BADTEXT}")
+if [ "${RESP}" == "Error: invalid principals." ]; then
+    echo "[OK] Test remove principals 'test-multiple-a,${BADTEXT}' to ${USER2}"
 else
     echo "[FAIL] Test remove principals 'test-multiple-a,test-multiple-b' to ${USER2} : ${RESP}"
 fi

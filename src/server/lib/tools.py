@@ -7,42 +7,219 @@ Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 
 """
+# pylint: disable=too-many-branches,too-many-statements,too-many-return-statements
+# pylint: disable=broad-except,too-many-arguments,no-name-in-module
 
+from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from glob import glob
 from json import dumps
-from os import remove, stat
 from random import choice
-from shutil import copyfile, move
+from shutil import copyfile
 from string import ascii_lowercase
 from tempfile import NamedTemporaryFile
+from os.path import isfile
+from os import remove
+import sys
 from time import time
 from urllib.parse import unquote_plus
 
 # Third party library imports
+from configparser import ConfigParser, NoOptionError
+from ldap import initialize, SCOPE_SUBTREE
 from psycopg2 import connect, OperationalError, ProgrammingError
 from requests import Session
-from requests.exceptions import ConnectionError
-from web import ctx, header
+from requests.exceptions import ConnectionError as req_ConnectionError
+from web import data, ctx, header
 
 # Own library
 from ssh_utils import Authority
+import lib.constants as constants
 
 # DEBUG
 # from pdb import set_trace as st
+
+def loadconfig(version='Unknown'):
+    """
+    Config loader
+    """
+    parser = ArgumentParser()
+    parser.add_argument('-c', '--config', action='store', help='Configuration file')
+    parser.add_argument(
+        '-v', '--verbose', action='store_true', default=False,
+        help='Add verbosity')
+    args = parser.parse_args()
+
+    if not args.config:
+        parser.error('--config argument is required !')
+
+    config = ConfigParser()
+    config.read(args.config)
+    server_opts = {}
+    server_opts['ca'] = config.get('main', 'ca')
+    server_opts['krl'] = config.get('main', 'krl')
+    server_opts['port'] = config.get('main', 'port')
+
+    try:
+        server_opts['admin_db_failover'] = config.get('main', 'admin_db_failover')
+    except NoOptionError:
+        server_opts['admin_db_failover'] = False
+    server_opts['ldap'] = False
+    server_opts['ssl'] = False
+
+    if config.has_section('postgres'):
+        try:
+            server_opts['db_host'] = config.get('postgres', 'host')
+            server_opts['db_name'] = config.get('postgres', 'dbname')
+            server_opts['db_user'] = config.get('postgres', 'user')
+            server_opts['db_password'] = config.get('postgres', 'password')
+        except NoOptionError:
+            if args.verbose:
+                print('Option reading error (postgres).')
+            sys.exit(1)
+
+    if config.has_section('ldap'):
+        try:
+            server_opts['ldap'] = True
+            server_opts['ldap_host'] = config.get('ldap', 'host')
+            server_opts['ldap_bind_dn'] = config.get('ldap', 'bind_dn')
+            server_opts['ldap_admin_cn'] = config.get('ldap', 'admin_cn')
+            server_opts['filterstr'] = config.get('ldap', 'filterstr')
+        except NoOptionError:
+            if args.verbose:
+                print('Option reading error (ldap).')
+            sys.exit(1)
+
+    if config.has_section('ssl'):
+        try:
+            server_opts['ssl'] = True
+            server_opts['ssl_private_key'] = config.get('ssl', 'private_key')
+            server_opts['ssl_public_key'] = config.get('ssl', 'public_key')
+        except NoOptionError:
+            if args.verbose:
+                print('Option reading error (ssl).')
+            sys.exit(1)
+
+    # Cluster mode is used for revocation
+    try:
+        server_opts['cluster'] = config.get('main', 'cluster').split(',')
+    except NoOptionError:
+        # Standalone mode
+        proto = 'http'
+        if server_opts['ssl']:
+            proto = 'https'
+        server_opts['cluster'] = ['%s://localhost:%s' % (proto, server_opts['port'])]
+
+    try:
+        server_opts['clustersecret'] = config.get('main', 'clustersecret')
+    except NoOptionError:
+        # Standalone mode
+        server_opts['clustersecret'] = random_string(32)
+
+    try:
+        server_opts['debug'] = bool(config.get('main', 'debug') != 'False')
+    except NoOptionError:
+        server_opts['debug'] = False
+
+    tooling = Tools(server_opts, constants.STATES, version)
+    return server_opts, args, tooling
+
+def ldap_authentification(server_options, admin=False):
+    """
+    Return True if user is well authentified
+        realname=xxxxx@domain.fr
+        password=xxxxx
+    """
+    if server_options['ldap']:
+        credentials, message = data2map()
+        if message:
+            return response_render(message, http_code='400 Bad Request')
+        if 'realname' in credentials:
+            realname = unquote_plus(credentials['realname'])
+        else:
+            return False, 'Error: No realname option given.'
+        if 'password' in credentials:
+            password = unquote_plus(credentials['password'])
+        else:
+            return False, 'Error: No password option given.'
+        if password == '':
+            return False, 'Error: password is empty.'
+        ldap_conn = initialize("ldap://"+server_options['ldap_host'])
+        try:
+            ldap_conn.bind_s(realname, password)
+        except Exception as err_msg:
+            return False, 'Error: {}'.format(err_msg)
+        if admin:
+            memberof_admin_list = ldap_conn.search_s(
+                server_options['ldap_bind_dn'],
+                SCOPE_SUBTREE,
+                filterstr='(&(%s=%s)(memberOf=%s))' % (
+                    server_options['filterstr'],
+                    realname,
+                    server_options['ldap_admin_cn']))
+            if not memberof_admin_list:
+                return False, 'Error: user %s is not an admin.' % realname
+    return True, 'OK'
+
+def validate_payload(key, value):
+    """
+    Return an error message if invalid input
+    """
+    new_value = unquote_plus(value)
+    count = 10
+    while value != new_value and count > 0 and \
+        key in ['username', 'principals', 'remove', 'update', 'filter', 'realname']:
+        value = new_value
+        new_value = unquote_plus(value)
+        count -= 1
+
+    err_msg = None
+
+    if key == 'username' and constants.PATTERN_USERNAME.match(value) is None:
+        err_msg = "Error: invalid username."
+    elif key == 'realname' and constants.PATTERN_REALNAME.match(value) is None:
+        err_msg = "Error: invalid realname."
+    elif key == 'expiry' and constants.PATTERN_EXPIRY.match(value) is None:
+        err_msg = "Error: invalid expiry."
+    elif key in ['principals', 'add', 'remove', 'update']:
+        for principal in value.split(','):
+            if constants.PATTERN_PRINCIPALS.match(principal) is None:
+                err_msg = "Error: invalid principals."
+    elif key == 'filter':
+        if value != '':
+            for principal in value.split(','):
+                if constants.PATTERN_PRINCIPALS.match(principal) is None:
+                    err_msg = "Error: invalid filter."
+    return err_msg
+
+def data2map():
+    """
+    Returns a map from data POST and error
+    """
+    data_map = {}
+    data_str = data().decode('utf-8')
+    if data_str == '':
+        return data_map, None
+    for key in data_str.split('&'):
+        sub_key = key.split('=')[0]
+        value = '='.join(key.split('=')[1:])
+        message = validate_payload(sub_key, value)
+        if message:
+            return None, message
+        data_map[sub_key] = value
+    return data_map, None
 
 def get_principals(sql_result, username, shell=False):
     """
     Transform sql principals into readable one
     """
-    if sql_result is None or sql_result == '':
+    if not sql_result:
         if shell:
             return username
         return [username]
-    else:
-        if shell:
-            return sql_result
-        return sql_result.split(',')
+    if shell:
+        return sql_result
+    return sql_result.split(',')
 
 def get_pubkey(username, pg_conn, key_n=0):
     """
@@ -50,7 +227,10 @@ def get_pubkey(username, pg_conn, key_n=0):
     For now, there is only one key per user, but it could change in the future
     """
     cur = pg_conn.cursor()
-    cur.execute('SELECT SSH_KEY FROM USERS WHERE NAME=(%s)', (username,))
+    cur.execute(
+        """
+        SELECT SSH_KEY FROM USERS WHERE NAME=(%s)
+        """, (username,))
     pubkeys = cur.fetchall()
     cur.close()
 
@@ -141,7 +321,7 @@ def unquote_custom(string):
     return string
 
 
-class Tools(object):
+class Tools():
     """
     Class tools
     """
@@ -182,7 +362,7 @@ class Tools(object):
                               headers=self.req_headers,
                               timeout=self.req_timeout,
                               stream=True)
-        except ConnectionError:
+        except req_ConnectionError:
             print('Connection error : %s' % url)
             req = None
         return req
@@ -191,13 +371,14 @@ class Tools(object):
         """
         Generates or returns a KRL file
         """
-        from os.path import isfile
-
         pg_conn, message = self.pg_connection()
         if pg_conn is None:
             return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
-        cur.execute('SELECT MAX(REVOCATION_DATE) FROM REVOCATION')
+        cur.execute(
+            """
+            SELECT MAX(REVOCATION_DATE) FROM REVOCATION
+            """)
         last_timestamp = cur.fetchone()
         if not last_timestamp[0]:
             return response_render(
@@ -298,7 +479,7 @@ class Tools(object):
                                data=payload,
                                headers=self.req_headers,
                                timeout=self.req_timeout)
-        except ConnectionError:
+        except req_ConnectionError:
             print('Connection error : %s' % url)
             req = None
         return req
@@ -317,7 +498,7 @@ class Tools(object):
             if db_cursor is not None:
                 db_cursor.execute('UPDATE USERS SET STATE=0, EXPIRATION=(%s) WHERE NAME=(%s)', \
                     (time() + str2date(expiry), username))
-        except:
+        except Exception:
             cert_contents = 'Error : signing key'
         return cert_contents
 
@@ -334,7 +515,8 @@ class Tools(object):
                 d_sub_result['username'] = res[0]
                 d_sub_result['realname'] = res[1]
                 d_sub_result['status'] = self.states[res[2]]
-                d_sub_result['expiration'] = datetime.fromtimestamp(res[3]).strftime('%Y-%m-%d %H:%M:%S')
+                d_sub_result['expiration'] = datetime.fromtimestamp(res[3]).strftime(
+                    '%Y-%m-%d %H:%M:%S')
                 d_sub_result['ssh_key_hash'] = pretty_ssh_key_hash(res[4])
                 d_sub_result['expiry'] = res[6]
                 d_sub_result['principals'] = get_principals(res[7], res[0])
@@ -344,7 +526,8 @@ class Tools(object):
         d_result['username'] = result[0]
         d_result['realname'] = result[1]
         d_result['status'] = self.states[result[2]]
-        d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime('%Y-%m-%d %H:%M:%S')
+        d_result['expiration'] = datetime.fromtimestamp(result[3]).strftime(
+            '%Y-%m-%d %H:%M:%S')
         d_result['ssh_key_hash'] = pretty_ssh_key_hash(result[4])
         d_result['expiry'] = result[6]
         d_result['principals'] = get_principals(result[7], result[0])

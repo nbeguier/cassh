@@ -1,4 +1,4 @@
-FROM python:3.6
+FROM python:3.8
 
 WORKDIR /opt/cassh
 
@@ -9,7 +9,6 @@ RUN apt-get update \
         libldap2-dev \
         libsasl2-dev \
     && rm -rf /var/lib/apt/lists/*
-
 
 COPY requirements.txt ./
 

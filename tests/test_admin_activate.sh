@@ -21,6 +21,13 @@ else
     echo "[FAIL] Test signing key when revoked: ${RESP}"
 fi
 
+RESP=$(curl -s -X POST -d "username=${USER1}&realname=test.${BADTEXT}@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+if [ "${RESP}" == 'Error: invalid realname.' ]; then
+    echo "[OK] Test signing key when revoked with bad realname"
+else
+    echo "[FAIL] Test signing key when revoked with bad realname : ${RESP}"
+fi
+
 RESP=$(curl -s -X DELETE "${CASSH_SERVER_URL}"/admin/"${USER1}")
 if [ "${RESP}" == 'OK' ]; then
     echo "[OK] Test delete '${USER1}'"

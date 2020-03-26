@@ -11,4 +11,9 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.* ]]; then pip install pylint; pip install -r src/client/requirements.txt; fi
   - if [[ $TRAVIS_PYTHON_VERSION == 3.* ]]; then pip3 install pylint; pip3 install -r src/client/requirements.txt; fi
 # command to run tests
-script: pylint src/client/cassh -d redefined-builtin -d useless-object-inheritance -d too-many-branches
+script:
+  - pylint src/client/cassh -d redefined-builtin -d useless-object-inheritance -d too-many-branches
+  - pylint src/server/server.py
+  - pylint src/server/lib/*.py
+  - pylint src/server/ssh_utils/*.py
+

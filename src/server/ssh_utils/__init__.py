@@ -36,7 +36,7 @@ def get_cert_contents(public_key_filename):
     remove(cert_filename)
     return cert_contents
 
-class Authority(object):
+class Authority():
     """
     Class which control authority certification
     """

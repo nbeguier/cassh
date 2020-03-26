@@ -42,8 +42,8 @@ else
     echo "[FAIL] Test search multiple principals with one unknown : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=test-multiple-${USER2},b@dt€xt")
-if [ "${RESP}" == "Error: principal doesn't match pattern ^([a-zA-Z-]+)$" ]; then
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=test-multiple-${USER2},${BADTEXT}")
+if [ "${RESP}" == "Error: invalid filter." ]; then
     echo "[OK] Test search multiple principals with one bad value"
 else
     echo "[FAIL] Test search multiple principals with one bad value : ${RESP}"
@@ -70,7 +70,7 @@ else
     echo "[FAIL] Test search with unknown action : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "b@dt€xt")
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/all/principals/search -d "${BADTEXT}")
 if [ "${RESP}" == "[ERROR] Unknown action" ]; then
     echo "[OK] Test search with garbage"
 else

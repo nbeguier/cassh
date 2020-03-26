@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == 'Error: No username option given. Update your CASSH >= 1.3.0' ]; then
+if [ "${RESP}" == 'Error: No username option given.' ]; then
     echo "[OK] Test signing key without username"
 else
     echo "[FAIL] Test signing key without username: ${RESP}"
