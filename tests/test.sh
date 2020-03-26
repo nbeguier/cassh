@@ -16,6 +16,8 @@ USER1=$(pwgen -A -0 10)
 USER2=$(pwgen -A -0 10)
 USER3=$(pwgen -A -0 10)
 
+BADTEXT=b@dt€xt
+
 RESP=$(curl -s "${CASSH_SERVER_URL}"/ping)
 if [ "${RESP}" == 'pong' ]; then
     echo "[OK] Test ping"

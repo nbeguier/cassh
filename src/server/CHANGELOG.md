@@ -4,6 +4,23 @@ CHANGELOG
 CASSH Server
 -----
 
+1.12.2
+-----
+
+2020/03/26
+
+### Changes
+  - upgrade requirements
+
+### Clean
+  - Split functions
+  - Validate all inputs
+
+### Bug Fixes
+  - remove/add wrong imports
+  - autoreload bug
+  - duplicates revoke
+
 1.12.1
 -----
 

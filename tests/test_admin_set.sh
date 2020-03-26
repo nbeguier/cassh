@@ -8,7 +8,7 @@ else
 fi
 
 RESP=$(curl -s -X PATCH "${CASSH_SERVER_URL}"/admin/"${USER2}" -d "expiry=3d")
-if [ "${RESP}" == "Error: expiry doesn't match pattern ^\+([0-9]+)+[dh]$" ]; then
+if [ "${RESP}" == "Error: invalid expiry." ]; then
     echo "[OK] Test set wrong expiry for ${USER2}"
 else
     echo "[FAIL] Test set wrong expiry for ${USER2} : ${RESP}"

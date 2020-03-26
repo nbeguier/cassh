@@ -7,6 +7,13 @@ else
     echo "[FAIL] Test admin revoke '${USER1}' : ${RESP}"
 fi
 
+RESP=$(curl -s -X POST -d 'revoke=true' "${CASSH_SERVER_URL}"/admin/"${USER1}")
+if [ "${RESP}" == "user ${USER1} already revoked." ]; then
+    echo "[OK] Test admin revoke '${USER1}' again (should fail)"
+else
+    echo "[FAIL] Test admin revoke '${USER1}' again (should fail) : ${RESP}"
+fi
+
 RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_URL}"/admin/"${USER1}" | jq .status)
 if [ "${RESP}" == '"REVOKED"' ]; then
     echo "[OK] Test admin verify '${USER1}' status"
@@ -19,6 +26,13 @@ if [ "${RESP}" == 'Status: REVOKED' ]; then
     echo "[OK] Test signing key when revoked"
 else
     echo "[FAIL] Test signing key when revoked: ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "username=${USER1}&realname=test.${BADTEXT}@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+if [ "${RESP}" == 'Error: invalid realname.' ]; then
+    echo "[OK] Test signing key when revoked with bad realname"
+else
+    echo "[FAIL] Test signing key when revoked with bad realname : ${RESP}"
 fi
 
 RESP=$(curl -s -X DELETE "${CASSH_SERVER_URL}"/admin/"${USER1}")

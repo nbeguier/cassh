@@ -9,7 +9,7 @@ https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8
 
   - [CLI version : **1.7.0** *(24/03/2020)*](src/client/CHANGELOG.md)
   - [WebUI version : **1.1.1** *(24/01/2020)*](src/server/web/CHANGELOG.md)
-  - [Server version : **1.12.1** *(24/03/2020)*](src/server/CHANGELOG.md)
+  - [Server version : **1.12.2** *(26/03/2020)*](src/server/CHANGELOG.md)
 
 ## Usage
 
@@ -149,8 +149,8 @@ realname = ursula.ser@domain.fr
 
 ```bash
 # Install cassh python 3 service dependencies
-sudo apt-get install openssh-client openssl libldap2-dev libsasl2-dev build-essential python3-dev
-sudo apt-get install python3-pip
+sudo apt install openssh-client openssl libldap2-dev libsasl2-dev build-essential python3-dev
+sudo apt install python3-pip
 pip3 install -r src/server/requirements.txt
 
 # Generate CA ssh key and revocation key file
@@ -162,7 +162,7 @@ ssh-keygen -k -f test-keys/revoked-keys
 ### Test script
 ```bash
 # install utilities needed by tests/test.sh
-sudo apt-get install pwgen jq
+sudo apt install pwgen jq
 ```
 Configuration file example :
 ```ini
@@ -218,11 +218,11 @@ python3 src/server/web/cassh_web.py
 
 ```bash
 # Python 3
-sudo apt-get install python3-pip
+sudo apt install python3-pip
 pip3 install -r src/client/requirements.txt
 
 # Python 2
-sudo apt-get install python-pip
+sudo apt install python-pip
 pip install -r src/client/requirements.txt
 ```
 
