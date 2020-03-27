@@ -7,9 +7,9 @@ Developped for @leboncoin
 
 https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8e4de7
 
-  - [CLI version : **1.7.0** *(24/03/2020)*](src/client/CHANGELOG.md)
+  - [CLI version : **1.7.0** *(24/03/2020)*](src/client/CHANGELOG.md) ![leboncoin/cassh](https://img.shields.io/docker/pulls/leboncoin/cassh) + ![nbeguier/cassh-client](https://img.shields.io/docker/pulls/nbeguier/cassh-client)
   - [WebUI version : **1.1.1** *(24/01/2020)*](src/server/web/CHANGELOG.md)
-  - [Server version : **1.12.2** *(26/03/2020)*](src/server/CHANGELOG.md)
+  - [Server version : **1.12.2** *(26/03/2020)*](src/server/CHANGELOG.md) ![leboncoin/cassh-server](https://img.shields.io/docker/pulls/leboncoin/cassh-server) + ![nbeguier/cassh-server](https://img.shields.io/docker/pulls/nbeguier/cassh-server)
 
 ## Usage
 
