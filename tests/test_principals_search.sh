@@ -35,9 +35,9 @@ fi
 #################################
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=")
 if [[ "${RESP}" == *"{\""* ]]; then
-    echo "[OK] Test search all users' principals"
+    echo "[OK] Test search all users' principals: ${RESP}"
 else
-    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test search all users' principals : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test search all users' principals: ${RESP}"
 fi
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=dontexists")
@@ -49,13 +49,13 @@ fi
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=test-multiple-${GUEST_B_USERNAME}")
 if [ "${RESP}" == "{\"${GUEST_B_USERNAME}\": [\"test-multiple-${GUEST_B_USERNAME}\"]}" ]; then
-    echo "[OK] Test search single principal"
+    echo "[OK] Test search test-multiple-${GUEST_B_USERNAME} principal"
 else
-    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test search single principal : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test search test-multiple-${GUEST_B_USERNAME} principal : ${RESP}"
 fi
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_C_USERNAME}"/principals -d "add=test-multiple-${GUEST_B_USERNAME}")
-if [ "${RESP}" == "OK: ${GUEST_C_USERNAME} principals are '${GUEST_C_USERNAME},test-multiple-${GUEST_B_USERNAME}'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_C_USERNAME} principals are '${GUEST_C_USERNAME},test-multiple-${GUEST_B_USERNAME},guest-everywhere'" ]; then
     echo "[OK] Test add principal 'test-multiple-${GUEST_B_USERNAME}' to ${GUEST_C_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add principal 'test-multiple-${GUEST_B_USERNAME}' to ${GUEST_C_USERNAME} : ${RESP}"
@@ -83,7 +83,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_C_USERNAME}"/principals -d "remove=test-multiple-${GUEST_B_USERNAME}")
-if [ "${RESP}" == "OK: ${GUEST_C_USERNAME} principals are '${GUEST_C_USERNAME}'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_C_USERNAME} principals are '${GUEST_C_USERNAME},guest-everywhere'" ]; then
     echo "[OK] Test remove principal 'test-multiple-${GUEST_B_USERNAME}' to ${GUEST_C_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test remove principal 'test-multiple-${GUEST_B_USERNAME}' to ${GUEST_C_USERNAME} : ${RESP}"

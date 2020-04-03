@@ -22,3 +22,4 @@ filter_realname_key = cn
 filter_memberof_key = gecos
 username_prefix = cn=
 username_suffix = ,dc=example,dc=org
+ldap_mapping_path = ./tests/cassh/ldap_mapping.json

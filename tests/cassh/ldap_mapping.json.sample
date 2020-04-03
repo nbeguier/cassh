@@ -1,0 +1,4 @@
+{
+    "guest,dc=example,dc=org": ["guest-everywhere"],
+    "admin,dc=example,dc=org": ["root-everywhere", "guest-everywhere"]
+}

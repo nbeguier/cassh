@@ -45,7 +45,7 @@ class Admin():
             status=true/false => Display status
         """
         # LDAP authentication
-        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -140,7 +140,7 @@ class Admin():
             key=value => Set the key value. Keys are in status output.
         """
         # LDAP authentication
-        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -172,7 +172,7 @@ class Admin():
         /admin/<username>
         """
         # LDAP authentication
-        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -214,7 +214,7 @@ class ClientStatus():
         /client/status
         """
         # LDAP authentication
-        is_auth, message, _ = tools.ldap_authentification(SERVER_OPTS)
+        is_auth, message = tools.ldap_authentification(SERVER_OPTS)
         if not is_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -248,7 +248,7 @@ class Client():
             admin_force=true|false
         """
         # LDAP authentication
-        is_auth, message, _ = tools.ldap_authentification(SERVER_OPTS)
+        is_auth, message = tools.ldap_authentification(SERVER_OPTS)
         if not is_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -256,7 +256,8 @@ class Client():
         force_sign = False
 
         # LDAP ADMIN authentication
-        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message = tools.ldap_authentification(
+            SERVER_OPTS, admin=True)
 
         payload, message = tools.data2map()
         if message:
@@ -342,6 +343,10 @@ class Client():
         status = user[2]
         expiry = user[3]
         custom_principals = tools.clean_principals_output(user[4], username, shell=True)
+        list_membership, _ = tools.get_memberof(
+            realname,
+            SERVER_OPTS)
+        full_principals = tools.merge_principals(custom_principals, list_membership, SERVER_OPTS)
 
         if status > 0:
             cur.close()
@@ -350,7 +355,7 @@ class Client():
             return tools.response_render("Status: %s" % constants.STATES[user[2]])
 
         cert_contents = TOOLS.sign_key(
-            tmp_pubkey.name, username, expiry, custom_principals, db_cursor=cur)
+            tmp_pubkey.name, username, expiry, full_principals, db_cursor=cur)
 
         remove(tmp_pubkey.name)
         pg_conn.commit()
@@ -368,7 +373,7 @@ class Client():
             realname=xxxxx@domain.fr => This LDAP/AD user.
         """
         # LDAP authentication
-        is_auth, message, _ = tools.ldap_authentification(SERVER_OPTS)
+        is_auth, message = tools.ldap_authentification(SERVER_OPTS)
         if not is_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -539,7 +544,7 @@ class Principals():
         Manage user principals
         """
         # LDAP authentication
-        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -564,7 +569,7 @@ class Principals():
         values = {'username': username}
         cur.execute(
             """
-            SELECT NAME,PRINCIPALS FROM USERS WHERE NAME=(%(username)s)
+            SELECT NAME,PRINCIPALS,REALNAME FROM USERS WHERE NAME=(%(username)s)
             """, values)
         user = cur.fetchone()
         # If user dont exist
@@ -611,8 +616,14 @@ class Principals():
             elif key == 'purge':
                 values['principals'] = username
 
-        # Remove duplicates
-        values['principals'] = ','.join(list(dict.fromkeys(values['principals'].split(','))))
+        list_membership, _ = tools.get_memberof(
+            user[2],
+            SERVER_OPTS)
+        values['principals'] = tools.truncate_principals(
+            values['principals'],
+            list_membership,
+            SERVER_OPTS)
+
         cur.execute(
             """
             UPDATE USERS SET PRINCIPALS=(%(principals)s) WHERE NAME=(%(username)s)
@@ -620,6 +631,13 @@ class Principals():
         pg_conn.commit()
         cur.close()
         pg_conn.close()
+
+        # Add LDAP principals
+        values['principals'] = tools.merge_principals(
+            values['principals'],
+            list_membership,
+            SERVER_OPTS)
+
         return tools.response_render(
             "OK: {} principals are '{}'".format(username, values['principals']))
 
@@ -633,7 +651,7 @@ class PrincipalsSearch():
         Search user's principals by filter
         """
         # LDAP authentication
-        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -653,25 +671,49 @@ class PrincipalsSearch():
 
         cur.execute(
             """
-            SELECT NAME,PRINCIPALS FROM USERS
+            SELECT NAME,PRINCIPALS,REALNAME FROM USERS
             """)
         all_principals = cur.fetchall()
         pg_conn.commit()
         cur.close()
         pg_conn.close()
 
+        if SERVER_OPTS['ldap']:
+            ldap_conn, _ = tools.get_ldap_conn(
+                SERVER_OPTS['ldap_host'],
+                SERVER_OPTS['ldap_username'],
+                SERVER_OPTS['ldap_password'])
+
         result = dict()
 
         for key, value in payload.items():
             value = unquote_plus(value)
             if key == 'filter' and value == '':
-                for name, principals in all_principals:
-                    if isinstance(principals, str):
-                        result[name] = principals.split(',')
+                for name, custom_principals, realname in all_principals:
+                    if not isinstance(custom_principals, str):
+                        continue
+                    list_membership, _ = tools.get_memberof(
+                        realname,
+                        SERVER_OPTS,
+                        reuse=ldap_conn)
+                    result[name] = tools.merge_principals(
+                        custom_principals,
+                        list_membership,
+                        SERVER_OPTS).split(',')
             elif key == 'filter':
                 for principal in value.split(','):
-                    for name, principals in all_principals:
-                        if isinstance(principals, str) and principal in principals.split(','):
+                    for name, custom_principals, realname in all_principals:
+                        if not isinstance(custom_principals, str):
+                            continue
+                        list_membership, _ = tools.get_memberof(
+                            realname,
+                            SERVER_OPTS,
+                            reuse=ldap_conn)
+                        principals = tools.merge_principals(
+                            custom_principals,
+                            list_membership,
+                            SERVER_OPTS).split(',')
+                        if principal in principals:
                             if name not in result:
                                 result[name] = list()
                             result[name].append(principal)
@@ -687,7 +729,7 @@ class TestAuth():
         Test authentication
         """
         # LDAP authentication
-        is_auth, message, _ = tools.ldap_authentification(SERVER_OPTS)
+        is_auth, message = tools.ldap_authentification(SERVER_OPTS)
         if not is_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
         return tools.response_render('OK')

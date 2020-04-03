@@ -40,7 +40,7 @@ fi
 ## ADMIN ADD PRINCIPAL GUEST B ##
 #################################
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "add=test-single")
-if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},test-single'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},test-single,guest-everywhere'" ]; then
     echo "[OK] Test add principal 'test-single' to ${GUEST_B_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add principal 'test-single' to ${GUEST_B_USERNAME} : ${RESP}"
@@ -49,7 +49,7 @@ fi
 RESP=$(curl -s -X POST -d "username=${GUEST_B_USERNAME}&realname=${GUEST_B_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_B_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
 echo "${RESP}" > /tmp/test-cert
 OUTPUT=$(echo $(echo -n "$(ssh-keygen -L -f /tmp/test-cert 2>&1)"))
-if [[ "${OUTPUT}" == *"Principals: ${GUEST_B_USERNAME} test-single Critical"* ]]; then
+if [[ "${OUTPUT}" == *"Principals: ${GUEST_B_USERNAME} test-single guest-everywhere Critical"* ]]; then
     echo "[OK] Test signing key with updated principals"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key with updated principals: ${OUTPUT}"
@@ -58,14 +58,14 @@ rm -f /tmp/test-cert
 
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "add=test-single")
-if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},test-single'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},test-single,guest-everywhere'" ]; then
     echo "[OK] Test add duplicate principal 'test-single' to ${GUEST_B_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add duplicate principal 'test-single' to ${GUEST_B_USERNAME} : ${RESP}"
 fi
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "remove=test-single")
-if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME}'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},guest-everywhere'" ]; then
     echo "[OK] Test remove principal 'test-single' to ${GUEST_B_USERNAME} which doesn't exists"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test remove principal 'test-single' to ${GUEST_B_USERNAME} which doesn't exists : ${RESP}"
@@ -75,7 +75,7 @@ fi
 ## ADMIN REMOVE PRINCIPAL GUEST B ##
 ####################################
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "remove=test-single")
-if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME}'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},guest-everywhere'" ]; then
     echo "[OK] Test remove principal 'test-single' to ${GUEST_B_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test remove principal 'test-single' to ${GUEST_B_USERNAME} : ${RESP}"
@@ -84,7 +84,7 @@ fi
 RESP=$(curl -s -X POST -d "username=${GUEST_B_USERNAME}&realname=${GUEST_B_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_B_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
 echo "${RESP}" > /tmp/test-cert
 OUTPUT=$(echo $(echo -n "$(ssh-keygen -L -f /tmp/test-cert 2>&1)"))
-if [[ "${OUTPUT}" == *"Principals: ${GUEST_B_USERNAME} Critical"* ]]; then
+if [[ "${OUTPUT}" == *"Principals: ${GUEST_B_USERNAME} guest-everywhere Critical"* ]]; then
     echo "[OK] Test signing key with updated principals"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key with updated principals: ${OUTPUT}"
@@ -95,7 +95,7 @@ rm -f /tmp/test-cert
 ## ADMIN PURGE PRINCIPAL GUEST B ##
 ###################################
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "purge=true")
-if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME}'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},guest-everywhere'" ]; then
     echo "[OK] Test purge principals to ${GUEST_B_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test purge principals to ${GUEST_B_USERNAME} : ${RESP}"
@@ -104,7 +104,7 @@ fi
 RESP=$(curl -s -X POST -d "username=${GUEST_B_USERNAME}&realname=${GUEST_B_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_B_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
 echo "${RESP}" > /tmp/test-cert
 OUTPUT=$(echo $(echo -n "$(ssh-keygen -L -f /tmp/test-cert 2>&1)"))
-if [[ "${OUTPUT}" == *"Principals: ${GUEST_B_USERNAME} Critical"* ]]; then
+if [[ "${OUTPUT}" == *"Principals: ${GUEST_B_USERNAME} guest-everywhere Critical"* ]]; then
     echo "[OK] Test signing key with updated principals"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key with updated principals: ${OUTPUT}"
@@ -112,7 +112,7 @@ fi
 rm -f /tmp/test-cert
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "add=test-multiple-a,test-multiple-b")
-if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},test-multiple-a,test-multiple-b'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},test-multiple-a,test-multiple-b,guest-everywhere'" ]; then
     echo "[OK] Test add principals 'test-multiple-a,test-multiple-b' to ${GUEST_B_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add principals 'test-multiple-a,test-multiple-b' to ${GUEST_B_USERNAME} : ${RESP}"
@@ -126,7 +126,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "remove=test-multiple-a,test-multiple-b")
-if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME}'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},guest-everywhere'" ]; then
     echo "[OK] Test remove principals 'test-multiple-a,test-multiple-b' to ${GUEST_B_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test remove principals 'test-multiple-a,test-multiple-b' to ${GUEST_B_USERNAME} : ${RESP}"
@@ -136,7 +136,7 @@ fi
 ## ADMIN UPDATE PRINCIPAL GUEST B ##
 ####################################
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "update=test-multiple-c,test-multiple-${GUEST_B_USERNAME}")
-if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are 'test-multiple-c,test-multiple-${GUEST_B_USERNAME}'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are 'test-multiple-c,test-multiple-${GUEST_B_USERNAME},guest-everywhere'" ]; then
     echo "[OK] Test update principals 'test-multiple-c,test-multiple-${GUEST_B_USERNAME}' to ${GUEST_B_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test update principals 'test-multiple-c,test-multiple-${GUEST_B_USERNAME}' to ${GUEST_B_USERNAME} : ${RESP}"
@@ -145,7 +145,7 @@ fi
 RESP=$(curl -s -X POST -d "username=${GUEST_B_USERNAME}&realname=${GUEST_B_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_B_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
 echo "${RESP}" > /tmp/test-cert
 OUTPUT=$(echo $(echo -n "$(ssh-keygen -L -f /tmp/test-cert 2>&1)"))
-if [[ "${OUTPUT}" == *"Principals: test-multiple-c test-multiple-${GUEST_B_USERNAME} Critical"* ]]; then
+if [[ "${OUTPUT}" == *"Principals: test-multiple-c test-multiple-${GUEST_B_USERNAME} guest-everywhere Critical"* ]]; then
     echo "[OK] Test signing key with updated principals"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key with updated principals: ${OUTPUT}"
@@ -153,7 +153,7 @@ fi
 rm -f /tmp/test-cert
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "update=test-multiple-c,test-multiple-c,test-multiple-${GUEST_B_USERNAME}")
-if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are 'test-multiple-c,test-multiple-${GUEST_B_USERNAME}'" ]; then
+if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are 'test-multiple-c,test-multiple-${GUEST_B_USERNAME},guest-everywhere'" ]; then
     echo "[OK] Test update with duplicate principals 'test-multiple-c,test-multiple-${GUEST_B_USERNAME}' to ${GUEST_B_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test update with duplicate principals 'test-multiple-c,test-multiple-${GUEST_B_USERNAME}' to ${GUEST_B_USERNAME} : ${RESP}"
@@ -169,9 +169,26 @@ fi
 RESP=$(curl -s -X POST -d "username=${SYSADMIN_USERNAME}&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}&pubkey=${SYSADMIN_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
 echo "${RESP}" > /tmp/test-cert
 OUTPUT=$(echo $(echo -n "$(ssh-keygen -L -f /tmp/test-cert 2>&1)"))
-if [[ "${OUTPUT}" == *"Principals: ${SYSADMIN_USERNAME} Critical"* ]]; then
+if [[ "${OUTPUT}" == *"Principals: ${SYSADMIN_USERNAME} root-everywhere guest-everywhere Critical"* ]]; then
     echo "[OK] Test signing sysadmin key"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing sysadmin key: ${OUTPUT}"
+fi
+rm -f /tmp/test-cert
+
+RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${SYSADMIN_USERNAME}"/principals -d "add=root-everywhere")
+if [ "${RESP}" == "OK: ${SYSADMIN_USERNAME} principals are '${SYSADMIN_USERNAME},root-everywhere,guest-everywhere'" ]; then
+    echo "[OK] Test add duplicate principal 'root-everywhere' to ${SYSADMIN_USERNAME}"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add duplicate principal 'root-everywhere' to ${SYSADMIN_USERNAME} : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "username=${SYSADMIN_USERNAME}&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}&pubkey=${SYSADMIN_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
+echo "${RESP}" > /tmp/test-cert
+OUTPUT=$(echo $(echo -n "$(ssh-keygen -L -f /tmp/test-cert 2>&1)"))
+if [[ "${OUTPUT}" == *"Principals: ${SYSADMIN_USERNAME} root-everywhere guest-everywhere Critical"* ]]; then
+    echo "[OK] Test signing sysadmin key without duplicates"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing sysadmin key without duplicates: ${OUTPUT}"
 fi
 rm -f /tmp/test-cert

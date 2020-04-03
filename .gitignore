@@ -2,4 +2,5 @@ test-keys/
 ssl/
 *.pyc
 tests/cassh/*.conf
+tests/cassh/*.json
 settings.txt

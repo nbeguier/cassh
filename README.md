@@ -272,8 +272,11 @@ Install docker : https://docs.docker.com/engine/installation/
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
 pip install -r tests/requirements.txt
 
-# Set the postgres host in the cassh-server configuration
 cp tests/cassh/cassh.conf.sample tests/cassh/cassh.conf
+cp tests/cassh/ldap_mapping.json.sample tests/cassh/ldap_mapping.json
+
+# Edit cassh.conf file to configure the hosts
+
 # Generate temporary certificates
 mkdir test-keys
 ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
