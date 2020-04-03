@@ -18,8 +18,9 @@ CASSH Server
   - LDAP configuration: "filterstr" is deprecated, use "filter_realname_key" instead
   - Remove GET /admin/principals (not used in client and not safe)
   - Remove deprecated PATCH endpoint for principals
-  - ldap_authentification returns also a list of memberof
   - rename get_principals to clean_principals_output
+  - add get_ldap_conn, get_memberof, truncate_principals, merge_principals
+  - Remove py3.4 support (json decoder issues)
 
 ### Bug Fixes
   - ldap_authentification return when bad options
