@@ -4,9 +4,11 @@
 Init pg database
 """
 
-from __future__ import print_function
 from os import listdir
 from os.path import isfile, join
+import sys
+
+# Third party library imports
 from psycopg2 import connect, OperationalError
 
 # DEBUG
@@ -27,14 +29,13 @@ def pg_connection(dbname='postgres', user='postgres', host='localhost',\
         pg_conn = None
     return pg_conn
 
-
 def init_pg(pg_conn):
     """
     Initialize pg database
     """
     if pg_conn is None:
         print('I am unable to connect to the database')
-        exit(1)
+        sys.exit(1)
     cur = pg_conn.cursor()
 
     sql_files = [f for f in listdir(SQL_SERVER_PATH) if isfile(join(SQL_SERVER_PATH, f))]

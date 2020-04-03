@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2128
 
 CASSH_SERVER_URL=${1:-http://localhost:8080}
 CASSH_SERVER_2_URL=${2:-http://localhost:8081}
@@ -24,13 +25,13 @@ RESP_1=$(ssh-keygen -Q -f /tmp/.revoked-keys "${KEY_1_EXAMPLE}".pub | awk '{prin
 if [ "${RESP_1}" == 'ok' ]; then
     echo "[OK] Test krl for non-revoked key"
 else
-    echo "[FAIL] Test krl for non-revoked key : ${RESP_1}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test krl for non-revoked key : ${RESP_1}"
 fi
 RESP_2=$(ssh-keygen -Q -f /tmp/.revoked-keys "${KEY_2_EXAMPLE}".pub | awk '{print $NF}')
 if [ "${RESP_2}" == 'ok' ]; then
     echo "[OK] Test krl for non-revoked key"
 else
-    echo "[FAIL] Test krl for non-revoked key : ${RESP_2}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test krl for non-revoked key : ${RESP_2}"
 fi
 
 
@@ -39,7 +40,7 @@ RESP=$(curl -s -X PUT -d "username=${USER1}&realname=${USER1}@domain.fr&pubkey=$
 if [ "${RESP}" == "Create user=${USER1}. Pending request." ]; then
     echo "[OK] Test add user ${USER1}"
 else
-    echo "[FAIL] Test add user ${USER1}: ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add user ${USER1}: ${RESP}"
 fi
 
 
@@ -48,7 +49,7 @@ RESP=$(curl -s -X POST -d 'revoke=true' "${CASSH_SERVER_URL}"/admin/"${USER1}")
 if [ "${RESP}" == "Revoke user=${USER1}." ]; then
     echo "[OK] Test admin revoke '${USER1}'"
 else
-    echo "[FAIL] Test admin revoke '${USER1}' : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin revoke '${USER1}' : ${RESP}"
 fi
 
 # Check if USER1 is revoked on the second server
@@ -56,7 +57,7 @@ RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_2_URL}"/admin/"${USER1}"
 if [ "${RESP}" == '"REVOKED"' ]; then
     echo "[OK] Test admin verify ${USER1} status is revoked on the server ${CASSH_SERVER_2_URL}"
 else
-    echo "[FAIL] Test admin verify ${USER1} status is revoked on the server ${CASSH_SERVER_2_URL}: ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin verify ${USER1} status is revoked on the server ${CASSH_SERVER_2_URL}: ${RESP}"
 fi
 
 
@@ -67,7 +68,7 @@ curl -s "${CASSH_SERVER_URL}"/krl -o /tmp/.revoked-keys
 # First user should be in the krl
 RESP_1=$(ssh-keygen -Q -f /tmp/.revoked-keys "${KEY_1_EXAMPLE}".pub | awk '{print $NF}')
 if [ "${RESP_1}" == 'ok' ]; then
-    echo "[FAIL] Test krl for revoked key"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test krl for revoked key"
 else
     echo "[OK] Test krl for revoked key : ${RESP_1}"
 fi
@@ -75,7 +76,7 @@ RESP_2=$(ssh-keygen -Q -f /tmp/.revoked-keys "${KEY_2_EXAMPLE}".pub | awk '{prin
 if [ "${RESP_2}" == 'ok' ]; then
     echo "[OK] Test krl for non-revoked key"
 else
-    echo "[FAIL] Test krl for non-revoked key : ${RESP_2}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test krl for non-revoked key : ${RESP_2}"
 fi
 
 
@@ -86,7 +87,7 @@ curl -s "${CASSH_SERVER_2_URL}"/krl -o /tmp/.revoked-keys
 # First user should be in the krl
 RESP_1=$(ssh-keygen -Q -f /tmp/.revoked-keys "${KEY_1_EXAMPLE}".pub | awk '{print $NF}')
 if [ "${RESP_1}" == 'ok' ]; then
-    echo "[FAIL] Test krl for revoked key on the server ${CASSH_SERVER_2_URL}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test krl for revoked key on the server ${CASSH_SERVER_2_URL}"
 else
     echo "[OK] Test krl for revoked key on the server ${CASSH_SERVER_2_URL}: ${RESP_1}"
 fi
@@ -94,5 +95,5 @@ RESP_2=$(ssh-keygen -Q -f /tmp/.revoked-keys "${KEY_2_EXAMPLE}".pub | awk '{prin
 if [ "${RESP_2}" == 'ok' ]; then
     echo "[OK] Test krl for non-revoked key on the server ${CASSH_SERVER_2_URL}"
 else
-    echo "[FAIL] Test krl for non-revoked key on the server ${CASSH_SERVER_2_URL}: ${RESP_2}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test krl for non-revoked key on the server ${CASSH_SERVER_2_URL}: ${RESP_2}"
 fi

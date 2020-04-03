@@ -9,7 +9,7 @@ https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8
 
   - [CLI version : **1.7.0** *(24/03/2020)*](src/client/CHANGELOG.md) ![leboncoin/cassh](https://img.shields.io/docker/pulls/leboncoin/cassh) + ![nbeguier/cassh-client](https://img.shields.io/docker/pulls/nbeguier/cassh-client) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-client)](https://hub.docker.com/r/nbeguier/cassh-client)
   - [WebUI version : **1.1.1** *(24/01/2020)*](src/server/web/CHANGELOG.md)
-  - [Server version : **1.12.2** *(26/03/2020)*](src/server/CHANGELOG.md) ![leboncoin/cassh-server](https://img.shields.io/docker/pulls/leboncoin/cassh-server) + ![nbeguier/cassh-server](https://img.shields.io/docker/pulls/nbeguier/cassh-server) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-server)](https://hub.docker.com/r/nbeguier/cassh-server)
+  - [Server version : **2.0.0** *(03/04/2020)*](src/server/CHANGELOG.md) ![leboncoin/cassh-server](https://img.shields.io/docker/pulls/leboncoin/cassh-server) + ![nbeguier/cassh-server](https://img.shields.io/docker/pulls/nbeguier/cassh-server) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-server)](https://hub.docker.com/r/nbeguier/cassh-server)
 
 ## Usage
 
@@ -140,7 +140,7 @@ url = https://cassh.net
 
 [ldap]
 # realname : this is the LDAP/AD login user
-realname = ursula.ser@domain.fr
+realname = ursula.ser@example.org
 ```
 
 ## Prerequisites
@@ -180,18 +180,25 @@ port = 8080
 # debug = True
 
 [postgres]
-host = cassh.domain.fr
+host = cassh.example.org
 dbname = casshdb
 user = cassh
 password = xxxxxxxx
 
 # Highly recommended
 [ldap]
-host = ldap.domain.fr
-bind_dn = OU=User,DC=domain,DC=fr
-admin_cn = CN=Admin,OU=Group,DC=domain,DC=fr
-# Key in user result to get his LDAP realname
-filterstr = userPrincipalName
+host = ldap.example.org
+bind_dn = dc=example,dc=org
+username = cn=cassh,dc=example,dc=org
+password = mypassword
+admin_cn = cn=admin,dc=example,dc=org
+# LDAP key to match realname
+filter_realname_key = userPrincipalName
+# LDAP key to match admin_cn
+filter_memberof_key = memberOf
+# Optionnal:
+# username_prefix = cn=
+# username_suffix = ,dc=example,dc=org
 
 # Optionnal
 [ssl]
@@ -238,13 +245,19 @@ public_key = __CASSH_PATH__/ssl/server.pem
 ### Active LDAP
 ```ini
 [ldap]
-host = ldap.domain.fr
-bind_dn = OU=User,DC=domain,DC=fr
-admin_cn = CN=Admin,OU=Group,DC=domain,DC=fr
-# Key in user result to get his LDAP realname
-filterstr = userPrincipalName
+host = ldap.example.org
+bind_dn = dc=example,dc=org
+username = cn=cassh,dc=example,dc=org
+password = mypassword
+admin_cn = cn=admin,dc=example,dc=org
+# LDAP key to match realname
+filter_realname_key = userPrincipalName
+# LDAP key to match admin_cn
+filter_memberof_key = memberOf
+# Optionnal:
+# username_prefix = cn=
+# username_suffix = ,dc=example,dc=org
 ```
-
 
 ## Quick test
 

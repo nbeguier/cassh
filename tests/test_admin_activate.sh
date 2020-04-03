@@ -1,78 +1,185 @@
 #!/bin/bash
+# shellcheck disable=SC2128
 
-RESP=$(curl -s -X POST -d 'revoke=true' "${CASSH_SERVER_URL}"/admin/"${USER1}")
-if [ "${RESP}" == "Revoke user=${USER1}." ]; then
-    echo "[OK] Test admin revoke '${USER1}'"
+RESP=$(curl -s -X POST -d 'revoke=true' "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "Error: No realname option given." ]; then
+    echo "[OK] Test admin revoke '${GUEST_A_USERNAME}' without realname,password"
 else
-    echo "[FAIL] Test admin revoke '${USER1}' : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin revoke '${GUEST_A_USERNAME}' without realname,password : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d 'revoke=true' "${CASSH_SERVER_URL}"/admin/"${USER1}")
-if [ "${RESP}" == "user ${USER1} already revoked." ]; then
-    echo "[OK] Test admin revoke '${USER1}' again (should fail)"
+RESP=$(curl -s -X POST -d "revoke=true&realname=${SYSADMIN_REALNAME}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "Error: No password option given." ]; then
+    echo "[OK] Test admin revoke '${GUEST_A_USERNAME}' without password"
 else
-    echo "[FAIL] Test admin revoke '${USER1}' again (should fail) : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin revoke '${GUEST_A_USERNAME}' without password : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_URL}"/admin/"${USER1}" | jq .status)
+RESP=$(curl -s -X POST -d "revoke=true&realname=${SYSADMIN_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+    echo "[OK] Test admin revoke '${GUEST_A_USERNAME}' with invalid credentials"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin revoke '${GUEST_A_USERNAME}' with invalid credentials : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "revoke=true&realname=${GUEST_A_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "Error: Not authorized." ]; then
+    echo "[OK] Test admin revoke '${GUEST_A_USERNAME}' with unauthorized user"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin revoke '${GUEST_A_USERNAME}' with unauthorized user : ${RESP}"
+fi
+
+##########################
+## ADMIN REVOKE GUEST A ##
+##########################
+RESP=$(curl -s -X POST -d "revoke=true&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "Revoke user=${GUEST_A_USERNAME}." ]; then
+    echo "[OK] Test admin revoke '${GUEST_A_USERNAME}'"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin revoke '${GUEST_A_USERNAME}' : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "revoke=true&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "user ${GUEST_A_USERNAME} already revoked." ]; then
+    echo "[OK] Test admin revoke '${GUEST_A_USERNAME}' again (should fail)"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin revoke '${GUEST_A_USERNAME}' again (should fail) : ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "Error: No realname option given." ]; then
+    echo "[OK] Test admin verify '${GUEST_A_USERNAME}' status without realname,password"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin verify '${GUEST_A_USERNAME}' status without realname,password: ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "status=true&realname=${SYSADMIN_REALNAME}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "Error: No password option given." ]; then
+    echo "[OK] Test admin verify '${GUEST_A_USERNAME}' status without password"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin verify '${GUEST_A_USERNAME}' status without password: ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "status=true&realname=${SYSADMIN_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+    echo "[OK] Test admin verify '${GUEST_A_USERNAME}' status with invalid credentials"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin verify '${GUEST_A_USERNAME}' status with invalid credentials: ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "status=true&realname=${GUEST_A_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
+if [ "${RESP}" == "Error: Not authorized." ]; then
+    echo "[OK] Test admin verify '${GUEST_A_USERNAME}' status with unauthorized user"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin verify '${GUEST_A_USERNAME}' status with unauthorized user: ${RESP}"
+fi
+
+##########################
+## ADMIN STATUS GUEST A ##
+##########################
+RESP=$(curl -s -X POST -d "status=true&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}" | jq .status)
 if [ "${RESP}" == '"REVOKED"' ]; then
-    echo "[OK] Test admin verify '${USER1}' status"
+    echo "[OK] Test admin verify '${GUEST_A_USERNAME}' status"
 else
-    echo "[FAIL] Test admin verify '${USER1}' status : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin verify '${GUEST_A_USERNAME}' status: ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d "username=${USER1}&realname=test.${USER1}@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X POST -d "username=${GUEST_A_USERNAME}&realname=${GUEST_A_REALNAME}&password=${GUEST_A_PASSWORD}&pubkey=${GUEST_A_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == 'Status: REVOKED' ]; then
     echo "[OK] Test signing key when revoked"
 else
-    echo "[FAIL] Test signing key when revoked: ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key when revoked: ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d "username=${USER1}&realname=test.${BADTEXT}@domain.fr&pubkey=${PUB_KEY_2_EXAMPLE}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == 'Error: invalid realname.' ]; then
-    echo "[OK] Test signing key when revoked with bad realname"
+RESP=$(curl -s -X POST -d "username=${GUEST_A_USERNAME}&realname=${GUEST_B_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_A_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
+if [ "${RESP}" == 'Error : (username, realname) couple mismatch.' ]; then
+    echo "[OK] Test signing key when revoked with wrong realname"
 else
-    echo "[FAIL] Test signing key when revoked with bad realname : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key when revoked with wrong realname: ${RESP}"
 fi
 
-RESP=$(curl -s -X DELETE "${CASSH_SERVER_URL}"/admin/"${USER1}")
+RESP=$(curl -s -X POST -d "username=${GUEST_A_USERNAME}&realname=${GUEST_A_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_A_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
+if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+    echo "[OK] Test signing key when revoked with invalid credentials"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key when revoked with invalid credentials : ${RESP}"
+fi
+
+##########################
+## ADMIN DELETE GUEST A ##
+##########################
+RESP=$(curl -s -X DELETE -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
 if [ "${RESP}" == 'OK' ]; then
-    echo "[OK] Test delete '${USER1}'"
+    echo "[OK] Test delete '${GUEST_A_USERNAME}'"
 else
-    echo "[FAIL] Test delete '${USER1}': ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test delete '${GUEST_A_USERNAME}': ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER1}")
+RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
 if [ "${RESP}" == "User does not exists." ]; then
     echo "[OK] Test admin active unknown user"
 else
-    echo "[FAIL] Test admin active unknown user : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active unknown user : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d 'status=true' "${CASSH_SERVER_URL}"/admin/"${USER2}" | jq .status)
+RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}")
+if [ "${RESP}" == "Error: No realname option given." ]; then
+    echo "[OK] Test admin active '${GUEST_B_USERNAME}' status without realname,password"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active '${GUEST_B_USERNAME}' status without realname,password: ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}")
+if [ "${RESP}" == "Error: No password option given." ]; then
+    echo "[OK] Test admin active '${GUEST_B_USERNAME}' status without password"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active '${GUEST_B_USERNAME}' status without password: ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}")
+if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+    echo "[OK] Test admin active '${GUEST_B_USERNAME}' status with invalid credentials"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active '${GUEST_B_USERNAME}' status with invalid credentials: ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "realname=${GUEST_B_REALNAME}&password=${GUEST_B_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}")
+if [ "${RESP}" == "Error: Not authorized." ]; then
+    echo "[OK] Test admin active '${GUEST_B_USERNAME}' status with unauthorized user"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active '${GUEST_B_USERNAME}' status with unauthorized user: ${RESP}"
+fi
+
+RESP=$(curl -s -X POST -d "status=true&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}" | jq .status)
 if [ "${RESP}" == '"PENDING"' ]; then
-    echo "[OK] Test admin verify '${USER2}' status"
+    echo "[OK] Test admin verify '${GUEST_B_USERNAME}' status"
 else
-    echo "[FAIL] Test admin verify '${USER2}' status : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin verify '${GUEST_B_USERNAME}' status : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}")
-if [ "${RESP}" == "Active user=${USER2}. SSH Key active but need to be signed." ]; then
-    echo "[OK] Test admin active ${USER2}"
+############################
+## ADMIN ACTIVATE GUEST B ##
+############################
+RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}")
+if [ "${RESP}" == "Active user=${GUEST_B_USERNAME}. SSH Key active but need to be signed." ]; then
+    echo "[OK] Test admin active ${GUEST_B_USERNAME}"
 else
-    echo "[FAIL] Test admin active ${USER2} : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active ${GUEST_B_USERNAME} : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER2}")
-if [ "${RESP}" == "user=${USER2} already active. Nothing done." ]; then
-    echo "[OK] Test admin re-active ${USER2}"
+RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}")
+if [ "${RESP}" == "user=${GUEST_B_USERNAME} already active. Nothing done." ]; then
+    echo "[OK] Test admin re-active ${GUEST_B_USERNAME}"
 else
-    echo "[FAIL] Test admin re-active ${USER2} : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin re-active ${GUEST_B_USERNAME} : ${RESP}"
 fi
 
-RESP=$(curl -s -X POST "${CASSH_SERVER_URL}"/admin/"${USER3}")
-if [ "${RESP}" == "Active user=${USER3}. SSH Key active but need to be signed." ]; then
-    echo "[OK] Test admin active ${USER3}"
+############################
+## ADMIN ACTIVATE GUEST C ##
+############################
+RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_C_USERNAME}")
+if [ "${RESP}" == "Active user=${GUEST_C_USERNAME}. SSH Key active but need to be signed." ]; then
+    echo "[OK] Test admin active ${GUEST_C_USERNAME}"
 else
-    echo "[FAIL] Test admin active ${USER3} : ${RESP}"
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active ${GUEST_C_USERNAME} : ${RESP}"
 fi

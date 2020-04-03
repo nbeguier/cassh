@@ -26,7 +26,7 @@ from urllib.parse import unquote_plus
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError
-from ldap import initialize, SCOPE_SUBTREE
+from ldap import initialize, NO_SUCH_OBJECT, SCOPE_SUBTREE
 from psycopg2 import connect, OperationalError, ProgrammingError
 from requests import Session
 from requests.exceptions import ConnectionError as req_ConnectionError
@@ -79,16 +79,40 @@ def loadconfig(version='Unknown'):
             sys.exit(1)
 
     if config.has_section('ldap'):
+
+        # Future deprecation of this block
+        # START
+        try:
+            config.get('ldap', 'filterstr')
+            print('WARNING: "filterstr" is deprecated, use "filter_realname_key" instead')
+        except NoOptionError:
+            pass
+        # END
+
         try:
             server_opts['ldap'] = True
             server_opts['ldap_host'] = config.get('ldap', 'host')
             server_opts['ldap_bind_dn'] = config.get('ldap', 'bind_dn')
+            server_opts['ldap_username'] = config.get('ldap', 'username')
+            server_opts['ldap_password'] = config.get('ldap', 'password')
             server_opts['ldap_admin_cn'] = config.get('ldap', 'admin_cn')
-            server_opts['filterstr'] = config.get('ldap', 'filterstr')
+            server_opts['ldap_filter_realname_key'] = config.get('ldap', 'filter_realname_key')
         except NoOptionError:
             if args.verbose:
                 print('Option reading error (ldap).')
             sys.exit(1)
+        try:
+            server_opts['ldap_username_prefix'] = config.get('ldap', 'username_prefix')
+        except NoOptionError:
+            server_opts['ldap_username_prefix'] = ''
+        try:
+            server_opts['ldap_username_suffix'] = config.get('ldap', 'username_suffix')
+        except NoOptionError:
+            server_opts['ldap_username_suffix'] = ''
+        try:
+            server_opts['ldap_filter_memberof_key'] = config.get('ldap', 'filter_memberof_key')
+        except NoOptionError:
+            server_opts['ldap_filter_memberof_key'] = 'memberOf'
 
     if config.has_section('ssl'):
         try:
@@ -133,7 +157,7 @@ def ldap_authentification(server_options, admin=False):
     if server_options['ldap']:
         credentials, message = data2map()
         if message:
-            return response_render(message, http_code='400 Bad Request')
+            return False, response_render(message, http_code='400 Bad Request')
         if 'realname' in credentials:
             realname = unquote_plus(credentials['realname'])
         else:
@@ -145,20 +169,36 @@ def ldap_authentification(server_options, admin=False):
         if password == '':
             return False, 'Error: password is empty.'
         ldap_conn = initialize("ldap://"+server_options['ldap_host'])
+
+        # user login to validate password
         try:
-            ldap_conn.bind_s(realname, password)
+            ldap_conn.bind_s('{}{}{}'.format(
+                server_options['ldap_username_prefix'],
+                realname,
+                server_options['ldap_username_suffix']), password)
         except Exception as err_msg:
             return False, 'Error: {}'.format(err_msg)
+
+        # cassh service login
+        try:
+            ldap_conn.bind_s(server_options['ldap_username'], server_options['ldap_password'])
+        except Exception as err_msg:
+            return False, 'Error: cassh ldap credentials'
+
         if admin:
-            memberof_admin_list = ldap_conn.search_s(
-                server_options['ldap_bind_dn'],
-                SCOPE_SUBTREE,
-                filterstr='(&(%s=%s)(memberOf=%s))' % (
-                    server_options['filterstr'],
-                    realname,
-                    server_options['ldap_admin_cn']))
+            try:
+                memberof_admin_list = ldap_conn.search_s(
+                    server_options['ldap_bind_dn'],
+                    SCOPE_SUBTREE,
+                    filterstr='(&({}={})({}={}))'.format(
+                        server_options['ldap_filter_realname_key'],
+                        realname,
+                        server_options['ldap_filter_memberof_key'],
+                        server_options['ldap_admin_cn']))
+            except NO_SUCH_OBJECT:
+                return False, 'Error: admin LDAP filter is incorrect.'
             if not memberof_admin_list:
-                return False, 'Error: user %s is not an admin.' % realname
+                return False, 'Error: Not authorized.'
     return True, 'OK'
 
 def validate_payload(key, value):

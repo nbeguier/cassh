@@ -29,7 +29,7 @@ import lib.tools as tools
 # DEBUG
 # from pdb import set_trace as st
 
-VERSION = '1.12.2'
+VERSION = '2.0.0'
 
 SERVER_OPTS, ARGS, TOOLS = tools.loadconfig(version=VERSION)
 
@@ -548,35 +548,6 @@ class Principals():
     """
     Class Principals
     """
-    def GET(self, username):
-        """
-        Get a user principals
-        """
-        # LDAP authentication
-        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
-        if not is_admin_auth:
-            return tools.response_render(message, http_code='401 Unauthorized')
-
-        pg_conn, message = TOOLS.pg_connection()
-        if pg_conn is None:
-            return tools.response_render(message, http_code='503 Service Unavailable')
-        cur = pg_conn.cursor()
-        values = {'username': username}
-        cur.execute(
-            """
-            SELECT PRINCIPALS FROM USERS WHERE NAME=(%(username)s)
-            """, values)
-        principals = cur.fetchone()
-        pg_conn.commit()
-        cur.close()
-        pg_conn.close()
-        if not principals:
-            return tools.response_render(
-                "ERROR: {} doesn't exist or doesn't have principals...".format(
-                    username),
-                http_code='400 Bad Request')
-        return tools.response_render('OK: {} principals are {}'.format(username, principals))
-
     def POST(self, username):
         """
         Manage user principals
