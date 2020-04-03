@@ -164,20 +164,6 @@ class Admin():
                 pg_conn.close()
                 return tools.response_render(
                     'OK: %s=%s for %s' % (key, value, username))
-            # Deprecated endpoint for principals
-            if key == 'principals':
-                value = unquote_plus(value)
-                cur.execute(
-                    """
-                    UPDATE USERS SET PRINCIPALS=(%s) WHERE NAME=(%s)
-                    """, (value, username))
-                pg_conn.commit()
-                cur.close()
-                pg_conn.close()
-                return tools.response_render(
-                    'WARNING: ' + \
-                    'This endpoint is deprecated, upgrade your client cassh to 1.7.0\n'+
-                    'OK: %s=%s for %s' % (key, value, username))
         return tools.response_render('WARNING: No key found...')
 
     def DELETE(self, username):
@@ -355,7 +341,7 @@ class Client():
 
         status = user[2]
         expiry = user[3]
-        principals = tools.get_principals(user[4], username, shell=True)
+        custom_principals = tools.clean_principals_output(user[4], username, shell=True)
 
         if status > 0:
             cur.close()
@@ -364,7 +350,7 @@ class Client():
             return tools.response_render("Status: %s" % constants.STATES[user[2]])
 
         cert_contents = TOOLS.sign_key(
-            tmp_pubkey.name, username, expiry, principals, db_cursor=cur)
+            tmp_pubkey.name, username, expiry, custom_principals, db_cursor=cur)
 
         remove(tmp_pubkey.name)
         pg_conn.commit()

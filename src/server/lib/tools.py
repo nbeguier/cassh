@@ -113,6 +113,10 @@ def loadconfig(version='Unknown'):
             server_opts['ldap_filter_memberof_key'] = config.get('ldap', 'filter_memberof_key')
         except NoOptionError:
             server_opts['ldap_filter_memberof_key'] = 'memberOf'
+        try:
+            server_opts['ldap_mapping_path'] = config.get('ldap', 'ldap_mapping_path')
+        except NoOptionError:
+            server_opts['ldap_mapping_path'] = None
 
     if config.has_section('ssl'):
         try:
@@ -273,7 +277,7 @@ def data2map():
         data_map[sub_key] = value
     return data_map, None
 
-def get_principals(sql_result, username, shell=False):
+def clean_principals_output(sql_result, username, shell=False):
     """
     Transform sql principals into readable one
     """
@@ -583,7 +587,7 @@ class Tools():
                     '%Y-%m-%d %H:%M:%S')
                 d_sub_result['ssh_key_hash'] = pretty_ssh_key_hash(res[4])
                 d_sub_result['expiry'] = res[6]
-                d_sub_result['principals'] = get_principals(res[7], res[0])
+                d_sub_result['principals'] = clean_principals_output(res[7], res[0])
                 d_result[res[0]] = d_sub_result
             return dumps(d_result, indent=4, sort_keys=True)
         d_result = {}
@@ -594,5 +598,5 @@ class Tools():
             '%Y-%m-%d %H:%M:%S')
         d_result['ssh_key_hash'] = pretty_ssh_key_hash(result[4])
         d_result['expiry'] = result[6]
-        d_result['principals'] = get_principals(result[7], result[0])
+        d_result['principals'] = clean_principals_output(result[7], result[0])
         return dumps(d_result, indent=4, sort_keys=True)

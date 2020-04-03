@@ -26,7 +26,7 @@ SYSADMIN_PASSWORD=b@dt€xt
 GUEST_A_PUB_KEY=$(cat "${KEY_2_EXAMPLE}".pub)
 GUEST_A_USERNAME=guesta$(pwgen -A -0 10)
 GUEST_A_REALNAME=guest.a@example.org
-GUEST_A_PASSWORD=password
+GUEST_A_PASSWORD=hG9%60P%3AJznneDcTfN%7D6KLr%2DV%5Ev%24EKR%3CDrx%22qj%28%5C%2Bf  # urlencoded
 
 # USER: guest.b
 GUEST_B_PUB_KEY=$(cat "${KEY_3_EXAMPLE}".pub)
@@ -34,11 +34,11 @@ GUEST_B_USERNAME=guestb$(pwgen -A -0 10)
 GUEST_B_REALNAME=guest.b@example.org
 GUEST_B_PASSWORD=ohwie6aegohghaegho2zed2kah6gaajeiV0ThahQu6oogukaevei4eeh9co0aiyeem9baeKeeh1ohphae9ies0ahx0Eechuij4osaej5ahchei1Jo2gaze2ahch3ohpiyie4hai4ohdi0fohx2akae4ooChohce1Thieg4shoosh9epae9ainooy1uepaad1gei1pheongaunie0mohy3Ich9eetohn1ni9johzaiMoan8sha7eish6Gee
 
-# USER: guest.c
+# USER: guest.c, same realname as guest.b
 GUEST_C_PUB_KEY=$(cat "${KEY_4_EXAMPLE}".pub)
 GUEST_C_USERNAME=guestc$(pwgen -A -0 10)
-GUEST_C_REALNAME=guest.c@example.org
-GUEST_C_PASSWORD=hG9%60P%3AJznneDcTfN%7D6KLr%2DV%5Ev%24EKR%3CDrx%22qj%28%5C%2Bf  # urlencoded
+GUEST_C_REALNAME=guest.b@example.org
+GUEST_C_PASSWORD=ohwie6aegohghaegho2zed2kah6gaajeiV0ThahQu6oogukaevei4eeh9co0aiyeem9baeKeeh1ohphae9ies0ahx0Eechuij4osaej5ahchei1Jo2gaze2ahch3ohpiyie4hai4ohdi0fohx2akae4ooChohce1Thieg4shoosh9epae9ainooy1uepaad1gei1pheongaunie0mohy3Ich9eetohn1ni9johzaiMoan8sha7eish6Gee
 
 BADTEXT=b@dt€xt
 

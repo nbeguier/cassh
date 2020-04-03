@@ -26,8 +26,8 @@ loginShell: /bin/bash
 homeDirectory: /home/guest
 uidNumber: 14583103
 gidNumber: 14564100
-# password: password
-userPassword: {SSHA}na/44s5Uj5xHpaihEviT+eESfBMD8Grq 
+# password: hG9`P:JznneDcTfN}6KLr-V^v$EKR<Drx"qj(\+f
+userPassword: {SSHA}RFn8la/6fzkhRsUCJ2EHoGEGAx3mdER1
 mail: guest.a@example.org
 # memberOf
 gecos: guest,dc=example,dc=org
@@ -46,22 +46,5 @@ gidNumber: 14564100
 # password: ohwie6aegohghaegho2zed2kah6gaajeiV0ThahQu6oogukaevei4eeh9co0aiyeem9baeKeeh1ohphae9ies0ahx0Eechuij4osaej5ahchei1Jo2gaze2ahch3ohpiyie4hai4ohdi0fohx2akae4ooChohce1Thieg4shoosh9epae9ainooy1uepaad1gei1pheongaunie0mohy3Ich9eetohn1ni9johzaiMoan8sha7eish6Gee
 userPassword: {SSHA}XdwvOTz4X7NZujyVrcCo3VCZWXV+G70L
 mail: guest.b@example.org
-# memberOf
-gecos: guest,dc=example,dc=org
-
-dn: cn=guest.c@example.org,dc=example,dc=org
-uid: guest.c@example.org
-cn: guest.c@example.org
-sn: 6
-objectClass: top
-objectClass: posixAccount
-objectClass: inetOrgPerson
-loginShell: /bin/bash
-homeDirectory: /home/guest
-uidNumber: 14583105
-gidNumber: 14564100
-# password: hG9`P:JznneDcTfN}6KLr-V^v$EKR<Drx"qj(\+f
-userPassword: {SSHA}RFn8la/6fzkhRsUCJ2EHoGEGAx3mdER1
-mail: guest.c@example.org
 # memberOf
 gecos: guest,dc=example,dc=org

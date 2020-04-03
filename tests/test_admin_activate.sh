@@ -183,3 +183,13 @@ if [ "${RESP}" == "Active user=${GUEST_C_USERNAME}. SSH Key active but need to b
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active ${GUEST_C_USERNAME} : ${RESP}"
 fi
+
+#############################
+## ADMIN ACTIVATE SYSADMIN ##
+#############################
+RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${SYSADMIN_USERNAME}")
+if [ "${RESP}" == "Active user=${SYSADMIN_USERNAME}. SSH Key active but need to be signed." ]; then
+    echo "[OK] Test admin active ${SYSADMIN_USERNAME}"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active ${SYSADMIN_USERNAME} : ${RESP}"
+fi

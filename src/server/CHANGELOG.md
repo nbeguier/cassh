@@ -10,13 +10,16 @@ CASSH Server
 2020/04/03
 
 ### New Features
+  - Add LDAP mapping with principals
   - Add multiple options in LDAP configuration, some breaking changes
   - Add OpenLDAP in tests
 
 ### Changes
   - LDAP configuration: "filterstr" is deprecated, use "filter_realname_key" instead
   - Remove GET /admin/principals (not used in client and not safe)
+  - Remove deprecated PATCH endpoint for principals
   - ldap_authentification returns also a list of memberof
+  - rename get_principals to clean_principals_output
 
 ### Bug Fixes
   - ldap_authentification return when bad options

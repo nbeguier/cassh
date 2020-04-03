@@ -101,6 +101,16 @@ else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add user with same realname (which is possible): ${RESP}"
 fi
 
+##################
+## ADD SYSADMIN ##
+##################
+RESP=$(curl -s -X PUT -d "username=${SYSADMIN_USERNAME}&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}&pubkey=${SYSADMIN_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
+if [ "${RESP}" == "Create user=${SYSADMIN_USERNAME}. Pending request." ]; then
+    echo "[OK] Test add user sysadmin"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add user sysadmin: ${RESP}"
+fi
+
 RESP=$(curl -s -X POST -d "realname=${GUEST_A_REALNAME}&password=${GUEST_B_PASSWORD}" "${CASSH_SERVER_URL}"/client/status)
 if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
     echo "[OK] Test status with invalid credentials"
@@ -118,7 +128,7 @@ else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test status pending user : ${RESP}"
 fi
 
-RESP=$(curl -s -X PUT -d "username=${GUEST_C_USERNAME}&realname=${GUEST_C_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_B_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
+RESP=$(curl -s -X PUT -d "username=${GUEST_C_USERNAME}&realname=${GUEST_A_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_B_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
 if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
     echo "[OK] Test updating user with invalid credentials"
 else

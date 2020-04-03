@@ -79,7 +79,7 @@ echo "POSTGRESQL IP: $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.
 echo "OPENLDAP IP: $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-openldap)"
 echo "CASSH IP: $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-cassh)"
 echo ''
-echo '> /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh.conf'
+echo '> /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh/cassh.conf'
 
 docker attach demo-cassh
 

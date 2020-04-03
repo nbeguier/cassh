@@ -273,20 +273,20 @@ Install docker : https://docs.docker.com/engine/installation/
 pip install -r tests/requirements.txt
 
 # Set the postgres host in the cassh-server configuration
-cp tests/cassh_dummy.conf tests/cassh.conf
+cp tests/cassh/cassh.conf.sample tests/cassh/cassh.conf
 # Generate temporary certificates
 mkdir test-keys
 ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
 ssh-keygen -k -f test-keys/revoked-keys
 
 # /!\ Wait for the container demo-postgres to be started
-sed -i "s/host = localhost/host = $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-postgres)/g" tests/cassh.conf
+sed -i "s/host = localhost/host = $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-postgres)/g" tests/cassh/cassh.conf
 
 # Duplicate the cassh.conf
-cp tests/cassh.conf tests/cassh_2.conf
+cp tests/cassh/cassh.conf tests/cassh/cassh_2.conf
 # Generate another krl
 ssh-keygen -k -f test-keys/revoked-keys-2
-sed -i "s/revoked-keys/revoked-keys-2/g" tests/cassh_2.conf
+sed -i "s/revoked-keys/revoked-keys-2/g" tests/cassh/cassh_2.conf
 ```
 
 #### One instance
@@ -295,7 +295,7 @@ sed -i "s/revoked-keys/revoked-keys-2/g" tests/cassh_2.conf
 ```bash
 # Launch this on another terminal
 bash tests/launch_demo_server.sh --server_code_path ${PWD} --debug
-$ /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh.conf
+$ /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh/cassh.conf
 
 # When 'http://0.0.0.0:8080/' appears, start this script
 bash tests/test.sh
@@ -308,7 +308,7 @@ The same as previsouly, but launch this to specify a second cassh-server instanc
 ```bash
 # Launch this on another terminal
 bash tests/launch_demo_server.sh --server_code_path ${PWD} --debug --port 8081
-$ /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh_2.conf
+$ /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh/cassh_2.conf
 ```
 
 
