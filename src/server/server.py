@@ -45,7 +45,7 @@ class Admin():
             status=true/false => Display status
         """
         # LDAP authentication
-        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -140,7 +140,7 @@ class Admin():
             key=value => Set the key value. Keys are in status output.
         """
         # LDAP authentication
-        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -186,7 +186,7 @@ class Admin():
         /admin/<username>
         """
         # LDAP authentication
-        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -228,7 +228,7 @@ class ClientStatus():
         /client/status
         """
         # LDAP authentication
-        is_auth, message = tools.ldap_authentification(SERVER_OPTS)
+        is_auth, message, _ = tools.ldap_authentification(SERVER_OPTS)
         if not is_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -262,7 +262,7 @@ class Client():
             admin_force=true|false
         """
         # LDAP authentication
-        is_auth, message = tools.ldap_authentification(SERVER_OPTS)
+        is_auth, message, _ = tools.ldap_authentification(SERVER_OPTS)
         if not is_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -270,7 +270,7 @@ class Client():
         force_sign = False
 
         # LDAP ADMIN authentication
-        is_admin_auth, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
 
         payload, message = tools.data2map()
         if message:
@@ -382,7 +382,7 @@ class Client():
             realname=xxxxx@domain.fr => This LDAP/AD user.
         """
         # LDAP authentication
-        is_auth, message = tools.ldap_authentification(SERVER_OPTS)
+        is_auth, message, _ = tools.ldap_authentification(SERVER_OPTS)
         if not is_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -553,7 +553,7 @@ class Principals():
         Manage user principals
         """
         # LDAP authentication
-        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -647,7 +647,7 @@ class PrincipalsSearch():
         Search user's principals by filter
         """
         # LDAP authentication
-        is_admin_auth, message = tools.ldap_authentification(SERVER_OPTS, admin=True)
+        is_admin_auth, message, _ = tools.ldap_authentification(SERVER_OPTS, admin=True)
         if not is_admin_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
 
@@ -701,7 +701,7 @@ class TestAuth():
         Test authentication
         """
         # LDAP authentication
-        is_auth, message = tools.ldap_authentification(SERVER_OPTS)
+        is_auth, message, _ = tools.ldap_authentification(SERVER_OPTS)
         if not is_auth:
             return tools.response_render(message, http_code='401 Unauthorized')
         return tools.response_render('OK')

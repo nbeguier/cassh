@@ -16,6 +16,7 @@ CASSH Server
 ### Changes
   - LDAP configuration: "filterstr" is deprecated, use "filter_realname_key" instead
   - Remove GET /admin/principals (not used in client and not safe)
+  - ldap_authentification returns also a list of memberof
 
 ### Bug Fixes
   - ldap_authentification return when bad options

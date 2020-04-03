@@ -148,26 +148,54 @@ def loadconfig(version='Unknown'):
     tooling = Tools(server_opts, constants.STATES, version)
     return server_opts, args, tooling
 
+def get_memberof(realname, server_options, ldap_conn):
+    """
+    Returns the list of memberOf groups
+    """
+    try:
+        output = ldap_conn.search_s(
+            server_options['ldap_bind_dn'],
+            SCOPE_SUBTREE,
+            filterstr='(&({}={}))'.format(
+                server_options['ldap_filter_realname_key'],
+                realname))
+    except NO_SUCH_OBJECT:
+        return list(), 'Error: admin LDAP filter is incorrect (no such object).'
+    if not isinstance(output, list) or not output:
+        return list(), 'Error: admin LDAP output is incorrect.'
+    if len(output) != 1:
+        return list(), 'Error: admin LDAP filter is incorrect (multiple user).'
+    ldap_infos = output[0]
+    if not isinstance(output, list) or not output:
+        return list(), 'Error: admin LDAP output is incorrect.'
+    for i in ldap_infos:
+        if isinstance(i, dict) and server_options['ldap_filter_memberof_key'] in i:
+            if isinstance(i[server_options['ldap_filter_memberof_key']], list):
+                return i[server_options['ldap_filter_memberof_key']], None
+            return list(), 'Error: admin LDAP output is incorrect.'
+    return list(), 'Error: admin LDAP filter is incorrect.'
+
 def ldap_authentification(server_options, admin=False):
     """
     Return True if user is well authentified
         realname=xxxxx@domain.fr
         password=xxxxx
+    It returns also a list of memberof
     """
     if server_options['ldap']:
         credentials, message = data2map()
         if message:
-            return False, response_render(message, http_code='400 Bad Request')
+            return False, response_render(message, http_code='400 Bad Request'), list()
         if 'realname' in credentials:
             realname = unquote_plus(credentials['realname'])
         else:
-            return False, 'Error: No realname option given.'
+            return False, 'Error: No realname option given.', list()
         if 'password' in credentials:
             password = unquote_plus(credentials['password'])
         else:
-            return False, 'Error: No password option given.'
+            return False, 'Error: No password option given.', list()
         if password == '':
-            return False, 'Error: password is empty.'
+            return False, 'Error: password is empty.', list()
         ldap_conn = initialize("ldap://"+server_options['ldap_host'])
 
         # user login to validate password
@@ -177,29 +205,25 @@ def ldap_authentification(server_options, admin=False):
                 realname,
                 server_options['ldap_username_suffix']), password)
         except Exception as err_msg:
-            return False, 'Error: {}'.format(err_msg)
+            return False, 'Error: {}'.format(err_msg), list()
 
         # cassh service login
         try:
             ldap_conn.bind_s(server_options['ldap_username'], server_options['ldap_password'])
         except Exception as err_msg:
-            return False, 'Error: cassh ldap credentials'
+            return False, 'Error: wrong cassh ldap credentials', list()
+
+        list_membership, err_msg = get_memberof(
+            realname,
+            server_options,
+            ldap_conn)
+        if err_msg:
+            return False, err_msg, list()
 
         if admin:
-            try:
-                memberof_admin_list = ldap_conn.search_s(
-                    server_options['ldap_bind_dn'],
-                    SCOPE_SUBTREE,
-                    filterstr='(&({}={})({}={}))'.format(
-                        server_options['ldap_filter_realname_key'],
-                        realname,
-                        server_options['ldap_filter_memberof_key'],
-                        server_options['ldap_admin_cn']))
-            except NO_SUCH_OBJECT:
-                return False, 'Error: admin LDAP filter is incorrect.'
-            if not memberof_admin_list:
-                return False, 'Error: Not authorized.'
-    return True, 'OK'
+            if server_options['ldap_admin_cn'].encode() not in list_membership:
+                return False, 'Error: Not authorized.', list()
+    return True, 'OK', list_membership
 
 def validate_payload(key, value):
     """
