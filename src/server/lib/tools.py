@@ -195,12 +195,12 @@ def get_memberof(realname, server_options, reuse=None):
     except NO_SUCH_OBJECT:
         return list(), 'Error: admin LDAP filter is incorrect (no such object).'
     if not isinstance(output, list) or not output:
-        return list(), 'Error: admin LDAP output is incorrect.'
+        return list(), None
     if len(output) != 1:
         return list(), 'Error: admin LDAP filter is incorrect (multiple user).'
     ldap_infos = output[0]
     if not isinstance(output, list) or not output:
-        return list(), 'Error: admin LDAP output is incorrect.'
+        return list(), None
     for i in ldap_infos:
         if isinstance(i, dict) and server_options['ldap_filter_memberof_key'] in i:
             if isinstance(i[server_options['ldap_filter_memberof_key']], list):

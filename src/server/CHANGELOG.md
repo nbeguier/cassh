@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Server
 -----
 
+2.0.1
+-----
+
+2020/04/06
+
+### Bug Fixes
+  - Unblock no-membership/no-bindCN user with a valid login/password
+
+
 2.0.0
 -----
 
