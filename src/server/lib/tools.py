@@ -13,7 +13,7 @@ Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from glob import glob
-from json import dumps
+import json
 from random import choice
 from shutil import copyfile
 from string import ascii_lowercase
@@ -26,7 +26,7 @@ from urllib.parse import unquote_plus
 
 # Third party library imports
 from configparser import ConfigParser, NoOptionError
-from ldap import initialize, SCOPE_SUBTREE
+from ldap import initialize, NO_SUCH_OBJECT, SCOPE_SUBTREE
 from psycopg2 import connect, OperationalError, ProgrammingError
 from requests import Session
 from requests.exceptions import ConnectionError as req_ConnectionError
@@ -66,6 +66,7 @@ def loadconfig(version='Unknown'):
         server_opts['admin_db_failover'] = False
     server_opts['ldap'] = False
     server_opts['ssl'] = False
+    server_opts['ldap_mapping'] = dict()
 
     if config.has_section('postgres'):
         try:
@@ -79,16 +80,47 @@ def loadconfig(version='Unknown'):
             sys.exit(1)
 
     if config.has_section('ldap'):
+
+        # Future deprecation of this block
+        # START
+        try:
+            config.get('ldap', 'filterstr')
+            print('WARNING: "filterstr" is deprecated, use "filter_realname_key" instead')
+        except NoOptionError:
+            pass
+        # END
+
         try:
             server_opts['ldap'] = True
             server_opts['ldap_host'] = config.get('ldap', 'host')
             server_opts['ldap_bind_dn'] = config.get('ldap', 'bind_dn')
+            server_opts['ldap_username'] = config.get('ldap', 'username')
+            server_opts['ldap_password'] = config.get('ldap', 'password')
             server_opts['ldap_admin_cn'] = config.get('ldap', 'admin_cn')
-            server_opts['filterstr'] = config.get('ldap', 'filterstr')
+            server_opts['ldap_filter_realname_key'] = config.get('ldap', 'filter_realname_key')
         except NoOptionError:
             if args.verbose:
                 print('Option reading error (ldap).')
             sys.exit(1)
+        try:
+            server_opts['ldap_username_prefix'] = config.get('ldap', 'username_prefix')
+        except NoOptionError:
+            server_opts['ldap_username_prefix'] = ''
+        try:
+            server_opts['ldap_username_suffix'] = config.get('ldap', 'username_suffix')
+        except NoOptionError:
+            server_opts['ldap_username_suffix'] = ''
+        try:
+            server_opts['ldap_filter_memberof_key'] = config.get('ldap', 'filter_memberof_key')
+        except NoOptionError:
+            server_opts['ldap_filter_memberof_key'] = 'memberOf'
+        try:
+            ldap_mapping_path = config.get('ldap', 'ldap_mapping_path')
+            if isfile(ldap_mapping_path):
+                with open(ldap_mapping_path, 'r') as ldap_mapping_file:
+                    server_opts['ldap_mapping'] = json.loads(ldap_mapping_file.read())
+        except (NoOptionError, json.decoder.JSONDecodeError):
+            pass
 
     if config.has_section('ssl'):
         try:
@@ -124,41 +156,111 @@ def loadconfig(version='Unknown'):
     tooling = Tools(server_opts, constants.STATES, version)
     return server_opts, args, tooling
 
+def get_ldap_conn(host, username, password, reuse=None):
+    """
+    Returns an LDAP connection
+    """
+    if reuse:
+        ldap_conn = reuse
+    else:
+        ldap_conn = initialize("ldap://"+host)
+    try:
+        ldap_conn.bind_s(username, password)
+    except Exception as err_msg:
+        return False, 'Error: {}'.format(err_msg)
+    return ldap_conn, None
+
+def get_memberof(realname, server_options, reuse=None):
+    """
+    Returns the list of memberOf groups
+    """
+    if not server_options['ldap']:
+        return list(), None
+    if reuse:
+        ldap_conn = reuse
+    else:
+        ldap_conn, err_msg = get_ldap_conn(
+            server_options['ldap_host'],
+            server_options['ldap_username'],
+            server_options['ldap_password'])
+        if err_msg:
+            return list(), 'Error: wrong cassh ldap credentials'
+    try:
+        output = ldap_conn.search_s(
+            server_options['ldap_bind_dn'],
+            SCOPE_SUBTREE,
+            filterstr='(&({}={}))'.format(
+                server_options['ldap_filter_realname_key'],
+                realname))
+    except NO_SUCH_OBJECT:
+        return list(), 'Error: admin LDAP filter is incorrect (no such object).'
+    if not isinstance(output, list) or not output:
+        return list(), 'Error: admin LDAP output is incorrect.'
+    if len(output) != 1:
+        return list(), 'Error: admin LDAP filter is incorrect (multiple user).'
+    ldap_infos = output[0]
+    if not isinstance(output, list) or not output:
+        return list(), 'Error: admin LDAP output is incorrect.'
+    for i in ldap_infos:
+        if isinstance(i, dict) and server_options['ldap_filter_memberof_key'] in i:
+            if isinstance(i[server_options['ldap_filter_memberof_key']], list):
+                return i[server_options['ldap_filter_memberof_key']], None
+            return list(), 'Error: admin LDAP output is incorrect.'
+    return list(), 'Error: admin LDAP filter is incorrect.'
+
 def ldap_authentification(server_options, admin=False):
     """
     Return True if user is well authentified
         realname=xxxxx@domain.fr
         password=xxxxx
+    It returns also a list of memberof
     """
-    if server_options['ldap']:
-        credentials, message = data2map()
-        if message:
-            return response_render(message, http_code='400 Bad Request')
-        if 'realname' in credentials:
-            realname = unquote_plus(credentials['realname'])
-        else:
-            return False, 'Error: No realname option given.'
-        if 'password' in credentials:
-            password = unquote_plus(credentials['password'])
-        else:
-            return False, 'Error: No password option given.'
-        if password == '':
-            return False, 'Error: password is empty.'
-        ldap_conn = initialize("ldap://"+server_options['ldap_host'])
-        try:
-            ldap_conn.bind_s(realname, password)
-        except Exception as err_msg:
-            return False, 'Error: {}'.format(err_msg)
-        if admin:
-            memberof_admin_list = ldap_conn.search_s(
-                server_options['ldap_bind_dn'],
-                SCOPE_SUBTREE,
-                filterstr='(&(%s=%s)(memberOf=%s))' % (
-                    server_options['filterstr'],
-                    realname,
-                    server_options['ldap_admin_cn']))
-            if not memberof_admin_list:
-                return False, 'Error: user %s is not an admin.' % realname
+    if not server_options['ldap']:
+        return True, 'OK'
+    credentials, message = data2map()
+    if message:
+        return False, response_render(message, http_code='400 Bad Request')
+    if 'realname' in credentials:
+        realname = unquote_plus(credentials['realname'])
+    else:
+        return False, 'Error: No realname option given.'
+    if 'password' in credentials:
+        password = unquote_plus(credentials['password'])
+    else:
+        return False, 'Error: No password option given.'
+    if password == '':
+        return False, 'Error: password is empty.'
+
+    # user login to validate password
+    ldap_conn, err_msg = get_ldap_conn(
+        server_options['ldap_host'],
+        '{}{}{}'.format(
+            server_options['ldap_username_prefix'],
+            realname,
+            server_options['ldap_username_suffix']),
+        password)
+    if err_msg:
+        return False, err_msg
+
+    # cassh service login
+    ldap_conn, err_msg = get_ldap_conn(
+        server_options['ldap_host'],
+        server_options['ldap_username'],
+        server_options['ldap_password'],
+        reuse=ldap_conn)
+    if err_msg:
+        return False, 'Error: wrong cassh ldap credentials'
+
+    list_membership, err_msg = get_memberof(
+        realname,
+        server_options,
+        reuse=ldap_conn)
+    if err_msg:
+        return False, err_msg
+
+    if admin:
+        if server_options['ldap_admin_cn'].encode() not in list_membership:
+            return False, 'Error: Not authorized.'
     return True, 'OK'
 
 def validate_payload(key, value):
@@ -209,7 +311,7 @@ def data2map():
         data_map[sub_key] = value
     return data_map, None
 
-def get_principals(sql_result, username, shell=False):
+def clean_principals_output(sql_result, username, shell=False):
     """
     Transform sql principals into readable one
     """
@@ -220,6 +322,53 @@ def get_principals(sql_result, username, shell=False):
     if shell:
         return sql_result
     return sql_result.split(',')
+
+def truncate_principals(custom_principals, list_membership, server_options):
+    """
+    Returns custom_principals without LDAP principals
+    """
+    principals = custom_principals.split(',')
+    if not server_options['ldap_mapping']:
+        return ','.join(principals)
+    for user_group_cn in list_membership:
+        user_group_cn_decoded = user_group_cn.decode(errors='ignore')
+        if user_group_cn_decoded not in server_options['ldap_mapping']:
+            continue
+        ldap_mapping_principals = server_options['ldap_mapping'][user_group_cn_decoded]
+        for principal in ldap_mapping_principals:
+            err_msg = validate_payload('principals', principal)
+            if err_msg:
+                print('Error: Invalid LDAP mapping configuration: err={}, principals={}'.format(
+                    err_msg, principal))
+                continue
+            if principal in principals:
+                principals.remove(principal)
+    # Remove duplicates
+    principals = list(dict.fromkeys(principals))
+    return ','.join(principals)
+
+def merge_principals(custom_principals, list_membership, server_options):
+    """
+    Returns a custom_principals + LDAP principals
+    """
+    principals = custom_principals.split(',')
+    if not server_options['ldap_mapping']:
+        return ','.join(principals)
+    for user_group_cn in list_membership:
+        user_group_cn_decoded = user_group_cn.decode(errors='ignore')
+        if user_group_cn_decoded not in server_options['ldap_mapping']:
+            continue
+        ldap_mapping_principals = server_options['ldap_mapping'][user_group_cn_decoded]
+        for principal in ldap_mapping_principals:
+            err_msg = validate_payload('principals', principal)
+            if err_msg:
+                print('Error: Invalid LDAP mapping configuration: err={}, principals={}'.format(
+                    err_msg, principal))
+                continue
+            principals.append(principal)
+    # Remove duplicates
+    principals = list(dict.fromkeys(principals))
+    return ','.join(principals)
 
 def get_pubkey(username, pg_conn, key_n=0):
     """
@@ -508,6 +657,12 @@ class Tools():
         """
         if result is None:
             return None
+        ldap_conn = None
+        if self.server_opts['ldap']:
+            ldap_conn, _ = get_ldap_conn(
+                self.server_opts['ldap_host'],
+                self.server_opts['ldap_username'],
+                self.server_opts['ldap_password'])
         if is_list:
             d_result = {}
             for res in result:
@@ -519,9 +674,14 @@ class Tools():
                     '%Y-%m-%d %H:%M:%S')
                 d_sub_result['ssh_key_hash'] = pretty_ssh_key_hash(res[4])
                 d_sub_result['expiry'] = res[6]
-                d_sub_result['principals'] = get_principals(res[7], res[0])
+                list_membership, _ = get_memberof(
+                    res[1],
+                    self.server_opts,
+                    reuse=ldap_conn)
+                full_principals = merge_principals(res[7], list_membership, self.server_opts)
+                d_sub_result['principals'] = clean_principals_output(full_principals, res[0])
                 d_result[res[0]] = d_sub_result
-            return dumps(d_result, indent=4, sort_keys=True)
+            return json.dumps(d_result, indent=4, sort_keys=True)
         d_result = {}
         d_result['username'] = result[0]
         d_result['realname'] = result[1]
@@ -530,5 +690,10 @@ class Tools():
             '%Y-%m-%d %H:%M:%S')
         d_result['ssh_key_hash'] = pretty_ssh_key_hash(result[4])
         d_result['expiry'] = result[6]
-        d_result['principals'] = get_principals(result[7], result[0])
-        return dumps(d_result, indent=4, sort_keys=True)
+        list_membership, _ = get_memberof(
+            result[1],
+            self.server_opts,
+            reuse=ldap_conn)
+        full_principals = merge_principals(result[7], list_membership, self.server_opts)
+        d_result['principals'] = clean_principals_output(full_principals, result[0])
+        return json.dumps(d_result, indent=4, sort_keys=True)

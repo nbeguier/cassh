@@ -1,13 +1,16 @@
 language: python
 python:
-  - '3.4'
   - "3.5"
   - "3.6"
   - "3.7"
   - "3.8"
-# command to install dependencies
 install:
-  - pip3 install pylint; pip3 install -r src/client/requirements.txt; pip3 install -r src/server/requirements.txt
-# command to run tests
-script: pylint src/client/cassh src/server/server.py src/server/lib/*.py src/server/ssh_utils/*.py -d redefined-builtin -d useless-object-inheritance -d too-many-branches
-
+  - pip3 install -U pip
+  - pip3 install -U pylint
+  - pip3 install -r src/client/requirements.txt
+  - pip3 install -r src/server/requirements.txt
+script:
+  - pylint src/client/cassh -d redefined-builtin -d useless-object-inheritance -d too-many-branches
+  - pylint src/server/server.py
+  - pylint src/server/lib/*.py
+  - pylint src/server/ssh_utils/*.py

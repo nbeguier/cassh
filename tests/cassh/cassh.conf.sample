@@ -1,0 +1,25 @@
+[main]
+ca = /opt/cassh/test-keys/id_rsa_ca
+krl = /opt/cassh/test-keys/revoked-keys
+port = 8080
+cluster = http://localhost:8080,http://localhost:8081
+clustersecret = clustersecretpassword
+debug = True
+
+[postgres]
+host = localhost
+dbname = postgres
+user = postgres
+password = mysecretpassword
+
+[ldap]
+host = localhost
+username = cn=admin,dc=example,dc=org
+password = admin
+bind_dn = dc=example,dc=org
+admin_cn = admin,dc=example,dc=org
+filter_realname_key = cn
+filter_memberof_key = gecos
+username_prefix = cn=
+username_suffix = ,dc=example,dc=org
+ldap_mapping_path = ./tests/cassh/ldap_mapping.json

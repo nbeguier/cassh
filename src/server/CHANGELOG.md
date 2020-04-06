@@ -4,6 +4,28 @@ CHANGELOG
 CASSH Server
 -----
 
+2.0.0
+-----
+
+2020/04/03
+
+### New Features
+  - Add LDAP mapping with principals
+  - Add multiple options in LDAP configuration, some breaking changes
+  - Add OpenLDAP in tests
+
+### Changes
+  - LDAP configuration: "filterstr" is deprecated, use "filter_realname_key" instead
+  - Remove GET /admin/principals (not used in client and not safe)
+  - Remove deprecated PATCH endpoint for principals
+  - rename get_principals to clean_principals_output
+  - add get_ldap_conn, get_memberof, truncate_principals, merge_principals
+  - Remove py3.4 support (json decoder issues)
+
+### Bug Fixes
+  - ldap_authentification return when bad options
+  - ldap_authentification uncatch error if no object in LDAP response
+
 1.12.2
 -----
 

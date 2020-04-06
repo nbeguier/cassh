@@ -49,7 +49,7 @@ esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
-echo 'INIT : LBC - SSH'
+echo 'INIT : CASSH Server'
 
 if [ ! "$(docker ps -q -f name=demo-postgres)" ]; then
     CARRY_POSTGRES=true
@@ -59,16 +59,33 @@ if [ ! "$(docker ps -q -f name=demo-postgres)" ]; then
 
     sleep 10
 
-    echo "Initialize server database"
-    python tests/init_pg.py
+    echo "Initialize Postgresql server"
+    python tests/postgres/init_pg.py
 
     sleep 5
 fi
 
+echo 'Starting OpenLDAP server'
+docker run --rm -d -v ${PWD}/tests/openldap/:/tmp/openldap/ -p 389:389 -p 636:636 --name demo-openldap osixia/openldap:1.3.0
+sleep 3
+echo 'Initialize OpenLDAP server'
+docker exec demo-openldap ldapadd -x -f /tmp/openldap/add-users.ldif -D "cn=admin,dc=example,dc=org" -w admin
+
+
 echo 'Starting CA-SSH demo server'
-docker run -it --rm -p "${PORT}":8080 ${MOUNT_VOL} ${ENTRYPOINT} nbeguier/cassh-server:latest
+docker run -it -d --rm -p "${PORT}":8080 ${MOUNT_VOL} ${ENTRYPOINT} --name demo-cassh nbeguier/cassh-server:latest
+
+echo "POSTGRESQL IP: $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-postgres)"
+echo "OPENLDAP IP: $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-openldap)"
+echo "CASSH IP: $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-cassh)"
+echo ''
+echo '> /opt/cassh/src/server/server.py --config /opt/cassh/tests/cassh/cassh.conf'
+
+docker attach demo-cassh
 
 if $CARRY_POSTGRES; then
     echo 'Stoping Postgresql server'
     docker stop demo-postgres
 fi
+docker stop demo-openldap
+    
