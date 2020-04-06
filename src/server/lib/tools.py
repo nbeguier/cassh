@@ -657,6 +657,12 @@ class Tools():
         """
         if result is None:
             return None
+        ldap_conn = None
+        if self.server_opts['ldap']:
+            ldap_conn, _ = get_ldap_conn(
+                self.server_opts['ldap_host'],
+                self.server_opts['ldap_username'],
+                self.server_opts['ldap_password'])
         if is_list:
             d_result = {}
             for res in result:
@@ -668,7 +674,12 @@ class Tools():
                     '%Y-%m-%d %H:%M:%S')
                 d_sub_result['ssh_key_hash'] = pretty_ssh_key_hash(res[4])
                 d_sub_result['expiry'] = res[6]
-                d_sub_result['principals'] = clean_principals_output(res[7], res[0])
+                list_membership, _ = get_memberof(
+                    res[1],
+                    self.server_opts,
+                    reuse=ldap_conn)
+                full_principals = merge_principals(res[7], list_membership, self.server_opts)
+                d_sub_result['principals'] = clean_principals_output(full_principals, res[0])
                 d_result[res[0]] = d_sub_result
             return json.dumps(d_result, indent=4, sort_keys=True)
         d_result = {}
@@ -679,5 +690,10 @@ class Tools():
             '%Y-%m-%d %H:%M:%S')
         d_result['ssh_key_hash'] = pretty_ssh_key_hash(result[4])
         d_result['expiry'] = result[6]
-        d_result['principals'] = clean_principals_output(result[7], result[0])
+        list_membership, _ = get_memberof(
+            result[1],
+            self.server_opts,
+            reuse=ldap_conn)
+        full_principals = merge_principals(result[7], list_membership, self.server_opts)
+        d_result['principals'] = clean_principals_output(full_principals, result[0])
         return json.dumps(d_result, indent=4, sort_keys=True)
