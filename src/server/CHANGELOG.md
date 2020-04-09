@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Server
 -----
 
+2.0.2
+-----
+
+2020/04/09
+
+### Bug Fixes
+  - Handle custom_principals as None (old database entry)
+  - Urldecode 'add' parameter
+
 2.0.1
 -----
 
@@ -11,7 +20,6 @@ CASSH Server
 
 ### Bug Fixes
   - Unblock no-membership/no-bindCN user with a valid login/password
-
 
 2.0.0
 -----

@@ -270,7 +270,7 @@ def validate_payload(key, value):
     new_value = unquote_plus(value)
     count = 10
     while value != new_value and count > 0 and \
-        key in ['username', 'principals', 'remove', 'update', 'filter', 'realname']:
+        key in ['username', 'principals', 'add', 'remove', 'update', 'filter', 'realname']:
         value = new_value
         new_value = unquote_plus(value)
         count -= 1
@@ -327,6 +327,8 @@ def truncate_principals(custom_principals, list_membership, server_options):
     """
     Returns custom_principals without LDAP principals
     """
+    if not custom_principals:
+        return ''
     principals = custom_principals.split(',')
     if not server_options['ldap_mapping']:
         return ','.join(principals)
@@ -351,6 +353,8 @@ def merge_principals(custom_principals, list_membership, server_options):
     """
     Returns a custom_principals + LDAP principals
     """
+    if not custom_principals:
+        return ''
     principals = custom_principals.split(',')
     if not server_options['ldap_mapping']:
         return ','.join(principals)
