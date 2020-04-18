@@ -351,3 +351,11 @@ python cassh admin user active
 # Sign it !
 python cassh sign [--display-only]
 ```
+
+# License
+Licensed under the [Apache License](https://github.com/nbeguier/cassh/blob/master/LICENSE), Version 2.0 (the "License").
+
+# Copyright
+Copyright 2017-2020 Nicolas BEGUIER
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
+([nbeguier](https://beguier.eu/nicolas/) - nicolas_beguier[at]hotmail[dot]com)
