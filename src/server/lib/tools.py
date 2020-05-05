@@ -19,7 +19,7 @@ from shutil import copyfile
 from string import ascii_lowercase
 from tempfile import NamedTemporaryFile
 from os.path import isfile
-from os import remove
+from os import environ, remove
 import sys
 from time import time
 from urllib.parse import unquote_plus
@@ -39,20 +39,11 @@ import lib.constants as constants
 # DEBUG
 # from pdb import set_trace as st
 
-def loadconfig(version='Unknown'):
-    """
-    Config loader
-    """
-    parser = ArgumentParser()
-    parser.add_argument('-c', '--config', action='store', help='Configuration file')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Add verbosity')
-    args = parser.parse_args()
 
-    if not args.config:
-        parser.error('--config argument is required !')
-
+def parse_cli(args):
+    """
+    Parse CLI arguments
+    """
     config = ConfigParser()
     config.read(args.config)
     server_opts = {}
@@ -80,16 +71,6 @@ def loadconfig(version='Unknown'):
             sys.exit(1)
 
     if config.has_section('ldap'):
-
-        # Future deprecation of this block
-        # START
-        try:
-            config.get('ldap', 'filterstr')
-            print('WARNING: "filterstr" is deprecated, use "filter_realname_key" instead')
-        except NoOptionError:
-            pass
-        # END
-
         try:
             server_opts['ldap'] = True
             server_opts['ldap_host'] = config.get('ldap', 'host')
@@ -152,6 +133,91 @@ def loadconfig(version='Unknown'):
         server_opts['debug'] = bool(config.get('main', 'debug') != 'False')
     except NoOptionError:
         server_opts['debug'] = False
+
+    return server_opts
+
+def parse_env(server_opts):
+    """
+    Override config with environment variables
+    """
+    main_string_var_mapping = {
+        'CASSH_SERVER_CA': 'ca',
+        'CASSH_SERVER_KRL': 'krl',
+        'CASSH_SERVER_PORT': 'port',
+        'CASSH_SERVER_DB_HOST': 'db_host',
+        'CASSH_SERVER_DB_NAME': 'db_name',
+        'CASSH_SERVER_DB_USER': 'db_user',
+        'CASSH_SERVER_DB_PASSWORD': 'db_password',
+        'CASSH_SERVER_CLUSTER_SECRET': 'clustersecret',
+    }
+
+    for env_var in main_string_var_mapping:
+        if environ.get(env_var):
+            server_opts[main_string_var_mapping[env_var]] = environ.get(env_var)
+
+    main_bool_var_mapping = {
+        'CASSH_SERVER_ADMIN_DB_FAILOVER': 'admin_db_failover',
+        'CASSH_SERVER_DEBUG': 'debug',
+    }
+
+    for env_var in main_bool_var_mapping:
+        if environ.get(env_var):
+            server_opts[main_bool_var_mapping[env_var]] = environ.get(env_var) == 'True'
+
+    ldap_string_var_mapping = {
+        'CASSH_SERVER_LDAP_HOST': 'ldap_host',
+        'CASSH_SERVER_LDAP_BIND_DN': 'ldap_bind_dn',
+        'CASSH_SERVER_LDAP_USERNAME': 'ldap_username',
+        'CASSH_SERVER_LDAP_PASSWORD': 'ldap_password',
+        'CASSH_SERVER_LDAP_ADMIN_CN': 'ldap_admin_cn',
+        'CASSH_SERVER_LDAP_FILTER_REALNAME_KEY': 'ldap_filter_realname_key',
+        'CASSH_SERVER_LDAP_USERNAME_PREFIX': 'ldap_username_prefix',
+        'CASSH_SERVER_LDAP_USERNAME_SUFFIX': 'ldap_username_suffix',
+        'CASSH_SERVER_LDAP_FILTER_MEMBEROF_KEY': 'ldap_filter_memberof_key',
+        'CASSH_SERVER_LDAP_MAPPING_PATH': 'ldap_mapping_path',
+    }
+
+    for env_var in ldap_string_var_mapping:
+        if environ.get(env_var):
+            server_opts['ldap'] = True
+            server_opts[ldap_string_var_mapping[env_var]] = environ.get(env_var)
+
+    ssl_string_var_mapping = {
+        'CASSH_SERVER_SSL_PRIVATE_KEY': 'ssl_private_key',
+        'CASSH_SERVER_SSL_PUBLIC_KEY': 'ssl_public_key',
+    }
+
+    for env_var in ssl_string_var_mapping:
+        if environ.get(env_var):
+            server_opts['ssl'] = True
+            server_opts[ssl_string_var_mapping[env_var]] = environ.get(env_var)
+
+    # Cluster handler
+    if environ.get('CASSH_SERVER_CLUSTER'):
+        server_opts['cluster'] = environ.get('CASSH_SERVER_CLUSTER').split(',')
+        proto = 'http'
+        if server_opts['ssl']:
+            proto = 'https'
+        server_opts['cluster'] = ['%s://localhost:%s' % (proto, server_opts['port'])]
+
+    return server_opts
+
+def loadconfig(version='Unknown'):
+    """
+    Config loader
+    """
+    parser = ArgumentParser()
+    parser.add_argument('-c', '--config', action='store', help='Configuration file')
+    parser.add_argument(
+        '-v', '--verbose', action='store_true', default=False,
+        help='Add verbosity')
+    args = parser.parse_args()
+
+    if not args.config:
+        parser.error('--config argument is required !')
+
+    server_opts = parse_cli(args)
+    server_opts = parse_env(server_opts)
 
     tooling = Tools(server_opts, constants.STATES, version)
     return server_opts, args, tooling
