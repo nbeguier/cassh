@@ -15,8 +15,9 @@ from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import datetime
 from functools import wraps
 from json import loads
-from os import getenv, path
+from os import environ, getenv, path
 from ssl import PROTOCOL_TLSv1_2, SSLContext
+import sys
 
 # Third party library imports
 from flask import Flask, render_template, request, Response, redirect, send_from_directory
@@ -30,13 +31,39 @@ disable_warnings()
 # Debug
 # from pdb import set_trace as st
 
+VERSION = '1.2.0'
 APP = Flask(__name__)
-APP.config.from_pyfile('settings.txt')
+# Read settings file by default, but can be missing
+try:
+    APP.config.from_pyfile('settings.txt')
+except FileNotFoundError:
+    pass
+
+# Override optionnal settings.txt file
+for env_var in [
+        'CASSH_URL',
+        'DEBUG',
+        'ENABLE_LDAP',
+        'ENCRYPTION_KEY',
+        'LOGIN_BANNER',
+        'PORT',
+        'SSL_PRIV_KEY',
+        'SSL_PUB_KEY',
+        'UPLOAD_FOLDER',
+    ]:
+    if environ.get(env_var):
+        if env_var in ['ENABLE_LDAP', 'DEBUG']:
+            APP.config[env_var] = environ.get(env_var) == 'True'
+        else:
+            APP.config[env_var] = environ.get(env_var)
+    elif env_var not in APP.config:
+        print('Error: {} is not present in configuration...'.format(env_var))
+        sys.exit(1)
 # These are the extension that we are accepting to be uploaded
 APP.config['ALLOWED_EXTENSIONS'] = set(['pub'])
 APP.config['HEADERS'] = {
-    'User-Agent': 'CASSH-WEB-CLIENT v%s' % APP.config['VERSION'],
-    'CLIENT_VERSION': APP.config['VERSION'],
+    'User-Agent': 'CASSH-WEB-CLIENT v%s' % VERSION,
+    'CLIENT_VERSION': VERSION,
 }
 
 def allowed_file(filename):
