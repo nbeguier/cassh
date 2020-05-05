@@ -48,3 +48,33 @@ filter_memberof_key = memberOf
 # username_prefix = cn=
 # username_suffix = ,dc=example,dc=org
 ```
+
+## Docker
+
+TODO
+But you can use environment variables to override default configuration.
+```
+export CASSH_SERVER_ADMIN_DB_FAILOVER=admin_db_failover
+export CASSH_SERVER_CA=ca
+export CASSH_SERVER_CLUSTER=cluster
+export CASSH_SERVER_CLUSTER_SECRET=clustersecret
+export CASSH_SERVER_DB_HOST=db_host
+export CASSH_SERVER_DB_NAME=db_name
+export CASSH_SERVER_DB_PASSWORD=db_password
+export CASSH_SERVER_DB_USER=db_user
+export CASSH_SERVER_DEBUG=debug
+export CASSH_SERVER_KRL=krl
+export CASSH_SERVER_LDAP_ADMIN_CN=ldap_admin_cn
+export CASSH_SERVER_LDAP_BIND_DN=ldap_bind_dn
+export CASSH_SERVER_LDAP_FILTER_MEMBEROF_KEY=ldap_filter_memberof_key
+export CASSH_SERVER_LDAP_FILTER_REALNAME_KEY=ldap_filter_realname_key
+export CASSH_SERVER_LDAP_HOST=ldap_host
+export CASSH_SERVER_LDAP_MAPPING_PATH=ldap_mapping_path
+export CASSH_SERVER_LDAP_PASSWORD=ldap_password
+export CASSH_SERVER_LDAP_USERNAME=ldap_username
+export CASSH_SERVER_LDAP_USERNAME_PREFIX=ldap_username_prefix
+export CASSH_SERVER_LDAP_USERNAME_SUFFIX=ldap_username_suffix
+export CASSH_SERVER_PORT=port
+export CASSH_SERVER_SSL_PRIVATE_KEY=ssl_private_key
+export CASSH_SERVER_SSL_PUBLIC_KEY=ssl_public_key
+```

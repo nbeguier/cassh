@@ -4,6 +4,14 @@ CHANGELOG
 CASSH Server
 -----
 
+2.1.0
+-----
+
+2020/05/05
+
+### New Features
+  - Support environment variables to override configuration file
+
 2.0.2
 -----
 

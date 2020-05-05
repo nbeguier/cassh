@@ -29,7 +29,7 @@ import lib.tools as tools
 # DEBUG
 # from pdb import set_trace as st
 
-VERSION = '2.0.2'
+VERSION = '2.1.0'
 
 SERVER_OPTS, ARGS, TOOLS = tools.loadconfig(version=VERSION)
 
