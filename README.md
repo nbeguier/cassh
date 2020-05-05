@@ -8,7 +8,7 @@ Developped for @leboncoin
 https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8e4de7
 
   - [CLI version : **1.7.0** *(24/03/2020)*](src/client/CHANGELOG.md) ![leboncoin/cassh](https://img.shields.io/docker/pulls/leboncoin/cassh) + ![nbeguier/cassh-client](https://img.shields.io/docker/pulls/nbeguier/cassh-client) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-client)](https://hub.docker.com/r/nbeguier/cassh-client)
-  - [WebUI version : **1.1.1** *(24/01/2020)*](src/server/web/CHANGELOG.md)
+  - [WebUI version : **1.1.1** *(24/01/2020)*](src/server/web/CHANGELOG.md) ![nbeguier/cassh-web](https://img.shields.io/docker/pulls/nbeguier/cassh-web) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-web)](https://hub.docker.com/r/nbeguier/cassh-web)
   - [Server version : **2.0.2** *(09/04/2020)*](src/server/CHANGELOG.md) ![leboncoin/cassh-server](https://img.shields.io/docker/pulls/leboncoin/cassh-server) + ![nbeguier/cassh-server](https://img.shields.io/docker/pulls/nbeguier/cassh-server) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-server)](https://hub.docker.com/r/nbeguier/cassh-server)
 
 ## Usage
@@ -116,31 +116,6 @@ cassh admin <username> set --purge-principals
 Search **Principals** among clients :
 ```
 cassh admin all search --principals-filter foo,bar
-```
-
-### Configuration file
-
-```ini
-[user]
-# name : this is the username you will use to log on every server
-name = user
-# key_path: This key path won\'t be used to log in, a copy will be made for the certificate.
-# We assume that `${key_path}` exists and `${key_path}.pub` as well.
-# WARNING: Never delete these keys
-key_path = ~/.ssh/id_rsa
-# key_signed_path: Every signed key via cassh will be put in this path.
-# At every sign, `${key_signed_path}` and `${key_signed_path}.pub` will be created
-key_signed_path = ~/.ssh/id_rsa-cert
-# url : URL of cassh server-side backend.
-url = https://cassh.net
-# [OPTIONNAL] timeout : requests timeout parameter in second. (timeout=2)
-# timeout = 2
-# [OPTIONNAL] verify : verifies SSL certificates for HTTPS requests. (verify=True)
-# verify = True
-
-[ldap]
-# realname : this is the LDAP/AD login user
-realname = ursula.ser@example.org
 ```
 
 ## Install
