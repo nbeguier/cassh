@@ -143,121 +143,20 @@ url = https://cassh.net
 realname = ursula.ser@example.org
 ```
 
-## Prerequisites
+## Install
 
 ### Server
 
-```bash
-# Install cassh python 3 service dependencies
-sudo apt install openssh-client openssl libldap2-dev libsasl2-dev build-essential python3-dev
-sudo apt install python3-pip
-pip3 install -r src/server/requirements.txt
-
-# Generate CA ssh key and revocation key file
-mkdir test-keys
-ssh-keygen -C CA -t rsa -b 4096 -o -a 100 -N "" -f test-keys/id_rsa_ca # without passphrase
-ssh-keygen -k -f test-keys/revoked-keys
-```
-
-### Test script
-```bash
-# install utilities needed by tests/test.sh
-sudo apt install pwgen jq
-```
-Configuration file example :
-```ini
-[main]
-ca = /etc/cassh/ca/id_rsa_ca
-krl = /etc/cassh/krl/revoked-keys
-port = 8080
-# Optionnal : admin_db_failover is used to bypass db when it fails.
-# admin_db_failover = False
-# Optionnal : cluster is used to list the cluster member
-# cluster = http://192.168.0.1:8080,http://192.168.0.2:8080
-# Optionnal : clustersecret is the shared secret used by cluster member
-# clustersecret = clustersecretpassword
-# Optionnal : debug is used to enable the debug. Should not be used into production
-# debug = True
-
-[postgres]
-host = cassh.example.org
-dbname = casshdb
-user = cassh
-password = xxxxxxxx
-
-# Highly recommended
-[ldap]
-host = ldap.example.org
-bind_dn = dc=example,dc=org
-username = cn=cassh,dc=example,dc=org
-password = mypassword
-admin_cn = cn=admin,dc=example,dc=org
-# LDAP key to match realname
-filter_realname_key = userPrincipalName
-# LDAP key to match admin_cn
-filter_memberof_key = memberOf
-# Optionnal:
-# username_prefix = cn=
-# username_suffix = ,dc=example,dc=org
-
-# Optionnal
-[ssl]
-private_key = /etc/cassh/ssl/cert.key
-public_key = /etc/cassh/ssl/cert.pem
-```
-
-### Server : Database
-
-* You need a database and a user's credentials 
-* Init the database with this sql statement: [SQL Model](src/server/sql/model.sql)
-* Update the `cassh-server` config with the user's credentials
-
-### Server : Client web user interface
-```bash
-pip3 insall -r src/server/web/requirements.txt
-
-cp src/server/web/settings.txt.sample src/server/web/settings.txt
-
-python3 src/server/web/cassh_web.py
-```
+[INSTALL.md](src/server/INSTALL.md)
 
 ### Client
 
-```bash
-# Python 3
-sudo apt install python3-pip
-pip3 install -r src/client/requirements.txt
+[INSTALL.md](src/client/INSTALL.md)
 
-# Python 2
-sudo apt install python-pip
-pip install -r src/client/requirements.txt
-```
+### Cassh WebUI
 
-## Features on CASSH server
+[INSTALL.md](src/server/web/INSTALL.md)
 
-### Active SSL
-```ini
-[ssl]
-private_key = __CASSH_PATH__/ssl/server.key
-public_key = __CASSH_PATH__/ssl/server.pem
-```
-
-### Active LDAP
-```ini
-[ldap]
-host = ldap.example.org
-bind_dn = dc=example,dc=org
-username = cn=cassh,dc=example,dc=org
-password = mypassword
-admin_cn = cn=admin,dc=example,dc=org
-# LDAP key to match realname
-filter_realname_key = userPrincipalName
-# LDAP key to match admin_cn
-filter_memberof_key = memberOf
-# Optionnal:
-# username_prefix = cn=
-# username_suffix = ,dc=example,dc=org
-```
 
 ## Quick test
 
@@ -265,10 +164,12 @@ filter_memberof_key = memberOf
 
 Install docker : https://docs.docker.com/engine/installation/
 
-
 #### Prerequisites
 
 ```bash
+# install utilities needed by tests/test.sh
+sudo apt install pwgen jq
+
 # Make a 'sudo' only if your user doesn't have docker rights, add your user into docker group
 pip install -r tests/requirements.txt
 
