@@ -37,7 +37,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "username=${GUEST_A_USERNAME}&realname=${GUEST_A_REALNAME}&password=${GUEST_A_PASSWORD}&pubkey=${GUEST_B_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == 'Error : User or Key absent, add your key again.' ]; then
+if [ "${RESP}" == 'Error : (username, realname, pubkey) triple mismatch.' ]; then
     echo "[OK] Test signing key when wrong public key"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key when wrong public key : ${RESP}"

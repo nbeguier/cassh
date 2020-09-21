@@ -56,6 +56,15 @@ else
 fi
 rm -f /tmp/test-cert
 
+RESP=$(curl -s -X POST -d "username=${GUEST_B_USERNAME}&realname=${GUEST_B_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_B_ALT_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
+echo "${RESP}" > /tmp/test-cert
+OUTPUT=$(echo $(echo -n "$(ssh-keygen -L -f /tmp/test-cert 2>&1)"))
+if [[ "${OUTPUT}" == *"Principals: ${GUEST_B_USERNAME} test-single guest-everywhere Critical"* ]]; then
+    echo "[OK] Test signing key with altered public key"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key with altered public key: ${OUTPUT}"
+fi
+rm -f /tmp/test-cert
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "add=test-single")
 if [ "${RESP}" == "OK: ${GUEST_B_USERNAME} principals are '${GUEST_B_USERNAME},test-single,guest-everywhere'" ]; then

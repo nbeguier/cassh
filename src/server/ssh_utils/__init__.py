@@ -16,10 +16,11 @@ def get_fingerprint(public_key_filename):
     Returns a key fingerprint
     """
     try:
-        fingerprint = '\n'.join(check_output([
+        fingerprint = ' '.join(check_output([
             'ssh-keygen',
             '-l',
-            '-f', public_key_filename]).decode('utf-8').split('\n')[:-1])
+            '-E', 'sha512',
+            '-f', public_key_filename]).decode('utf-8').split('\n')[0].split()[:2])
     except CalledProcessError:
         fingerprint = 'Unknown'
     return fingerprint

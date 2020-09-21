@@ -92,7 +92,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "username=${GUEST_A_USERNAME}&realname=${GUEST_B_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_A_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == 'Error : (username, realname) couple mismatch.' ]; then
+if [ "${RESP}" == 'Error : (username, realname, pubkey) triple mismatch.' ]; then
     echo "[OK] Test signing key when revoked with wrong realname"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key when revoked with wrong realname: ${RESP}"

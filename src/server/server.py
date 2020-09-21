@@ -29,7 +29,7 @@ import lib.tools as tools
 # DEBUG
 # from pdb import set_trace as st
 
-VERSION = '2.0.2'
+VERSION = '2.1.0'
 
 SERVER_OPTS, ARGS, TOOLS = tools.loadconfig(version=VERSION)
 
@@ -317,27 +317,42 @@ class Client():
             return tools.response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
 
-        # Search if key already exists
+        # Search if user already exists
         cur.execute(
             """
-            SELECT NAME,REALNAME,STATE,EXPIRY,PRINCIPALS FROM USERS
-            WHERE SSH_KEY=(%s) AND NAME=lower(%s)
-            """, (pubkey, username))
+            SELECT NAME,REALNAME,STATE,EXPIRY,PRINCIPALS,SSH_KEY FROM USERS
+            WHERE NAME=lower(%s)
+            """, (username,))
         user = cur.fetchone()
         if user is None:
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
             return tools.response_render(
-                'Error : User or Key absent, add your key again.',
+                'Error : User absent, please create an account.',
                 http_code='400 Bad Request')
 
-        if username != user[0] or realname != user[1]:
+        # Get database key fingerprint
+        db_pubkey = NamedTemporaryFile(delete=False)
+        db_pubkey.write(bytes(user[5], 'utf-8'))
+        db_pubkey.close()
+        db_pubkey_fingerprint = get_fingerprint(db_pubkey.name)
+        remove(db_pubkey.name)
+
+        if db_pubkey_fingerprint == 'Unknown':
+            remove(tmp_pubkey.name)
+            return tools.response_render(
+                'Error : Public key from database unprocessable',
+                http_code='422 Unprocessable Entity')
+
+        if username != user[0] or \
+            realname != user[1] or \
+            db_pubkey_fingerprint != pubkey_fingerprint:
             cur.close()
             pg_conn.close()
             remove(tmp_pubkey.name)
             return tools.response_render(
-                'Error : (username, realname) couple mismatch.',
+                'Error : (username, realname, pubkey) triple mismatch.',
                 http_code='401 Unauthorized')
 
         status = user[2]

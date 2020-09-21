@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Server
 -----
 
+2.1.0
+-----
+
+2020/09/21
+
+### Changes
+  - Compare ssh public fingerprint instead of raw content
+  - Force sha512 during fingerprint, instead of default hash algorithm
+
 2.0.2
 -----
 
