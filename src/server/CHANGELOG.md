@@ -4,6 +4,14 @@ CHANGELOG
 CASSH Server
 -----
 
+2.1.1
+-----
+
+2021/03/26
+
+### Changes
+  - Ability to add numbers in principals
+
 2.1.0
 -----
 
