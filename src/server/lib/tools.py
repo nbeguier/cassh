@@ -305,6 +305,7 @@ def data2map():
     for key in data_str.split('&'):
         sub_key = key.split('=')[0]
         value = '='.join(key.split('=')[1:])
+        value = unquote_plus(value)
         message = validate_payload(sub_key, value)
         if message:
             return None, message

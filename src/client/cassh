@@ -250,7 +250,7 @@ class CASSH(object):
         elif action == 'set':
             if set_value[0] == 'deprecated':
                 set_value_dict = {}
-                set_value_dict[set_value.split('=')[0]] = set_value.split('=')[1]
+                set_value_dict[set_value[1].split('=')[0]] = set_value[1].split('=')[1]
                 payload.update(set_value_dict)
                 req = self.patch('/admin/' + username, payload)
             else:
