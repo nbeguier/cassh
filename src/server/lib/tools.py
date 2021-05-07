@@ -590,7 +590,7 @@ class Tools():
         is_list = False
 
         if realname is not None:
-            cur.execute('SELECT * FROM USERS WHERE REALNAME=lower((%s))', (realname,))
+            cur.execute('SELECT * FROM USERS WHERE REALNAME=(%s)', (realname,))
             result = cur.fetchone()
         elif username is not None:
             cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
