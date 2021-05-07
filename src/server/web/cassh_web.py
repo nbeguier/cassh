@@ -47,6 +47,7 @@ for env_var in [
         'ENCRYPTION_KEY',
         'LOGIN_BANNER',
         'PORT',
+        'LISTEN',
         'SSL_PRIV_KEY',
         'SSL_PUB_KEY',
         'UPLOAD_FOLDER',
@@ -267,4 +268,4 @@ if __name__ == '__main__':
     CONTEXT = SSLContext(PROTOCOL_TLSv1_2)
     CONTEXT.load_cert_chain(APP.config['SSL_PUB_KEY'], APP.config['SSL_PRIV_KEY'])
     PORT = int(getenv('PORT', APP.config['PORT']))
-    APP.run(debug=APP.config['DEBUG'], host='0.0.0.0', port=PORT, ssl_context=CONTEXT)
+    APP.run(debug=APP.config['DEBUG'], host=APP.config['LISTEN'], port=PORT, ssl_context=CONTEXT)
