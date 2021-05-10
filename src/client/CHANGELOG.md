@@ -4,10 +4,22 @@ CHANGELOG
 CASSH Client
 -----
 
+1.8.0
+-----
+
+2021/05/10
+
+### Changes
+  - `expiry` do not require a `+`
+
+### Fix
+  - Fix `expiry` crash (@fedegiova)
+
+
 1.7.0
 -----
 
-2020/01/24
+2020/04/24
 
 ### New Features
 

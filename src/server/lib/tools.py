@@ -305,7 +305,6 @@ def data2map():
     for key in data_str.split('&'):
         sub_key = key.split('=')[0]
         value = '='.join(key.split('=')[1:])
-        value = unquote_plus(value)
         message = validate_payload(sub_key, value)
         if message:
             return None, message
@@ -557,9 +556,8 @@ class Tools():
                     content_type='application/octet-stream')
 
             for pubkey in pubkeys:
-                tmp_pubkey = NamedTemporaryFile(delete=False)
-                tmp_pubkey.write(bytes(pubkey[0], 'utf-8'))
-                tmp_pubkey.close()
+                with NamedTemporaryFile(delete=False) as tmp_pubkey:
+                    tmp_pubkey.write(bytes(pubkey[0], 'utf-8'))
                 ca_ssh.update_krl(tmp_pubkey.name)
             remove(tmp_pubkey.name)
 
@@ -648,7 +646,7 @@ class Tools():
         # Sign the key
         try:
             cert_contents = ca_ssh.sign_public_user_key(\
-                tmp_pubkey_name, username, expiry, principals)
+                tmp_pubkey_name, username, '+'+expiry, principals)
             if db_cursor is not None:
                 db_cursor.execute('UPDATE USERS SET STATE=0, EXPIRATION=(%s) WHERE NAME=(%s)', \
                     (time() + str2date(expiry), username))

@@ -31,7 +31,7 @@ disable_warnings()
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '1.2.0'
+VERSION = '1.3.0'
 APP = Flask(__name__)
 # Read settings file by default, but can be missing
 try:
