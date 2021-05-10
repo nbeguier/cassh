@@ -8,3 +8,4 @@ SSL_PRIV_KEY = '/etc/ssl/private/ssl-cert-snakeoil.key'
 ENCRYPTION_KEY = 'bSFEf9YNd1mXg5S5ko9NebHapQANJqFo'
 LOGIN_BANNER = 'Login LDAP/AD'
 DEBUG = False
+LISTEN = '0.0.0.0'

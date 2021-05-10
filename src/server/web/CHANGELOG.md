@@ -4,6 +4,14 @@ CHANGELOG
 CASSH Web Client
 -----
 
+1.3.0
+-----
+
+2021/05/10
+
+### New Features
+  - `LISTEN` parameter in configuration for the WEB UI (@fedegiova)
+
 1.2.0
 -----
 

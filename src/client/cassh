@@ -29,7 +29,7 @@ from requests.exceptions import ConnectionError
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '%(prog)s 1.7.0'
+VERSION = '%(prog)s 1.8.0'
 
 PATTERN_USERNAME = re_compile("^([a-z]+)$")
 
@@ -250,7 +250,7 @@ class CASSH(object):
         elif action == 'set':
             if set_value[0] == 'deprecated':
                 set_value_dict = {}
-                set_value_dict[set_value.split('=')[0]] = set_value.split('=')[1]
+                set_value_dict[set_value[1].split('=')[0]] = set_value[1].split('=')[1]
                 payload.update(set_value_dict)
                 req = self.patch('/admin/' + username, payload)
             else:
@@ -286,9 +286,8 @@ class CASSH(object):
         Add a public key.
         """
         payload = self.get_data()
-        pubkey = open('%s.pub' % self.key_path, 'r')
-        payload.update({'pubkey': pubkey.read()})
-        pubkey.close()
+        with open('%s.pub' % self.key_path, 'r') as pubkey:
+            payload.update({'pubkey': pubkey.read()})
         payload.update({'username': self.name})
         req = self.put('/client', payload)
         print(req.text)
@@ -298,9 +297,8 @@ class CASSH(object):
         Sign a public key.
         """
         payload = self.get_data()
-        pubkey = open('%s.pub' % self.key_path, 'r')
-        payload.update({'pubkey': pubkey.read()})
-        pubkey.close()
+        with open('%s.pub' % self.key_path, 'r') as pubkey:
+            payload.update({'pubkey': pubkey.read()})
         payload.update({'username': self.name})
         if force:
             payload.update({'admin_force': True})
@@ -312,9 +310,8 @@ class CASSH(object):
             key_signed_path = self.user_metadata['key_signed_path']
             copyfile(self.key_path, key_signed_path)
             chmod(key_signed_path, 0o600)
-            pubkey_signed = open('%s.pub' % key_signed_path, 'w+')
-            pubkey_signed.write(req.text)
-            pubkey_signed.close()
+            with open('%s.pub' % key_signed_path, 'w+') as pubkey_signed:
+                pubkey_signed.write(req.text)
             print('Public key successfuly signed')
         else:
             print(req.text)

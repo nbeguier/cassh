@@ -4,3 +4,4 @@ ssl/
 tests/cassh/*.conf
 tests/cassh/*.json
 settings.txt
+venv

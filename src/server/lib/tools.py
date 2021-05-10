@@ -556,9 +556,8 @@ class Tools():
                     content_type='application/octet-stream')
 
             for pubkey in pubkeys:
-                tmp_pubkey = NamedTemporaryFile(delete=False)
-                tmp_pubkey.write(bytes(pubkey[0], 'utf-8'))
-                tmp_pubkey.close()
+                with NamedTemporaryFile(delete=False) as tmp_pubkey:
+                    tmp_pubkey.write(bytes(pubkey[0], 'utf-8'))
                 ca_ssh.update_krl(tmp_pubkey.name)
             remove(tmp_pubkey.name)
 
@@ -589,7 +588,7 @@ class Tools():
         is_list = False
 
         if realname is not None:
-            cur.execute('SELECT * FROM USERS WHERE REALNAME=lower((%s))', (realname,))
+            cur.execute('SELECT * FROM USERS WHERE REALNAME=(%s)', (realname,))
             result = cur.fetchone()
         elif username is not None:
             cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
@@ -647,7 +646,7 @@ class Tools():
         # Sign the key
         try:
             cert_contents = ca_ssh.sign_public_user_key(\
-                tmp_pubkey_name, username, expiry, principals)
+                tmp_pubkey_name, username, '+'+expiry, principals)
             if db_cursor is not None:
                 db_cursor.execute('UPDATE USERS SET STATE=0, EXPIRATION=(%s) WHERE NAME=(%s)', \
                     (time() + str2date(expiry), username))

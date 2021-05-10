@@ -29,7 +29,7 @@ import lib.tools as tools
 # DEBUG
 # from pdb import set_trace as st
 
-VERSION = '2.1.1'
+VERSION = '2.2.0'
 
 SERVER_OPTS, ARGS, TOOLS = tools.loadconfig(version=VERSION)
 
@@ -294,9 +294,8 @@ class Client():
             return tools.response_render(
                 'Error: No pubkey given.',
                 http_code='400 Bad Request')
-        tmp_pubkey = NamedTemporaryFile(delete=False)
-        tmp_pubkey.write(bytes(pubkey, 'utf-8'))
-        tmp_pubkey.close()
+        with NamedTemporaryFile(delete=False) as tmp_pubkey:
+            tmp_pubkey.write(bytes(pubkey, 'utf-8'))
 
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
         if pubkey_fingerprint == 'Unknown':
@@ -333,9 +332,8 @@ class Client():
                 http_code='400 Bad Request')
 
         # Get database key fingerprint
-        db_pubkey = NamedTemporaryFile(delete=False)
-        db_pubkey.write(bytes(user[5], 'utf-8'))
-        db_pubkey.close()
+        with NamedTemporaryFile(delete=False) as db_pubkey:
+            db_pubkey.write(bytes(user[5], 'utf-8'))
         db_pubkey_fingerprint = get_fingerprint(db_pubkey.name)
         remove(db_pubkey.name)
 
@@ -428,9 +426,8 @@ class Client():
             return tools.response_render(
                 'Error: No pubkey given.',
                 http_code='400 Bad Request')
-        tmp_pubkey = NamedTemporaryFile(delete=False)
-        tmp_pubkey.write(bytes(pubkey, 'utf-8'))
-        tmp_pubkey.close()
+        with NamedTemporaryFile(delete=False) as tmp_pubkey:
+            tmp_pubkey.write(bytes(pubkey, 'utf-8'))
 
         pubkey_fingerprint = get_fingerprint(tmp_pubkey.name)
         if pubkey_fingerprint == 'Unknown':

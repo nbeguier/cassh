@@ -4,6 +4,21 @@ CHANGELOG
 CASSH Server
 -----
 
+2.2.0
+-----
+
+2021/03/26
+
+### New Features
+  - `realname` can have upper case (@fedegiova)
+
+### Changes
+  - `expiry` do not require a `+`
+
+## Lint
+  - R1732: Consider using 'with' for resource-allocating operations
+  - W1401: Anomalous backslash in string: '\d'. String constant might be missing an r prefix.
+
 2.1.1
 -----
 
