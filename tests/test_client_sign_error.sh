@@ -44,7 +44,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "username=${GUEST_A_USERNAME}&realname=${GUEST_A_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_A_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test signing key with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key when PENDING status : ${RESP}"

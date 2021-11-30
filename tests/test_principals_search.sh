@@ -17,7 +17,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${GUEST_B_PASSWORD}" "${CASSH_SERVER_URL}"/admin/all/principals/search -d "filter=")
-if [[ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test search principals with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test search all users' principals with invalid credentials: ${RESP}"
