@@ -16,7 +16,7 @@ else
 fi
 
 RESP=$(curl -s -X DELETE -d "status=true&realname=${SYSADMIN_REALNAME}&password=${GUEST_B_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}")
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test admin delete '${GUEST_B_USERNAME}' status with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin delete '${GUEST_B_USERNAME}' status with invalid credentials: ${RESP}"

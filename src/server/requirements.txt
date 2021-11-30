@@ -1,6 +1,6 @@
 configparser>=4.0.2    # Python 3.4, 3.5 support
 psycopg2-binary==2.8.4
-python-ldap==3.2.0
+python-ldap==3.4.0
 requests>=2.21.0       # Python 3.4 support
 web.py==0.51
 wheel>=0.33.6          # Python 3.4 support

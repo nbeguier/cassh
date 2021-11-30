@@ -16,7 +16,7 @@ else
 fi
 
 RESP=$(curl -s -X PATCH -d "realname=${SYSADMIN_REALNAME}&password=${GUEST_B_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}" -d "expiry=3d")
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test set expiry with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test set expiry with invalid credentials: ${RESP}"

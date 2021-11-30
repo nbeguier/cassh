@@ -51,7 +51,7 @@ else
 fi
 
 RESP=$(curl -s -X PUT -d "username=${GUEST_A_USERNAME}&realname=${GUEST_A_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_A_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test add user with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add user with invalid credentials : ${RESP}"
@@ -112,7 +112,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "realname=${GUEST_A_REALNAME}&password=${GUEST_B_PASSWORD}" "${CASSH_SERVER_URL}"/client/status)
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test status with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test status with invalid credentials : ${RESP}"
@@ -129,7 +129,7 @@ else
 fi
 
 RESP=$(curl -s -X PUT -d "username=${GUEST_C_USERNAME}&realname=${GUEST_A_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_B_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test updating user with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test updating user with invalid credentials: ${RESP}"

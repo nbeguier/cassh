@@ -16,7 +16,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${GUEST_B_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}"/principals -d "add=test-single")
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test add principal with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test add principal with invalid credentials: ${RESP}"

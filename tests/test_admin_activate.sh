@@ -16,7 +16,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "revoke=true&realname=${SYSADMIN_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test admin revoke '${GUEST_A_USERNAME}' with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin revoke '${GUEST_A_USERNAME}' with invalid credentials : ${RESP}"
@@ -61,7 +61,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "status=true&realname=${SYSADMIN_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}")
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test admin verify '${GUEST_A_USERNAME}' status with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin verify '${GUEST_A_USERNAME}' status with invalid credentials: ${RESP}"
@@ -99,7 +99,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "username=${GUEST_A_USERNAME}&realname=${GUEST_A_REALNAME}&password=${GUEST_B_PASSWORD}&pubkey=${GUEST_A_PUB_KEY}" "${CASSH_SERVER_URL}"/client)
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test signing key when revoked with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test signing key when revoked with invalid credentials : ${RESP}"
@@ -137,7 +137,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "realname=${SYSADMIN_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}")
-if [ "${RESP}" == "Error: {'desc': 'Invalid credentials'}" ]; then
+if [[ "${RESP}" == *"'desc': 'Invalid credentials'"* ]]; then
     echo "[OK] Test admin active '${GUEST_B_USERNAME}' status with invalid credentials"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active '${GUEST_B_USERNAME}' status with invalid credentials: ${RESP}"
