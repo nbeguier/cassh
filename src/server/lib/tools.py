@@ -2,7 +2,7 @@
 """
 tools lib
 
-Copyright 2017-2021 Nicolas BEGUIER
+Copyright 2017-2022 Nicolas BEGUIER
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 

@@ -238,4 +238,4 @@ python cassh sign [--display-only]
 Licensed under the [Apache License](https://github.com/nbeguier/cassh/blob/master/LICENSE), Version 2.0 (the "License").
 
 # Copyright
-Copyright 2017-2021 Nicolas BEGUIER; ([nbeguier](https://beguier.eu/nicolas/) - nicolas_beguier[at]hotmail[dot]com)
+Copyright 2017-2022 Nicolas BEGUIER; ([nbeguier](https://beguier.eu/nicolas/) - nicolas_beguier[at]hotmail[dot]com)
