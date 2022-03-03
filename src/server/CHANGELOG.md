@@ -4,6 +4,14 @@ CHANGELOG
 CASSH Server
 -----
 
+2.3.0
+-----
+
+2022/03/03
+
+### New Features
+  - protocol definition in ldap configuration -> ldaps support (@arnaudmm)
+
 2.2.0
 -----
 

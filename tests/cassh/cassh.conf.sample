@@ -14,6 +14,7 @@ password = mysecretpassword
 
 [ldap]
 host = LDAP_HOST
+protocol = ldap
 username = cn=admin,dc=example,dc=org
 password = admin
 bind_dn = dc=example,dc=org

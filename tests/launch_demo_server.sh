@@ -66,7 +66,7 @@ if [ ! "$(docker ps -q -f name=demo-postgres)" ]; then
 fi
 
 echo 'Starting OpenLDAP server'
-docker run --rm -d -v ${PWD}/tests/openldap/:/tmp/openldap/ -p 389:389 -p 636:636 --name demo-openldap osixia/openldap:1.3.0
+docker run --rm -d -v ${PWD}/tests/openldap/:/tmp/openldap/ -p 389:389 -p 636:636 --name demo-openldap osixia/openldap:1.5.0
 sleep 3
 echo 'Initialize OpenLDAP server'
 docker exec demo-openldap ldapadd -x -f /tmp/openldap/add-users.ldif -D "cn=admin,dc=example,dc=org" -w admin

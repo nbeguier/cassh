@@ -29,7 +29,7 @@ import lib.tools as tools
 # DEBUG
 # from pdb import set_trace as st
 
-VERSION = '2.2.0'
+VERSION = '2.3.0'
 
 SERVER_OPTS, ARGS, TOOLS = tools.loadconfig(version=VERSION)
 
@@ -694,7 +694,8 @@ class PrincipalsSearch():
             ldap_conn, _ = tools.get_ldap_conn(
                 SERVER_OPTS['ldap_host'],
                 SERVER_OPTS['ldap_username'],
-                SERVER_OPTS['ldap_password'])
+                SERVER_OPTS['ldap_password'],
+                SERVER_OPTS['ldap_protocol'])
 
         result = dict()
 
