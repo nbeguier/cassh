@@ -7,14 +7,14 @@ clustersecret = clustersecretpassword
 debug = True
 
 [postgres]
-host = PG_HOST
+host = demo-postgres
 dbname = postgres
 user = postgres
 password = mysecretpassword
 
 [ldap]
-host = LDAP_HOST
-protocol = ldap
+host = demo-openldap
+protocol = ldaps
 username = cn=admin,dc=example,dc=org
 password = admin
 bind_dn = dc=example,dc=org

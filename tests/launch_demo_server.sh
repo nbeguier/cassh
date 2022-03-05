@@ -66,14 +66,17 @@ if [ ! "$(docker ps -q -f name=demo-postgres)" ]; then
 fi
 
 echo 'Starting OpenLDAP server'
-docker run --rm -d -v ${PWD}/tests/openldap/:/tmp/openldap/ -p 389:389 -p 636:636 --name demo-openldap osixia/openldap:1.5.0
+docker run --rm -d --hostname demo-openldap --env LDAP_TLS_VERIFY_CLIENT=try -v ${PWD}/tests/openldap/:/tmp/openldap/ -p 389:389 -p 636:636 --name demo-openldap osixia/openldap:1.5.0
 sleep 3
 echo 'Initialize OpenLDAP server'
 docker exec demo-openldap ldapadd -x -f /tmp/openldap/add-users.ldif -D "cn=admin,dc=example,dc=org" -w admin
 
 
 echo 'Starting CA-SSH demo server'
-docker run -it -d --rm -p "${PORT}":8080 ${MOUNT_VOL} ${ENTRYPOINT} --name demo-cassh nbeguier/cassh-server:latest
+docker run -it -d --rm -p "${PORT}":8080 ${MOUNT_VOL} ${ENTRYPOINT} --env LDAPTLS_CACERT=/opt/cassh/tests/openldap/ca.crt --name demo-cassh nbeguier/cassh-server:latest
+# Update /etc/hosts
+docker exec demo-cassh /opt/cassh/tests/cassh/update_hosts.sh $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-postgres) demo-postgres
+docker exec demo-cassh /opt/cassh/tests/cassh/update_hosts.sh $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-openldap) demo-openldap
 
 echo "POSTGRESQL IP: $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-postgres)"
 echo "OPENLDAP IP: $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-openldap)"
@@ -88,4 +91,3 @@ if $CARRY_POSTGRES; then
     docker stop demo-postgres
 fi
 docker stop demo-openldap
-    

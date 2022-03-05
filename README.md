@@ -162,11 +162,6 @@ ssh-keygen -k -f test-keys/revoked-keys
 # BEGIN THE ONE OR MULTIPLE INSTANCES STEP #
 ############################################
 
-# /!\ Wait for the container demo-postgres to be started
-sed -i "s/PG_HOST/$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-postgres)/" tests/cassh/cassh.conf
-# /!\ Wait for the container demo-openldap to be started
-sed -i "s/LDAP_HOST/$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' demo-openldap)/" tests/cassh/cassh.conf
-
 # Duplicate the cassh.conf
 cp tests/cassh/cassh.conf tests/cassh/cassh_2.conf
 # Generate another krl
