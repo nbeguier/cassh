@@ -4,6 +4,17 @@ CHANGELOG
 CASSH Server
 -----
 
+2.3.1
+-----
+
+2022/03/06
+
+### New Features
+  - add ldap starttls support
+
+### Changes
+  - add ldaps+starttls support on tests
+
 2.3.0
 -----
 

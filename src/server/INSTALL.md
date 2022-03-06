@@ -36,6 +36,8 @@ public_key = __CASSH_PATH__/ssl/server.pem
 ```ini
 [ldap]
 host = ldap.example.org
+# ldap procotol can be: ldap, ldaps or starttls
+protocol = ldap
 bind_dn = dc=example,dc=org
 username = cn=cassh,dc=example,dc=org
 password = mypassword

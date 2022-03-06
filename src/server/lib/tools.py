@@ -99,6 +99,10 @@ def loadconfig(version='Unknown'):
             server_opts['ldap_admin_cn'] = config.get('ldap', 'admin_cn')
             server_opts['ldap_filter_realname_key'] = config.get('ldap', 'filter_realname_key')
             server_opts['ldap_protocol'] = config.get('ldap', 'protocol', fallback='ldap')
+            if server_opts['ldap_protocol'] not in ['ldap', 'ldaps', 'starttls']:
+                print('Option reading error (ldap): %s not in ["ldap", "ldaps", "starttls"]' \
+                    % (server_opts['ldap_protocol']))
+                sys.exit(1)
         except NoOptionError:
             if args.verbose:
                 print('Option reading error (ldap).')
@@ -164,7 +168,15 @@ def get_ldap_conn(host, username, password, protocol, reuse=None):
     if reuse:
         ldap_conn = reuse
     else:
+        is_starttls = protocol == 'starttls'
+        if is_starttls:
+            protocol = 'ldap'
         ldap_conn = initialize(protocol + "://" + host)
+        if is_starttls:
+            try:
+                ldap_conn.start_tls_s()
+            except Exception as err_msg:
+                return False, 'Error: (ldap starttls) {}'.format(err_msg)
     try:
         ldap_conn.bind_s(username, password)
     except Exception as err_msg:
