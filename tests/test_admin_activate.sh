@@ -77,7 +77,7 @@ fi
 ##########################
 ## ADMIN STATUS GUEST A ##
 ##########################
-RESP=$(curl -s -X POST -d "status=true&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}" | jq .status)
+RESP=$(curl -s -X POST -d "status=true&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_A_USERNAME}" | jq '.[]|.status')
 if [ "${RESP}" == '"REVOKED"' ]; then
     echo "[OK] Test admin verify '${GUEST_A_USERNAME}' status"
 else
@@ -150,7 +150,7 @@ else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active '${GUEST_B_USERNAME}' status with unauthorized user: ${RESP}"
 fi
 
-RESP=$(curl -s -X POST -d "status=true&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}" | jq .status)
+RESP=$(curl -s -X POST -d "status=true&realname=${SYSADMIN_REALNAME}&password=${SYSADMIN_PASSWORD}" "${CASSH_SERVER_URL}"/admin/"${GUEST_B_USERNAME}" | jq '.[] | .status')
 if [ "${RESP}" == '"PENDING"' ]; then
     echo "[OK] Test admin verify '${GUEST_B_USERNAME}' status"
 else
@@ -182,6 +182,16 @@ if [ "${RESP}" == "Active user=${GUEST_C_USERNAME}. SSH Key active but need to b
     echo "[OK] Test admin active ${GUEST_C_USERNAME}"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test admin active ${GUEST_C_USERNAME} : ${RESP}"
+fi
+
+#######################################
+## STATUS GUEST B WITH MULTIPLE KEYS ##
+#######################################
+RESP=$(curl -s -X POST -d "realname=${GUEST_B_REALNAME}&password=${GUEST_B_PASSWORD}" "${CASSH_SERVER_URL}"/client/status | jq '.[] | .status')
+if [ "${RESP}" == $'"ACTIVE"\n"ACTIVE"' ]; then
+    echo "[OK] Test status pending user"
+else
+    echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test status pending user : ${RESP}"
 fi
 
 #############################

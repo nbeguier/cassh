@@ -270,11 +270,8 @@ class CASSH(object):
             if result == {}:
                 print(dumps(result, indent=4, sort_keys=True))
                 return
-            if username == 'all':
-                for user in result:
-                    print_result(result[user])
-                return
-            print_result(result)
+            for user in result.keys():
+                print_result(result[user])
             return
         else:
             print('Action should be : active, delete, revoke, set, search, status')
@@ -330,7 +327,8 @@ class CASSH(object):
         if result == {}:
             print(dumps(result, indent=4, sort_keys=True))
             return
-        print_result(result)
+        for user in result.keys():
+            print_result(result[user])
 
     def get_ca(self):
         """

@@ -601,21 +601,24 @@ class Tools():
         if pg_conn is None:
             return response_render(message, http_code='503 Service Unavailable')
         cur = pg_conn.cursor()
-        is_list = False
 
-        if realname is not None:
+        if realname is not None and username is not None:
+            cur.execute('SELECT * FROM USERS WHERE REALNAME=(%s) and NAME=(%s)', (realname,username,))
+            result = [cur.fetchone()]
+        elif realname is not None:
             cur.execute('SELECT * FROM USERS WHERE REALNAME=(%s)', (realname,))
-            result = cur.fetchone()
+            result = cur.fetchall()
         elif username is not None:
             cur.execute('SELECT * FROM USERS WHERE NAME=(%s)', (username,))
-            result = cur.fetchone()
+            result = [cur.fetchone()]
         else:
             cur.execute('SELECT * FROM USERS')
             result = cur.fetchall()
-            is_list = True
         cur.close()
         pg_conn.close()
-        return self.sql_to_json(result, is_list=is_list)
+        print(result,realname,username)
+        k = self.sql_to_json(result, is_list=True)
+        return k
 
     def pg_connection(self):
         """
