@@ -7,7 +7,7 @@ Developped for @leboncoin
 
 https://medium.com/leboncoin-engineering-blog/cassh-ssh-key-signing-tool-39fd3b8e4de7
 
-  - [CLI version : **1.8.0** *(10/05/2021)*](src/client/CHANGELOG.md) ![leboncoin/cassh](https://img.shields.io/docker/pulls/leboncoin/cassh) + ![nbeguier/cassh-client](https://img.shields.io/docker/pulls/nbeguier/cassh-client) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-client)](https://hub.docker.com/r/nbeguier/cassh-client)
+  - [CLI version : **1.8.1** *(02/06/2022)*](src/client/CHANGELOG.md) ![leboncoin/cassh](https://img.shields.io/docker/pulls/leboncoin/cassh) + ![nbeguier/cassh-client](https://img.shields.io/docker/pulls/nbeguier/cassh-client) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-client)](https://hub.docker.com/r/nbeguier/cassh-client)
   - [WebUI version : **1.3.0** *(10/05/2021)*](src/server/web/CHANGELOG.md) ![nbeguier/cassh-web](https://img.shields.io/docker/pulls/nbeguier/cassh-web) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-web)](https://hub.docker.com/r/nbeguier/cassh-web)
   - [Server version : **2.3.1** *(06/03/2022)*](src/server/CHANGELOG.md) ![leboncoin/cassh-server](https://img.shields.io/docker/pulls/leboncoin/cassh-server) + ![nbeguier/cassh-server](https://img.shields.io/docker/pulls/nbeguier/cassh-server) [![docker-build](https://img.shields.io/docker/cloud/automated/nbeguier/cassh-server)](https://hub.docker.com/r/nbeguier/cassh-server)
 

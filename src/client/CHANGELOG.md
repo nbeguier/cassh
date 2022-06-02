@@ -4,6 +4,15 @@ CHANGELOG
 CASSH Client
 -----
 
+1.8.1
+-----
+
+2022/06/02
+
+### Fix
+  - Fix `timeout` int cast (@dacofr)
+  - Handling timeout error nicely
+
 1.8.0
 -----
 
