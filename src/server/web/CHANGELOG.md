@@ -4,6 +4,14 @@ CHANGELOG
 CASSH Web Client
 -----
 
+1.3.1
+-----
+
+2022/06/02
+
+### Changes
+  - Upgrade requirements.txt (vuln waitress)
+
 1.3.0
 -----
 

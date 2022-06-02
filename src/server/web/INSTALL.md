@@ -9,8 +9,6 @@
 # Run an example web server
 docker run -it --rm \
     -v $PWD/settings.txt.sample:/opt/cassh/settings.txt \
-    -v /etc/ssl/certs/ssl-cert-snakeoil.pem:/etc/ssl/certs/ssl-cert-snakeoil.pem:ro \
-    -v /etc/ssl/private/ssl-cert-snakeoil.key:/etc/ssl/private/ssl-cert-snakeoil.key:ro \
     -p 8443:8443 \
     nbeguier/cassh-web
 
