@@ -50,3 +50,12 @@ filter_memberof_key = memberOf
 # username_prefix = cn=
 # username_suffix = ,dc=example,dc=org
 ```
+### Initial validity date
+
+Allows to specify an initial validity date for the generated certificates
+instead of today, useful for systems without a reliable clock source
+
+```ini
+[main]
+keyvalidityintervalstart = 20220101
+```
