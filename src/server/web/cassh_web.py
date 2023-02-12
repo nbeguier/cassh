@@ -194,12 +194,13 @@ def cassh_status(current_user=None):
         return Response('Connection error : %s' % APP.config['CASSH_URL'])
     try:
         result = loads(req.text)
-        is_expired = datetime.strptime(result['expiration'], '%Y-%m-%d %H:%M:%S') < datetime.now()
-        if result['status'] == 'ACTIVE':
-            if is_expired:
-                result['status'] = 'EXPIRED'
-            else:
-                result['status'] = 'SIGNED'
+        for r in result.values():
+            is_expired = datetime.strptime(r['expiration'], '%Y-%m-%d %H:%M:%S') < datetime.now()
+            if r['status'] == 'ACTIVE':
+                if is_expired:
+                    r['status'] = 'EXPIRED'
+                else:
+                    r['status'] = 'SIGNED'
     except:
         result = req.text
 

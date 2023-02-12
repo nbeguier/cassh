@@ -5,16 +5,20 @@
 {% block content %}
 
 {% if logged_in %}
-<div class="datagrid"><table>
-<thead><tr><th>Login</th><th>{{ result.realname }}</th></tr></thead>
-<tbody><tr><td>Status</td><td>{{ result.status }}</td></tr>
-<tr class="alt"><td>Expiration</td><td>{{ result.expiration }}</td></tr>
-<tbody><tr><td>SSH Key Hash</td><td>{{ result.ssh_key_hash }}</td></tr>
-<tr class="alt"><td>Username</td><td>{{ result.username }}</td></tr>
-<tbody><tr><td>Expiry</td><td>{{ result.expiry }}</td></tr>
-<tr class="alt"><td>Principals</td><td>{{ result.principals }}</td></tr>
+<div class="datagrid">
+{% for r in result.values() %}
+<table>
+<thead><tr><th>Login</th><th>{{ r.realname }}</th></tr></thead>
+<tbody><tr><td>Status</td><td>{{ r.status }}</td></tr>
+<tr class="alt"><td>Expiration</td><td>{{ r.expiration }}</td></tr>
+<tbody><tr><td>SSH Key Hash</td><td>{{ r.ssh_key_hash }}</td></tr>
+<tr class="alt"><td>Username</td><td>{{ r.username }}</td></tr>
+<tbody><tr><td>Expiry</td><td>{{ r.expiry }}</td></tr>
+<tr class="alt"><td>Principals</td><td>{{ r.principals }}</td></tr>
 </tbody>
-</table></div>
+</table>
+{% endfor %}
+</div>
 {% else %}
 <strong>Log in first !</strong>
 {% endif %}
