@@ -1,6 +1,6 @@
-flask>=2.1.2
-markdown==3.1.1
-pyopenssl>=22.0.0
-pyyaml>=6.0
-requests>=2.27.1
-waitress>=2.1.2
+flask>=3.1.0
+markdown>=3.8
+pyopenssl>=25.0.0
+pyyaml>=6.0.2
+requests>=2.32.3
+waitress>=3.0.2

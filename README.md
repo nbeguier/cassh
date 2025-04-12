@@ -1,7 +1,5 @@
 # CASSH
 
-[![Build Status](https://travis-ci.com/nbeguier/cassh.svg?branch=master)](https://travis-ci.com/nbeguier/cassh) [![Python 3.5|3.9](https://img.shields.io/badge/python-3.5|3.9-green.svg)](https://www.python.org/) [![License](https://img.shields.io/github/license/nbeguier/cassh?color=blue)](https://github.com/nbeguier/cassh/blob/master/LICENSE)
-
 OpenSSH features reach their limit when it comes to industrialization. We don’t want an administrator to sign every user’s public key by hand every day, so we need a service for that. That is exactly the purpose of CASSH: **signing keys**!
 Developped for @leboncoin
 
@@ -233,4 +231,4 @@ python cassh sign [--display-only]
 Licensed under the [Apache License](https://github.com/nbeguier/cassh/blob/master/LICENSE), Version 2.0 (the "License").
 
 # Copyright
-Copyright 2017-2022 Nicolas BEGUIER; ([nbeguier](https://beguier.eu/nicolas/) - nicolas_beguier[at]hotmail[dot]com)
+Copyright 2017-2025 Nicolas BEGUIER; ([nbeguier](https://beguier.eu/nicolas/) - nicolas_beguier[at]hotmail[dot]com)

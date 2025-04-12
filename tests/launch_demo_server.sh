@@ -60,7 +60,7 @@ if [ ! "$(docker ps -q -f name=demo-postgres)" ]; then
     sleep 10
 
     echo "Initialize Postgresql server"
-    python tests/postgres/init_pg.py
+    python3 tests/postgres/init_pg.py
 
     sleep 5
 fi
