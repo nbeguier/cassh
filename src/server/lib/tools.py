@@ -67,6 +67,15 @@ def loadconfig(version='Unknown'):
     server_opts['ldap'] = False
     server_opts['ssl'] = False
     server_opts['ldap_mapping'] = dict()
+    try:
+        server_opts['keyvalidityintervalstart'] = None
+        c = config.get('main', 'keyvalidityintervalstart')
+        if c != 'None' and constants.PATTERN_EXPIRY.match(c) is not None:
+            server_opts['keyvalidityintervalstart'] = c
+        else:
+            parser.error('Invalid format for keyvalidityintervalstart')
+    except NoOptionError:
+        pass
 
     if config.has_section('postgres'):
         try:
@@ -661,8 +670,13 @@ class Tools():
 
         # Sign the key
         try:
+            ks = self.server_opts['keyvalidityintervalstart']
+            if ks is None:
+                exp = '+'+expiry
+            else:
+                exp = ks+':+'+expiry
             cert_contents = ca_ssh.sign_public_user_key(\
-                tmp_pubkey_name, username, '+'+expiry, principals)
+                tmp_pubkey_name, username, exp, principals)
             if db_cursor is not None:
                 db_cursor.execute('UPDATE USERS SET STATE=0, EXPIRATION=(%s) WHERE NAME=(%s)', \
                     (time() + str2date(expiry), username))

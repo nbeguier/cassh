@@ -18,7 +18,7 @@ STATES = {
     'PENDING': 2,
 }
 
-PATTERN_EXPIRY = re_compile('^([0-9]+)+[dh]$')
+PATTERN_EXPIRY = re_compile('^([0-9]+)+[dh]|([0-9]+){8}$')
 PATTERN_PRINCIPALS = re_compile(r'^([a-zA-Z-\d]+)$')
 PATTERN_REALNAME = re_compile(
     r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"
