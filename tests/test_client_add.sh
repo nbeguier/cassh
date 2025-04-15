@@ -121,7 +121,7 @@ fi
 ####################
 ## STATUS GUEST A ##
 ####################
-RESP=$(curl -s -X POST -d "realname=${GUEST_A_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/client/status | jq .status)
+RESP=$(curl -s -X POST -d "realname=${GUEST_A_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/client/status | jq '.[] | .status')
 if [ "${RESP}" == '"PENDING"' ]; then
     echo "[OK] Test status pending user"
 else

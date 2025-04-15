@@ -61,7 +61,7 @@ else
 fi
 
 RESP=$(curl -s -X POST -d "realname=${GUEST_A_REALNAME}&password=${GUEST_A_PASSWORD}" "${CASSH_SERVER_URL}"/client/status)
-if [ "${RESP}" == 'None' ]; then
+if [ "${RESP}" == '{}' ]; then
     echo "[OK] Test status unknown user"
 else
     echo "[FAIL ${BASH_SOURCE}:+${LINENO}] Test status unknown user : ${RESP}"
